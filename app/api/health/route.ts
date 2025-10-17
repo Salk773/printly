@@ -1,16 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-  const { error } = await supabase.from("products").select("id").limit(1);
+    const { error } = await supabase.from("products").select("id").limit(1);
 
-  if (error) {
-    return new Response(`Supabase connection failed: ${error.message}`, { status: 500 });
+    if (error) {
+      console.error("Supabase error:", error);
+      return new Response(JSON.stringify({ status: "fail", error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ status: "ok", message: "Supabase connected ✅" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    console.error("Unexpected error:", err);
+    return new Response(JSON.stringify({ status: "error", message: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
-
-  return new Response("Supabase connection successful ✅", { status: 200 });
 }
