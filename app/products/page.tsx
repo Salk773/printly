@@ -1,49 +1,35 @@
-"use client";
-import React, { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseServer"
+import Link from "next/link"
 
-type Product = {
-  id: string;
-  name: string;
-  price_aed: number;
-  category?: string;
-  image_url?: string;
-};
-
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/products");
-        const json = await res.json();
-        setProducts(json.products ?? []);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  if (loading) return <main style={{padding:24,fontFamily:"system-ui"}}>Loading…</main>;
+export default async function ProductsPage() {
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, base_price, image_main, category_id")
+    .eq("active", true)
+    .order("created_at", { ascending: false })
 
   return (
-    <main style={{maxWidth:960, margin:"40px auto", padding:"0 16px", fontFamily:"system-ui"}}>
-      <h1 style={{fontSize:32, marginBottom:16}}>Products</h1>
-      <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px,1fr))", gap:16}}>
-        {products.map((p) => (
-          <div key={p.id} style={{border:"1px solid #eee", borderRadius:12, padding:12}}>
-            <div style={{aspectRatio:"4/3", background:"#fafafa", borderRadius:8, marginBottom:8, overflow:"hidden"}}>
-              {p.image_url ? (
-                <img src={p.image_url} alt={p.name} style={{width:"100%", height:"100%", objectFit:"cover"}} />
-              ) : null}
+    <main className="p-8">
+      <h1 className="text-3xl font-bold mb-6">All Products</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products?.map((p) => (
+          <Link key={p.id} href={`/products/${p.id}`}>
+            <div className="bg-zinc-900 rounded-xl overflow-hidden shadow hover:scale-105 transition">
+              <img
+                src={p.image_main || "/placeholder.png"}
+                alt={p.name}
+                className="w-full h-52 object-cover"
+              />
+              <div className="p-4">
+                <h2 className="text-lg font-semibold">{p.name}</h2>
+                <p className="text-purple-400 font-bold mt-1">
+                  AED {p.base_price?.toFixed(2)}
+                </p>
+              </div>
             </div>
-            <div style={{fontWeight:600}}>{p.name}</div>
-            <div style={{opacity:.7, fontSize:14, margin:"4px 0 8px"}}>{p.category || "—"}</div>
-            <div style={{fontSize:18}}>AED {Number(p.price_aed).toFixed(2)}</div>
-          </div>
+          </Link>
         ))}
       </div>
     </main>
-  );
+  )
 }
