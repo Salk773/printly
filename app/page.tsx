@@ -1,14 +1,18 @@
+// 📁 app/page.tsx
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import Image from "next/image"; // ✅ optimised image component
 
+// Supabase connection
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function HomePage() {
+  // Fetch up to 4 active products from Supabase
   const { data: products } = await supabase
     .from("products")
-    .select("*")
+    .select("id, name, description, base_price, image_main, active")
     .eq("active", true)
     .limit(4);
 
@@ -23,7 +27,7 @@ export default async function HomePage() {
         flexDirection: "column",
       }}
     >
-      {/* 🧭 Navbar */}
+      {/* 🧭 NAVBAR */}
       <nav
         style={{
           display: "flex",
@@ -44,16 +48,22 @@ export default async function HomePage() {
           <Link href="/" style={{ color: "#fff", textDecoration: "none" }}>
             Home
           </Link>
-          <Link href="/products" style={{ color: "#fff", textDecoration: "none" }}>
+          <Link
+            href="/products"
+            style={{ color: "#fff", textDecoration: "none" }}
+          >
             Products
           </Link>
-          <Link href="mailto:contact@printly.ae" style={{ color: "#fff", textDecoration: "none" }}>
+          <Link
+            href="mailto:contact@printly.ae"
+            style={{ color: "#fff", textDecoration: "none" }}
+          >
             Contact
           </Link>
         </div>
       </nav>
 
-      {/* 🎯 Hero Section */}
+      {/* 🎯 HERO SECTION */}
       <section
         style={{
           textAlign: "center",
@@ -85,11 +95,19 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      {/* 🛍️ Featured Products */}
+      {/* 🛍️ FEATURED PRODUCTS */}
       <section style={{ padding: "60px 40px" }}>
-        <h2 style={{ textAlign: "center", marginBottom: "40px" }}>
-          Featured Filaments
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "40px",
+            fontSize: "1.8rem",
+            fontWeight: 600,
+          }}
+        >
+          Featured Products
         </h2>
+
         <div
           style={{
             display: "grid",
@@ -98,41 +116,66 @@ export default async function HomePage() {
           }}
         >
           {products?.map((p) => (
-            <div
+            <Link
               key={p.id}
-              style={{
-                border: "1px solid #222",
-                borderRadius: "12px",
-                padding: "20px",
-                background: "linear-gradient(145deg, #111, #1a1a1a)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              }}
+              href={`/products/${p.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
             >
-              <h3
+              <div
                 style={{
-                  color:
-                    p.material === "PLA+"
-                      ? "#c084fc"
-                      : p.material === "PETG"
-                      ? "#00bcd4"
-                      : "#fff",
-                  marginBottom: "10px",
+                  border: "1px solid #222",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  background: "linear-gradient(145deg, #111, #1a1a1a)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  transition: "transform 0.2s ease",
                 }}
               >
-                {p.name}
-              </h3>
-              <p style={{ color: "#ccc", fontSize: "0.9rem" }}>
-                {p.description}
-              </p>
-              <p style={{ fontWeight: 600, marginTop: "8px" }}>
-                {p.price} AED
-              </p>
-            </div>
+                {/* 🖼️ Product Image */}
+                {p.image_main && (
+                  <Image
+                    src={p.image_main}
+                    alt={p.name}
+                    width={400}
+                    height={400}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      borderRadius: "12px",
+                      marginBottom: "12px",
+                    }}
+                    priority={false}
+                  />
+                )}
+
+                <h3
+                  style={{
+                    color: "#c084fc",
+                    marginBottom: "10px",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  {p.name}
+                </h3>
+                <p style={{ color: "#ccc", fontSize: "0.9rem" }}>
+                  {p.description}
+                </p>
+                <p
+                  style={{
+                    fontWeight: 600,
+                    marginTop: "8px",
+                    color: "#fff",
+                  }}
+                >
+                  AED {p.base_price?.toFixed(2)}
+                </p>
+              </div>
+            </Link>
           ))}
         </div>
       </section>
 
-      {/* 🦶 Footer */}
+      {/* 🦶 FOOTER */}
       <footer
         style={{
           marginTop: "auto",
@@ -147,4 +190,3 @@ export default async function HomePage() {
     </main>
   );
 }
-import Image from "next/image";
