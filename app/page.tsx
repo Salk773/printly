@@ -147,3 +147,4 @@ export default async function HomePage() {
     </main>
   );
 }
+import Image from "next/image";
