@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
 
+// ---- SUPABASE INIT ----
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ---------------- TYPES ----------------
+// ---- TYPES ----
 interface Category {
   id: string;
   name: string;
 }
-
 interface Product {
   id: string;
   name: string;
@@ -23,8 +23,13 @@ interface Product {
   category_id: string;
 }
 
-// ---------------- COMPONENT ----------------
+// ---- COMPONENT ----
 export default function AdminPage() {
+  const [authorized, setAuthorized] = useState(false);
+  const [pass, setPass] = useState("");
+  const [error, setError] = useState("");
+  const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
+
   const [tab, setTab] = useState<"products" | "categories">("products");
 
   // Product states
@@ -38,9 +43,18 @@ export default function AdminPage() {
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Category states
   const [newCategory, setNewCategory] = useState("");
+
+  // ---------------- AUTH ----------------
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pass === ADMIN_CODE) {
+      setAuthorized(true);
+      setError("");
+    } else {
+      setError("Incorrect passcode ❌");
+    }
+  };
 
   // ---------------- FETCH ----------------
   const fetchProducts = async () => {
@@ -50,16 +64,16 @@ export default function AdminPage() {
       .order("name");
     setProducts(data || []);
   };
-
   const fetchCategories = async () => {
     const { data } = await supabase.from("categories").select("id, name");
     setCategories(data || []);
   };
-
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, []);
+    if (authorized) {
+      fetchProducts();
+      fetchCategories();
+    }
+  }, [authorized]);
 
   // ---------------- ADD PRODUCT ----------------
   const addProduct = async () => {
@@ -73,7 +87,6 @@ export default function AdminPage() {
       return;
     }
     setLoading(true);
-
     const { error } = await supabase.from("products").insert([
       {
         name: newProduct.name,
@@ -84,7 +97,6 @@ export default function AdminPage() {
         active: true,
       },
     ]);
-
     if (error) alert("Error adding product: " + error.message);
     else {
       setNewProduct({
@@ -129,7 +141,59 @@ export default function AdminPage() {
     else await fetchCategories();
   };
 
-  // ---------------- UI ----------------
+  // ---------------- LOGIN UI ----------------
+  if (!authorized) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#0a0a0a",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexDirection: "column",
+          color: "#fff",
+          fontFamily: "system-ui, sans-serif",
+        }}
+      >
+        <h1 style={{ marginBottom: "10px", color: "#c084fc" }}>Printly Admin</h1>
+        <form onSubmit={handleLogin} style={{ textAlign: "center" }}>
+          <input
+            type="password"
+            placeholder="Enter passcode"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            style={{
+              padding: "10px 14px",
+              borderRadius: "6px",
+              border: "1px solid #333",
+              background: "#111",
+              color: "#fff",
+              width: "200px",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              marginLeft: "10px",
+              padding: "10px 14px",
+              borderRadius: "6px",
+              border: "none",
+              background: "#c084fc",
+              color: "#000",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Login
+          </button>
+        </form>
+        {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+      </main>
+    );
+  }
+
+  // ---------------- ADMIN DASHBOARD ----------------
   return (
     <main
       style={{
