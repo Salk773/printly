@@ -1,123 +1,70 @@
 import Link from "next/link";
-import Image from "next/image";
-import { supabaseServer } from "../../lib/supabaseServer"; // ✅ Fixed path
+import { createClient } from "@supabase/supabase-js";
 
-export default async function ProductsPage({
-  searchParams,
-}: {
-  searchParams?: { category?: string };
-}) {
-  const supabase = supabaseServer();
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name")
-    .order("name");
-
-  const query = supabase
+export default async function HomePage() {
+  const { data: products } = await supabase
     .from("products")
-    .select("id, name, description, base_price, image_main, active, category_id")
+    .select("*")
     .eq("active", true)
-    .order("name");
-
-  if (searchParams?.category) query.eq("category_id", searchParams.category);
-  const { data: products, error } = await query;
-
-  if (error) {
-    return (
-      <div className="container" style={{ padding: "48px 0" }}>
-        Failed to load products.
-      </div>
-    );
-  }
+    .limit(4);
 
   return (
-    <main style={{ padding: "32px 0" }}>
-      <div className="container">
-        <h1
+    <main style={{ padding: "60px 20px", textAlign: "center" }}>
+      <section style={{ padding: "100px 20px" }}>
+        <h1 style={{ fontSize: "3rem", fontWeight: 700 }}>
+          Made <span style={{ color: "#c084fc" }}>Layer by Layer</span>.
+        </h1>
+        <p style={{ color: "#ccc", marginTop: "10px", fontSize: "1.2rem" }}>
+          UAE’s first 3D printing marketplace — from creators, for creators.
+        </p>
+        <Link
+          href="/products"
           style={{
-            fontSize: "2rem",
-            fontWeight: 800,
-            textAlign: "center",
-            marginBottom: "1rem",
+            display: "inline-block",
+            marginTop: "30px",
+            padding: "12px 28px",
+            backgroundColor: "#c084fc",
+            color: "#000",
+            fontWeight: 600,
+            borderRadius: "8px",
+            textDecoration: "none",
           }}
         >
-          Products
-        </h1>
+          Browse Products
+        </Link>
+      </section>
 
-        {/* Category Filters */}
+      <section style={{ marginTop: "60px" }}>
+        <h2>Featured Products</h2>
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            justifyContent: "center",
-            marginTop: 16,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "20px",
+            marginTop: "30px",
           }}
         >
-          <Link
-            href="/products"
-            className="btn secondary"
-            style={{
-              background: !searchParams?.category ? "var(--accent)" : "#222",
-              color: !searchParams?.category ? "#000" : "#fff",
-            }}
-          >
-            All
-          </Link>
-          {categories?.map((c) => (
-            <Link
-              key={c.id}
-              href={`/products?category=${c.id}`}
-              className="btn secondary"
+          {products?.map((p) => (
+            <div
+              key={p.id}
               style={{
-                background:
-                  searchParams?.category === c.id ? "var(--accent)" : "#222",
-                color: searchParams?.category === c.id ? "#000" : "#fff",
+                background: "#111",
+                padding: "20px",
+                borderRadius: "12px",
+                border: "1px solid #222",
               }}
             >
-              {c.name}
-            </Link>
+              <h3>{p.name}</h3>
+              <p style={{ color: "#aaa" }}>{p.description}</p>
+              <p style={{ color: "#c084fc", fontWeight: 600 }}>{p.price} AED</p>
+            </div>
           ))}
         </div>
-
-        {/* Products Grid */}
-        <div className="grid" style={{ marginTop: 28 }}>
-          {products?.map((p) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.id}`}
-              className="card"
-              style={{ padding: 16 }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  aspectRatio: "4/3",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                }}
-              >
-                <Image
-                  src={p.image_main || "/placeholder.png"}
-                  alt={p.name}
-                  fill
-                  sizes="(max-width:768px) 100vw, (max-width:1200px) 50vw, 33vw"
-                  style={{ objectFit: "cover" }}
-                />
-              </div>
-              <h3 style={{ marginTop: 12, marginBottom: 6 }}>{p.name}</h3>
-              <p style={{ color: "var(--muted)", margin: 0 }}>
-                {p.description}
-              </p>
-              <p style={{ marginTop: 8, fontWeight: 700 }}>
-                AED {p.base_price?.toFixed(2)}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </div>
+      </section>
     </main>
   );
 }
