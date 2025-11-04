@@ -1,5 +1,4 @@
-import Image from "next/image";
-import { supabaseServer } from "../../../lib/supabaseServer"; // ✅ Correct path
+import { supabaseServer } from "../../../lib/supabaseServer";
 
 export default async function ProductDetails({
   params,
@@ -7,107 +6,40 @@ export default async function ProductDetails({
   params: { id: string };
 }) {
   const supabase = supabaseServer();
-
-  const { data: product } = await supabase
+  const { data: product, error } = await supabase
     .from("products")
-    .select("id, name, description, base_price, image_main, active")
+    .select("*")
     .eq("id", params.id)
     .single();
 
-  const { data: variants } = await supabase
-    .from("product_variants")
-    .select("id, color, material, price, stock")
-    .eq("product_id", params.id);
-
-  if (!product) {
+  if (error || !product)
     return (
-      <div className="container" style={{ padding: "48px 0" }}>
-        Product not found.
-      </div>
+      <main style={{ padding: "100px", textAlign: "center" }}>
+        <h1>Product not found</h1>
+      </main>
     );
-  }
 
   return (
-    <main style={{ padding: "40px 0" }}>
-      <div
-        className="container"
-        style={{
-          display: "grid",
-          gap: 28,
-          gridTemplateColumns: "1fr",
-          alignItems: "start",
-        }}
-      >
-        <div className="card" style={{ padding: 16 }}>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              aspectRatio: "4/3",
-              borderRadius: 12,
-              overflow: "hidden",
-            }}
-          >
-            <Image
-              src={product.image_main || "/placeholder.png"}
-              alt={product.name}
-              fill
-              sizes="100vw"
-              style={{ objectFit: "cover" }}
-              priority
-            />
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 20 }}>
-          <h1 style={{ marginTop: 0 }}>{product.name}</h1>
-          <p style={{ color: "var(--muted)" }}>{product.description}</p>
-          <p style={{ fontWeight: 800, fontSize: "1.2rem" }}>
-            AED {product.base_price?.toFixed(2)}
+    <main style={{ padding: "60px 40px" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "40px" }}>
+        <img
+          src={product.image_main || "/placeholder.jpg"}
+          alt={product.name}
+          style={{
+            width: "400px",
+            borderRadius: "12px",
+            objectFit: "cover",
+            maxWidth: "100%",
+          }}
+        />
+        <div style={{ flex: 1 }}>
+          <h1>{product.name}</h1>
+          <p style={{ color: "#aaa", margin: "20px 0" }}>
+            {product.description}
           </p>
-
-          {variants && variants.length > 0 && (
-            <>
-              <h3 style={{ marginTop: 20 }}>Available Options</h3>
-              <div
-                className="grid"
-                style={{
-                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                }}
-              >
-                {variants.map((v) => (
-                  <div key={v.id} className="card" style={{ padding: 12 }}>
-                    <p style={{ fontWeight: 700 }}>{v.color}</p>
-                    <p style={{ color: "var(--muted)", margin: 0 }}>
-                      {v.material}
-                    </p>
-                    <p
-                      style={{
-                        marginTop: 6,
-                        color: "var(--accent)",
-                        fontWeight: 700,
-                      }}
-                    >
-                      AED {v.price?.toFixed(2)}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: ".85rem",
-                        color: "#999",
-                        marginTop: 2,
-                      }}
-                    >
-                      Stock: {v.stock}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          <button className="btn" style={{ marginTop: 20 }} disabled>
-            Add to Cart (coming soon)
-          </button>
+          <p style={{ fontSize: "1.5rem", color: "#c084fc", fontWeight: 700 }}>
+            {product.price} AED
+          </p>
         </div>
       </div>
     </main>
