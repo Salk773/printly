@@ -1,70 +1,65 @@
-import { supabaseServer } from "../../lib/supabaseServer";
-import Link from "next/link";
+import Image from 'next/image';
+import { supabaseServer } from '../../../lib/supabaseServer';
 
-export default async function ProductsPage() {
+export default async function ProductDetails({ params }: { params: { id: string } }) {
   const supabase = supabaseServer();
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("id, name, description, price, image_main, active")
-    .eq("active", true);
 
-  if (error) {
-    console.error("Error fetching products:", error);
-    return <div>Failed to load products.</div>;
+  const { data: product } = await supabase
+    .from('products')
+    .select('id, name, description, base_price, image_main, active')
+    .eq('id', params.id)
+    .single();
+
+  const { data: variants } = await supabase
+    .from('product_variants')
+    .select('id, color, material, price, stock')
+    .eq('product_id', params.id);
+
+  if (!product) {
+    return <div className="container" style={{ padding: '48px 0' }}>Product not found.</div>;
   }
 
   return (
-    <main
-      style={{
-        backgroundColor: "#0a0a0a",
-        color: "#fff",
-        fontFamily: "system-ui, sans-serif",
-        minHeight: "100vh",
-        padding: "60px 40px",
-      }}
-    >
-      <h1 style={{ fontSize: "2.5rem", fontWeight: 700, textAlign: "center" }}>
-        Our Products
-      </h1>
-
-      <div
-        style={{
-          marginTop: "50px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
-        }}
-      >
-        {products?.map((p) => (
-          <Link
-            key={p.id}
-            href={`/products/${p.id}`}
-            style={{
-              textDecoration: "none",
-              color: "#fff",
-              border: "1px solid #222",
-              borderRadius: "12px",
-              padding: "20px",
-              background: "linear-gradient(145deg, #111, #1b1b1b)",
-            }}
-          >
-            <img
-              src={p.image_main || "/placeholder.png"}
-              alt={p.name}
-              style={{
-                width: "100%",
-                height: "200px",
-                objectFit: "cover",
-                borderRadius: "8px",
-              }}
+    <main style={{ padding: '40px 0' }}>
+      <div className="container" style={{ display:'grid', gap: 28, gridTemplateColumns:'1fr', alignItems:'start' }}>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ position:'relative', width:'100%', aspectRatio:'4/3', borderRadius: 12, overflow:'hidden' }}>
+            <Image
+              src={product.image_main || '/placeholder.png'}
+              alt={product.name}
+              fill
+              sizes="100vw"
+              style={{ objectFit:'cover' }}
+              priority
             />
-            <h3 style={{ marginTop: "15px" }}>{p.name}</h3>
-            <p style={{ color: "#aaa", fontSize: "0.9rem" }}>{p.description}</p>
-            <p style={{ color: "#c084fc", fontWeight: 600 }}>
-              {p.price ? `${p.price} AED` : "Price on request"}
-            </p>
-          </Link>
-        ))}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 20 }}>
+          <h1 style={{ marginTop: 0 }}>{product.name}</h1>
+          <p style={{ color: 'var(--muted)' }}>{product.description}</p>
+          <p style={{ fontWeight: 800, fontSize: '1.2rem' }}>AED {product.base_price?.toFixed(2)}</p>
+
+          {variants && variants.length > 0 && (
+            <>
+              <h3 style={{ marginTop: 20 }}>Available Options</h3>
+              <div className="grid" style={{ gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                {variants.map((v) => (
+                  <div key={v.id} className="card" style={{ padding: 12 }}>
+                    <p style={{ fontWeight: 700 }}>{v.color}</p>
+                    <p style={{ color:'var(--muted)', margin: 0 }}>{v.material}</p>
+                    <p style={{ marginTop: 6, color:'var(--accent)', fontWeight:700 }}>AED {v.price?.toFixed(2)}</p>
+                    <p style={{ fontSize: '.85rem', color:'#999', marginTop: 2 }}>Stock: {v.stock}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <button className="btn" style={{ marginTop: 20 }} disabled>
+            Add to Cart (coming soon)
+          </button>
+        </div>
       </div>
     </main>
   );
