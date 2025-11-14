@@ -1,9 +1,9 @@
+// app/admin/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-// API endpoints instead of direct supabase (fixes RLS)
 const API_CATEGORIES = "/api/categories";
 const API_PRODUCTS = "/api/products";
 
@@ -28,21 +28,17 @@ export default function AdminPage() {
 
   const PASSCODE = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
 
-  // Admin Auth (simple passcode)
   const checkPasscode = () => {
     if (passcodeInput === PASSCODE) setAuthorized(true);
     else alert("Wrong passcode.");
   };
 
-  // UI state
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [loading, setLoading] = useState(false);
 
-  // Data
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  // New Product Fields
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
@@ -53,14 +49,12 @@ export default function AdminPage() {
 
   const [newCategory, setNewCategory] = useState("");
 
-  // Fetch categories
   async function loadCategories() {
     const res = await fetch(API_CATEGORIES);
     const json = await res.json();
     if (json.success) setCategories(json.categories);
   }
 
-  // Fetch products
   async function loadProducts() {
     const res = await fetch(API_PRODUCTS);
     const json = await res.json();
@@ -74,7 +68,6 @@ export default function AdminPage() {
     }
   }, [authorized]);
 
-  // Add category
   async function addCategory() {
     if (!newCategory.trim()) return alert("Category name required.");
 
@@ -91,7 +84,6 @@ export default function AdminPage() {
     loadCategories();
   }
 
-  // Add product
   async function addProduct() {
     const { name, description, price, image_main, category_id } = newProduct;
 
@@ -128,7 +120,6 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  // Delete category
   async function deleteCategory(id: string) {
     if (!confirm("Delete category?")) return;
 
@@ -141,7 +132,6 @@ export default function AdminPage() {
     else loadCategories();
   }
 
-  // Delete product
   async function deleteProduct(id: string) {
     if (!confirm("Delete product?")) return;
 
@@ -154,7 +144,6 @@ export default function AdminPage() {
     else loadProducts();
   }
 
-  // If not authorized, show login
   if (!authorized) {
     return (
       <main
@@ -237,7 +226,7 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* -------------------- PRODUCTS TAB -------------------- */}
+      {/* PRODUCTS TAB */}
       {tab === "products" && (
         <>
           <h2 style={{ marginTop: "30px" }}>Add Product</h2>
@@ -328,7 +317,10 @@ export default function AdminPage() {
             }}
           >
             {products.map((p) => (
-              <div key={p.id} style={{ background: "#111", padding: "15px", borderRadius: "10px" }}>
+              <div
+                key={p.id}
+                style={{ background: "#111", padding: "15px", borderRadius: "10px" }}
+              >
                 {p.image_main && (
                   <Image
                     src={p.image_main}
@@ -363,7 +355,7 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* -------------------- CATEGORIES TAB -------------------- */}
+      {/* CATEGORIES TAB */}
       {tab === "categories" && (
         <>
           <h2 style={{ marginTop: "30px" }}>Add Category</h2>
