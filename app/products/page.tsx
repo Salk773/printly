@@ -1,61 +1,77 @@
+// app/products/page.tsx
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import Link from "next/link";
-import { supabaseServer } from "../../lib/supabaseServer";
 
-export const revalidate = 60; // cache rebuild every minute
+export const revalidate = 0; // always fresh
 
 export default async function ProductsPage() {
-  const supabase = supabaseServer();
+  const supabase = supabaseAdmin();
+
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, name, description, price, image_main, category_id")
+    .select("id, name, description, price, image_main")
     .eq("active", true)
     .order("name");
 
   if (error) {
-    console.error("Error loading products:", error.message);
-    return <div>Error loading products</div>;
+    console.error("Supabase error:", error);
+    return <div>Error loading products.</div>;
   }
 
   return (
-    <main style={{ padding: "60px 40px" }}>
-      <h1 style={{ textAlign: "center", marginBottom: "40px" }}>All Products</h1>
+    <main
+      style={{
+        background: "#0a0a0a",
+        color: "white",
+        minHeight: "100vh",
+        padding: "40px",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      <h1 style={{ fontSize: "2rem", marginBottom: "20px" }}>All Products</h1>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
+          gap: "25px",
         }}
       >
-        {products?.map((p) => (
+        {products?.map((product) => (
           <Link
-            key={p.id}
-            href={`/products/${p.id}`}
+            key={product.id}
+            href={`/products/${product.id}`}
             style={{
               background: "#111",
               borderRadius: "12px",
               padding: "20px",
-              color: "#fff",
               textDecoration: "none",
+              color: "white",
               border: "1px solid #222",
             }}
           >
-            <img
-              src={p.image_main || "/placeholder.jpg"}
-              alt={p.name}
-              style={{
-                width: "100%",
-                height: "200px",
-                objectFit: "cover",
-                borderRadius: "8px",
-                marginBottom: "10px",
-              }}
-            />
-            <h3>{p.name}</h3>
+            {product.image_main && (
+              <img
+                src={product.image_main}
+                alt={product.name}
+                style={{
+                  width: "100%",
+                  height: "180px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                  marginBottom: "12px",
+                }}
+              />
+            )}
+
+            <h3 style={{ fontSize: "1.2rem" }}>{product.name}</h3>
             <p style={{ color: "#aaa", fontSize: "0.9rem" }}>
-              {p.description?.slice(0, 60)}...
+              {product.description}
             </p>
-            <p style={{ color: "#c084fc", fontWeight: 600 }}>{p.price} AED</p>
+
+            <p style={{ marginTop: "10px", color: "#c084fc", fontWeight: 600 }}>
+              {product.price} AED
+            </p>
           </Link>
         ))}
       </div>
