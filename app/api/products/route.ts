@@ -1,62 +1,116 @@
+// app/api/products/route.ts
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// Parse and sanitize query params
-function getParams(req: Request) {
-  const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get("page") || 1));
-  const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 12)));
-  const q = (url.searchParams.get("q") || "").trim();
-  const category = (url.searchParams.get("category") || "").trim();
-  const sort = (url.searchParams.get("sort") || "created_at_desc").trim(); // price_asc | price_desc | created_at_asc | created_at_desc
-  return { page, limit, q, category, sort };
+// ---------- GET /api/products ----------
+export async function GET() {
+  const admin = supabaseAdmin();
+
+  const { data, error } = await admin
+    .from("products")
+    .select("id, name, description, price, image_main, category_id")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("GET /api/products error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, products: data ?? [] });
 }
 
-export async function GET(req: Request) {
+// ---------- POST /api/products ----------
+export async function POST(req: Request) {
   try {
-    const { page, limit, q, category, sort } = getParams(req);
+    const body = await req.json().catch(() => null);
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    let query = supabase
-      .from("products")
-      .select("*", { count: "exact" })
-      .eq("active", true);
-
-    if (q) query = query.ilike("name", `%${q}%`);
-    if (category) query = query.eq("category", category);
-
-    // Sorting
-    const [col, dir] =
-      sort === "price_asc" ? ["price_aed", true] :
-      sort === "price_desc" ? ["price_aed", false] :
-      sort === "created_at_asc" ? ["created_at", true] :
-      ["created_at", false];
-
-    query = query.order(col, { ascending: dir });
-
-    // Pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error("Products API error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!body) {
+      return NextResponse.json(
+        { success: false, message: "Invalid JSON body" },
+        { status: 400 }
+      );
     }
 
-    // Cache for 60s (safe for product listing) – tweak later if needed
-    const res = NextResponse.json({ products: data ?? [], page, limit, total: count ?? 0 });
-    res.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-    return res;
-  } catch (err: any) {
-    console.error("Products API unexpected error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    const { name, description, price, image_main, category_id } = body;
+
+    if (
+      !name ||
+      !image_main ||
+      !category_id ||
+      price === undefined ||
+      price === null
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "name, price, image_main and category_id are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid price value" },
+        { status: 400 }
+      );
+    }
+
+    const admin = supabaseAdmin();
+
+    const { error } = await admin.from("products").insert({
+      name: String(name),
+      description: description ? String(description) : "",
+      price: numericPrice,
+      image_main: String(image_main),
+      category_id: String(category_id),
+      active: true,
+    });
+
+    if (error) {
+      console.error("Insert product error:", error);
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Product created" });
+  } catch (e: any) {
+    console.error("POST /api/products exception:", e);
+    return NextResponse.json(
+      { success: false, message: "Unexpected server error" },
+      { status: 500 }
+    );
   }
 }
 
+// ---------- DELETE /api/products?id=... ----------
+export async function DELETE(req: Request) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Missing 'id' query parameter" },
+      { status: 400 }
+    );
+  }
+
+  const admin = supabaseAdmin();
+  const { error } = await admin.from("products").delete().eq("id", id);
+
+  if (error) {
+    console.error("DELETE /api/products error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, message: "Product deleted" });
+}
