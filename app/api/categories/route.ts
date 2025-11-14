@@ -1,8 +1,8 @@
 // app/api/categories/route.ts
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
-// Simple helper to make a URL-safe slug
+// Helper: Convert text → URL slug
 function toSlug(s: string) {
   return s
     .toLowerCase()
@@ -14,80 +14,68 @@ function toSlug(s: string) {
 }
 
 // POST /api/categories
-// Body: { name: string, slug?: string }
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
+
     if (!body || typeof body.name !== "string" || !body.name.trim()) {
       return NextResponse.json(
-        { status: "error", message: "Invalid request: 'name' is required" },
+        { error: "Invalid request: 'name' is required" },
         { status: 400 }
       );
     }
 
-    const name: string = body.name.trim();
-    let slug: string = (body.slug?.trim() || toSlug(name)) as string;
-
-    // Ensure slug uniqueness by appending a suffix if needed
     const admin = supabaseAdmin();
 
-    // Check if slug exists
-    const { data: existing } = await admin
-      .from("categories")
-      .select("id, slug")
-      .eq("slug", slug)
-      .maybeSingle();
+    const name = body.name.trim();
+    let slug = body.slug?.trim() || toSlug(name);
 
-    if (existing) {
-      slug = `${slug}-${Date.now().toString().slice(-6)}`;
+    // Ensure slug is unique
+    let finalSlug = slug;
+    let counter = 1;
+
+    while (true) {
+      const { data: exists } = await admin
+        .from("categories")
+        .select("id")
+        .eq("slug", finalSlug)
+        .maybeSingle();
+
+      if (!exists) break;
+
+      finalSlug = `${slug}-${counter++}`;
     }
 
+    // Insert category
     const { data, error } = await admin
       .from("categories")
-      .insert([{ name, slug }])
-      .select("*")
+      .insert([{ name, slug: finalSlug }])
+      .select()
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { status: "error", message: error.message },
-        { status: 400 }
-      );
+      console.error("Insert error:", error);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json(
-      { status: "ok", category: data },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    return NextResponse.json(
-      { status: "error", message: err?.message || "Unexpected server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true, category: data }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
-// Optional: GET /api/categories — list all categories (admin-powered to avoid RLS issues in some setups)
+// GET /api/categories
 export async function GET() {
-  try {
-    const admin = supabaseAdmin();
-    const { data, error } = await admin
-      .from("categories")
-      .select("id, name, slug")
-      .order("name");
+  const admin = supabaseAdmin();
+  const { data, error } = await admin
+    .from("categories")
+    .select("id, name, slug")
+    .order("name");
 
-    if (error) {
-      return NextResponse.json(
-        { status: "error", message: error.message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ status: "ok", categories: data || [] });
-  } catch (err: any) {
-    return NextResponse.json(
-      { status: "error", message: err?.message || "Unexpected server error" },
-      { status: 500 }
-    );
+  if (error) {
+    console.error(error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  return NextResponse.json(data);
 }
