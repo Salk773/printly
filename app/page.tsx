@@ -38,7 +38,7 @@ export default async function HomePage() {
               Made <span className="hero-accent">layer by layer</span>.
             </h1>
             <p className="hero-subtitle">
-              Browse ready-made 3D printed items or scale into custom parts — all
+              Browse ready-made 3D printed items or later scale into custom parts —
               printed locally with PLA+ and PETG.
             </p>
             <div className="hero-actions">
@@ -46,15 +46,15 @@ export default async function HomePage() {
                 Browse products
               </Link>
               <a href="mailto:contact@printly.ae" className="btn btn-secondary">
-                Contact us
+                Email us
               </a>
             </div>
           </div>
           <div className="hero-card">
             <p className="hero-card-title">For makers & small brands</p>
             <p className="hero-card-text">
-              Start with charms, décor, and useful everyday parts. Later, open the
-              platform for custom uploads and B2B printing.
+              Start with charms, decor, and useful everyday parts. Later, open the
+              platform for custom uploads and B2B orders.
             </p>
           </div>
         </div>
