@@ -1,27 +1,39 @@
+// components/Navbar.tsx
 "use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
+  const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
   return (
     <nav className="nav">
-      <div
-        className="container"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 0",
-        }}
-      >
-        <Link href="/" aria-label="Printly home">
-          <h2 style={{ color: "var(--accent)", fontWeight: 800, letterSpacing: ".2px" }}>
-            Printly
-          </h2>
+      <div className="container nav-inner">
+        <Link href="/" className="logo">
+          Printly
         </Link>
-        <div style={{ display: "flex", gap: 20 }}>
-          <Link href="/">Home</Link>
-          <Link href="/products">Products</Link>
-          <Link href="mailto:contact@printly.ae">Contact</Link>
+        <div className="nav-links">
+          <Link
+            href="/"
+            className={isActive("/") ? "nav-link nav-link-active" : "nav-link"}
+          >
+            Home
+          </Link>
+          <Link
+            href="/products"
+            className={
+              isActive("/products") ? "nav-link nav-link-active" : "nav-link"
+            }
+          >
+            Products
+          </Link>
+          <a href="mailto:contact@printly.ae" className="nav-link">
+            Contact
+          </a>
         </div>
       </div>
     </nav>
