@@ -1,10 +1,13 @@
+// app/layout.tsx
+import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
-export const metadata = {
-  title: "Printly",
-  description: "UAE’s first 3D printing marketplace — made layer by layer.",
+export const metadata: Metadata = {
+  title: "Printly — Made layer by layer",
+  description: "UAE-based 3D printing marketplace for ready-made and custom parts.",
+  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
 export default function RootLayout({
@@ -14,16 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          backgroundColor: "#0a0a0a",
-          color: "#fff",
-          fontFamily: "system-ui, sans-serif",
-        }}
-      >
+      <body className="printly-body">
         <Navbar />
-        <main>{children}</main>
+        <div className="page-shell">{children}</div>
         <Footer />
       </body>
     </html>
