@@ -16,6 +16,7 @@ export default function Navbar() {
         <Link href="/" className="logo">
           Printly
         </Link>
+
         <div className="nav-links">
           <Link
             href="/"
@@ -31,9 +32,12 @@ export default function Navbar() {
           >
             Products
           </Link>
-          <a href="mailto:contact@printly.ae" className="nav-link">
-            Contact
-          </a>
+        </div>
+
+        <div className="nav-contact">
+          <span className="nav-contact-item">contact@printly.ae</span>
+          <span className="nav-contact-dot">•</span>
+          <span className="nav-contact-item">+971 XX XXX XXXX</span>
         </div>
       </div>
     </nav>
