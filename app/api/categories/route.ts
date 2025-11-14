@@ -1,5 +1,5 @@
 // app/api/categories/route.ts
-import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 // Simple helper to make a URL-safe slug
