@@ -1,12 +1,12 @@
 /* app/globals.css */
 
 :root {
-  --bg: #050505;
-  --bg-elevated: #0f0f10;
-  --border: #222;
+  --bg: #08080a;
+  --bg-elevated: #111118;
+  --border: #262637;
   --accent: #c084fc;
-  --text: #ffffff;
-  --muted: #a3a3a3;
+  --text: #f5f5ff;
+  --muted: #c0c0d0;
 }
 
 * {
@@ -21,7 +21,7 @@ body {
 
 .printly-body {
   margin: 0;
-  background: radial-gradient(circle at top, #111 0, #050505 45%);
+  background: radial-gradient(circle at top, #141421 0, #05050a 45%);
   color: var(--text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     sans-serif;
@@ -43,18 +43,19 @@ body {
   top: 0;
   z-index: 50;
   backdrop-filter: blur(18px);
-  background: rgba(5, 5, 5, 0.92);
+  background: rgba(5, 5, 10, 0.92);
   border-bottom: 1px solid var(--border);
 }
 .nav-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 0;
+  padding: 12px 0;
+  gap: 16px;
 }
 .logo {
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   letter-spacing: 0.04em;
   color: var(--accent);
   text-decoration: none;
@@ -70,6 +71,20 @@ body {
 }
 .nav-link-active {
   color: var(--text);
+}
+.nav-contact {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #e0e0ff;
+  opacity: 0.85;
+}
+.nav-contact-item {
+  white-space: nowrap;
+}
+.nav-contact-dot {
+  opacity: 0.5;
 }
 
 /* HERO */
@@ -220,7 +235,7 @@ body {
 }
 .filters input,
 .filters select {
-  background: #080808;
+  background: #0b0b10;
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--text);
@@ -272,5 +287,12 @@ body {
   .filters {
     flex-direction: column;
     align-items: stretch;
+  }
+  .nav-inner {
+    flex-wrap: wrap;
+  }
+  .nav-contact {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
