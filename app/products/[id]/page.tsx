@@ -22,48 +22,26 @@ export const metadata = {
 export default async function ProductPage({ params }: ProductPageProps) {
   const supabase = supabaseServer();
 
-  const { data: product, error } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .select("id, name, description, price, image_main")
     .eq("id", params.id)
     .maybeSingle();
 
   if (error) {
-    console.error("Error loading product:", error);
+    console.error("Error loading product:", error.message);
   }
 
-  if (!product) {
-    return notFound();
-  }
+  if (!data) return notFound();
 
-  const p = product as Product;
+  const p = data as Product;
 
-  // Simple - your “material & colour choices later” UI can go here.
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "40px 20px 60px",
-        maxWidth: "1000px",
-        margin: "0 auto",
-        color: "#fff",
-      }}
-    >
-      <div style={{ display: "grid", gap: "24px", gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)" }}>
-        {/* IMAGE */}
+    <main className="section">
+      <div className="container product-layout">
         <section>
           {p.image_main && (
-            <div
-              style={{
-                position: "relative",
-                width: "100%",
-                aspectRatio: "4/3",
-                borderRadius: "16px",
-                overflow: "hidden",
-                background: "#000",
-                border: "1px solid #222",
-              }}
-            >
+            <div className="product-detail-image">
               <Image
                 src={p.image_main}
                 alt={p.name}
@@ -75,38 +53,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
         </section>
 
-        {/* INFO */}
-        <section>
-          <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>{p.name}</h1>
-          <p style={{ color: "#aaa", marginBottom: "16px" }}>
-            {p.description || "No description yet."}
+        <section className="product-detail-info">
+          <h1>{p.name}</h1>
+          <p className="muted" style={{ marginBottom: "16px" }}>
+            {p.description || "3D printed item."}
           </p>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "#c084fc",
-              marginBottom: "24px",
-            }}
-          >
+          <p className="price-lg">
             {p.price != null ? `${p.price.toFixed(2)} AED` : "Price on request"}
           </p>
 
-          <div
-            style={{
-              padding: "16px",
-              borderRadius: "12px",
-              border: "1px solid #222",
-              background: "#0f0f0f",
-              marginBottom: "18px",
-            }}
-          >
-            <h2 style={{ fontSize: "1rem", marginBottom: "8px" }}>
-              Printing options (coming soon)
-            </h2>
-            <p style={{ fontSize: "0.9rem", color: "#aaa" }}>
-              Here you’ll be able to choose material (PLA+ / PETG), colours, and
-              quantity. For now this is a read-only prototype page.
+          <div className="card" style={{ marginTop: "16px" }}>
+            <h2 className="small">Printing options (coming soon)</h2>
+            <p className="muted small">
+              Later you’ll be able to pick material (PLA+ / PETG), colours and
+              quantity here. For now this is a read-only product preview.
             </p>
           </div>
         </section>
