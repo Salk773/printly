@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { supabaseServer } from "@/lib/supabaseServer";
+import ProductsFilters from "@/components/ProductsFilters";
 
 type Category = { id: string; name: string; slug: string };
 type Product = {
@@ -52,7 +53,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   }
 
   if (search) {
-    // Simple name filter
     query = query.ilike("name", `%${search}%`);
   }
 
@@ -71,35 +71,22 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           <div>
             <h1>Products</h1>
             <p className="muted">
-              Filter by category or search by name. All items are 3D printed in the
-              UAE.
+              Filter by category or search by name. All items are 3D printed in
+              the UAE.
             </p>
           </div>
-          {/* Search + category filters */}
-          <form className="filters" method="get">
-            <input
-              type="text"
-              name="q"
-              placeholder="Search by name"
-              defaultValue={search}
-            />
-            <select name="category" defaultValue={selectedCategory}>
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn btn-primary">
-              Apply
-            </button>
-          </form>
+
+          <ProductsFilters
+            categories={categories}
+            initialSearch={search}
+            initialCategory={selectedCategory}
+          />
         </header>
 
         {products.length === 0 ? (
           <p className="muted" style={{ marginTop: "20px" }}>
-            No products found. Try clearing filters or add products from the admin panel.
+            No products found. Try clearing filters or add products from the
+            admin panel.
           </p>
         ) : (
           <div className="grid">
