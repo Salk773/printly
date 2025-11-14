@@ -2,8 +2,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// Helper: Convert text → URL slug
-function toSlug(s: string) {
+// Helper – turn a name into a URL-safe slug
+function toSlug(s: string): string {
   return s
     .toLowerCase()
     .trim()
@@ -13,69 +13,112 @@ function toSlug(s: string) {
     .slice(0, 80);
 }
 
-// POST /api/categories
+// ---------- GET /api/categories ----------
+export async function GET() {
+  const admin = supabaseAdmin();
+
+  const { data, error } = await admin
+    .from("categories")
+    .select("id, name, slug")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("GET /api/categories error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, categories: data ?? [] });
+}
+
+// ---------- POST /api/categories ----------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
 
     if (!body || typeof body.name !== "string" || !body.name.trim()) {
       return NextResponse.json(
-        { error: "Invalid request: 'name' is required" },
+        { success: false, message: "Invalid request: 'name' is required" },
         { status: 400 }
       );
     }
 
+    const name: string = body.name.trim();
+    let baseSlug: string = (body.slug?.trim() as string) || toSlug(name);
+    if (!baseSlug) baseSlug = toSlug(name);
+
     const admin = supabaseAdmin();
 
-    const name = body.name.trim();
-    let slug = body.slug?.trim() || toSlug(name);
-
-    // Ensure slug is unique
-    let finalSlug = slug;
-    let counter = 1;
+    // Ensure slug is unique by appending -2, -3, ... if needed
+    let slug = baseSlug;
+    let counter = 2;
 
     while (true) {
-      const { data: exists } = await admin
+      const { data: existing, error: slugErr } = await admin
         .from("categories")
         .select("id")
-        .eq("slug", finalSlug)
+        .eq("slug", slug)
         .maybeSingle();
 
-      if (!exists) break;
+      if (slugErr) {
+        console.error("Slug check error:", slugErr);
+        return NextResponse.json(
+          { success: false, message: slugErr.message },
+          { status: 500 }
+        );
+      }
 
-      finalSlug = `${slug}-${counter++}`;
+      if (!existing) break; // unique found
+      slug = `${baseSlug}-${counter++}`;
     }
 
-    // Insert category
-    const { data, error } = await admin
-      .from("categories")
-      .insert([{ name, slug: finalSlug }])
-      .select()
-      .single();
+    const { error } = await admin.from("categories").insert({
+      name,
+      slug,
+    });
 
     if (error) {
-      console.error("Insert error:", error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error("Insert category error:", error);
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, category: data }, { status: 201 });
-  } catch (e) {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ success: true, message: "Category created" });
+  } catch (e: any) {
+    console.error("POST /api/categories exception:", e);
+    return NextResponse.json(
+      { success: false, message: "Unexpected server error" },
+      { status: 500 }
+    );
   }
 }
 
-// GET /api/categories
-export async function GET() {
-  const admin = supabaseAdmin();
-  const { data, error } = await admin
-    .from("categories")
-    .select("id, name, slug")
-    .order("name");
+// ---------- DELETE /api/categories?id=... ----------
+export async function DELETE(req: Request) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id");
 
-  if (error) {
-    console.error(error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Missing 'id' query parameter" },
+      { status: 400 }
+    );
   }
 
-  return NextResponse.json(data);
+  const admin = supabaseAdmin();
+  const { error } = await admin.from("categories").delete().eq("id", id);
+
+  if (error) {
+    console.error("DELETE /api/categories error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, message: "Category deleted" });
 }
