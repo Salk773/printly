@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
 
-// ---- SUPABASE INIT ----
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+// API endpoints instead of direct supabase (fixes RLS)
+const API_CATEGORIES = "/api/categories";
+const API_PRODUCTS = "/api/products";
 
-// ---- TYPES ----
 interface Category {
   id: string;
   name: string;
+  slug: string;
 }
+
 interface Product {
   id: string;
   name: string;
@@ -23,17 +22,27 @@ interface Product {
   category_id: string;
 }
 
-// ---- COMPONENT ----
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
-  const [pass, setPass] = useState("");
-  const [error, setError] = useState("");
-  const ADMIN_CODE = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
+  const [passcodeInput, setPasscodeInput] = useState("");
 
+  const PASSCODE = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
+
+  // Admin Auth (simple passcode)
+  const checkPasscode = () => {
+    if (passcodeInput === PASSCODE) setAuthorized(true);
+    else alert("Wrong passcode.");
+  };
+
+  // UI state
   const [tab, setTab] = useState<"products" | "categories">("products");
+  const [loading, setLoading] = useState(false);
 
-  // Product states
+  // Data
+  const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+
+  // New Product Fields
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
@@ -41,63 +50,70 @@ export default function AdminPage() {
     image_main: "",
     category_id: "",
   });
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
+
   const [newCategory, setNewCategory] = useState("");
 
-  // ---------------- AUTH ----------------
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pass === ADMIN_CODE) {
-      setAuthorized(true);
-      setError("");
-    } else {
-      setError("Incorrect passcode ❌");
-    }
-  };
+  // Fetch categories
+  async function loadCategories() {
+    const res = await fetch(API_CATEGORIES);
+    const json = await res.json();
+    if (json.success) setCategories(json.categories);
+  }
 
-  // ---------------- FETCH ----------------
-  const fetchProducts = async () => {
-    const { data } = await supabase
-      .from("products")
-      .select("id, name, description, price, image_main, category_id")
-      .order("name");
-    setProducts(data || []);
-  };
-  const fetchCategories = async () => {
-    const { data } = await supabase.from("categories").select("id, name");
-    setCategories(data || []);
-  };
+  // Fetch products
+  async function loadProducts() {
+    const res = await fetch(API_PRODUCTS);
+    const json = await res.json();
+    if (json.success) setProducts(json.products);
+  }
+
   useEffect(() => {
     if (authorized) {
-      fetchProducts();
-      fetchCategories();
+      loadCategories();
+      loadProducts();
     }
   }, [authorized]);
 
-  // ---------------- ADD PRODUCT ----------------
-  const addProduct = async () => {
-    if (
-      !newProduct.name ||
-      !newProduct.price ||
-      !newProduct.image_main ||
-      !newProduct.category_id
-    ) {
-      alert("Please fill all fields");
-      return;
-    }
+  // Add category
+  async function addCategory() {
+    if (!newCategory.trim()) return alert("Category name required.");
+
+    const res = await fetch(API_CATEGORIES, {
+      method: "POST",
+      body: JSON.stringify({ name: newCategory }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) return alert(json.message);
+
+    setNewCategory("");
+    loadCategories();
+  }
+
+  // Add product
+  async function addProduct() {
+    const { name, description, price, image_main, category_id } = newProduct;
+
+    if (!name || !price || !image_main || !category_id)
+      return alert("Please fill all fields");
+
     setLoading(true);
-    const { error } = await supabase.from("products").insert([
-      {
-        name: newProduct.name,
-        description: newProduct.description,
-        price: parseFloat(newProduct.price),
-        image_main: newProduct.image_main,
-        category_id: newProduct.category_id,
-        active: true,
-      },
-    ]);
-    if (error) alert("Error adding product: " + error.message);
+
+    const res = await fetch(API_PRODUCTS, {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description,
+        price: parseFloat(price),
+        image_main,
+        category_id,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) alert(json.message);
     else {
       setNewProduct({
         name: "",
@@ -106,159 +122,137 @@ export default function AdminPage() {
         image_main: "",
         category_id: "",
       });
-      await fetchProducts();
+      loadProducts();
     }
+
     setLoading(false);
-  };
+  }
 
-  // ---------------- DELETE PRODUCT ----------------
-  const deleteProduct = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) alert(error.message);
-    else await fetchProducts();
-  };
+  // Delete category
+  async function deleteCategory(id: string) {
+    if (!confirm("Delete category?")) return;
 
-  // ---------------- ADD CATEGORY ----------------
-  const addCategory = async () => {
-    if (!newCategory.trim()) return;
-    const slug = newCategory.trim().toLowerCase().replace(/\s+/g, "-");
-    const { error } = await supabase
-      .from("categories")
-      .insert([{ name: newCategory.trim(), slug }]);
-    if (error) alert(error.message);
-    else {
-      setNewCategory("");
-      await fetchCategories();
-    }
-  };
+    const res = await fetch(`${API_CATEGORIES}?id=${id}`, {
+      method: "DELETE",
+    });
 
-  // ---------------- DELETE CATEGORY ----------------
-  const deleteCategory = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
-    const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) alert(error.message);
-    else await fetchCategories();
-  };
+    const json = await res.json();
+    if (!json.success) alert(json.message);
+    else loadCategories();
+  }
 
-  // ---------------- LOGIN UI ----------------
+  // Delete product
+  async function deleteProduct(id: string) {
+    if (!confirm("Delete product?")) return;
+
+    const res = await fetch(`${API_PRODUCTS}?id=${id}`, {
+      method: "DELETE",
+    });
+
+    const json = await res.json();
+    if (!json.success) alert(json.message);
+    else loadProducts();
+  }
+
+  // If not authorized, show login
   if (!authorized) {
     return (
       <main
         style={{
-          minHeight: "100vh",
           background: "#0a0a0a",
+          color: "#fff",
+          minHeight: "100vh",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           flexDirection: "column",
-          color: "#fff",
-          fontFamily: "system-ui, sans-serif",
+          gap: "15px",
         }}
       >
-        <h1 style={{ marginBottom: "10px", color: "#c084fc" }}>Printly Admin</h1>
-        <form onSubmit={handleLogin} style={{ textAlign: "center" }}>
-          <input
-            type="password"
-            placeholder="Enter passcode"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            style={{
-              padding: "10px 14px",
-              borderRadius: "6px",
-              border: "1px solid #333",
-              background: "#111",
-              color: "#fff",
-              width: "200px",
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              marginLeft: "10px",
-              padding: "10px 14px",
-              borderRadius: "6px",
-              border: "none",
-              background: "#c084fc",
-              color: "#000",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Login
-          </button>
-        </form>
-        {error && <p style={{ color: "red", marginTop: "10px" }}>{error}</p>}
+        <h2>Admin Login</h2>
+        <input
+          type="password"
+          placeholder="Enter Admin Passcode"
+          value={passcodeInput}
+          onChange={(e) => setPasscodeInput(e.target.value)}
+          style={{ padding: "10px", width: "240px" }}
+        />
+        <button
+          onClick={checkPasscode}
+          style={{
+            background: "#c084fc",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          Enter
+        </button>
       </main>
     );
   }
 
-  // ---------------- ADMIN DASHBOARD ----------------
   return (
     <main
       style={{
         background: "#0a0a0a",
         color: "#fff",
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "system-ui",
+        padding: "30px",
         minHeight: "100vh",
-        padding: "40px",
       }}
     >
-      <h1 style={{ fontSize: "2rem", marginBottom: "30px" }}>🛠️ Admin Panel</h1>
+      <h1>🛠️ Admin Panel</h1>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
+      {/* TABS */}
+      <div style={{ marginTop: "20px", display: "flex", gap: "15px" }}>
         <button
           onClick={() => setTab("products")}
           style={{
-            background: tab === "products" ? "#c084fc" : "#222",
-            border: "none",
-            padding: "10px 20px",
+            background: tab === "products" ? "#c084fc" : "#333",
+            padding: "10px 18px",
             borderRadius: "8px",
-            color: "#fff",
+            border: "none",
             cursor: "pointer",
+            color: "#fff",
           }}
         >
           Products
         </button>
+
         <button
           onClick={() => setTab("categories")}
           style={{
-            background: tab === "categories" ? "#c084fc" : "#222",
-            border: "none",
-            padding: "10px 20px",
+            background: tab === "categories" ? "#c084fc" : "#333",
+            padding: "10px 18px",
             borderRadius: "8px",
-            color: "#fff",
+            border: "none",
             cursor: "pointer",
+            color: "#fff",
           }}
         >
           Categories
         </button>
       </div>
 
-      {/* PRODUCTS TAB */}
+      {/* -------------------- PRODUCTS TAB -------------------- */}
       {tab === "products" && (
         <>
-          {/* Add Product Form */}
+          <h2 style={{ marginTop: "30px" }}>Add Product</h2>
+
           <div
             style={{
-              marginBottom: "40px",
               background: "#111",
               padding: "20px",
               borderRadius: "12px",
+              marginTop: "15px",
             }}
           >
-            <h2>Add New Product</h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "15px",
-                marginTop: "15px",
-              }}
-            >
+            <div style={{ display: "grid", gap: "10px" }}>
               <input
-                placeholder="Product name"
+                placeholder="Product Name"
                 value={newProduct.name}
                 onChange={(e) =>
                   setNewProduct({ ...newProduct, name: e.target.value })
@@ -278,10 +272,10 @@ export default function AdminPage() {
                   setNewProduct({ ...newProduct, category_id: e.target.value })
                 }
               >
-                <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
+                <option value="">Select Category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -292,85 +286,73 @@ export default function AdminPage() {
                   setNewProduct({ ...newProduct, image_main: e.target.value })
                 }
               />
+              <textarea
+                placeholder="Description"
+                value={newProduct.description}
+                onChange={(e) =>
+                  setNewProduct({
+                    ...newProduct,
+                    description: e.target.value,
+                  })
+                }
+                style={{ minHeight: "80px" }}
+              />
             </div>
-            <textarea
-              placeholder="Description"
-              value={newProduct.description}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, description: e.target.value })
-              }
-              style={{
-                marginTop: "10px",
-                width: "100%",
-                minHeight: "80px",
-              }}
-            />
+
             <button
               onClick={addProduct}
               disabled={loading}
               style={{
+                marginTop: "15px",
                 background: "#c084fc",
-                border: "none",
                 padding: "10px 20px",
                 borderRadius: "8px",
-                color: "#000",
-                marginTop: "10px",
-                fontWeight: 600,
+                border: "none",
                 cursor: "pointer",
+                color: "#000",
+                fontWeight: 700,
               }}
             >
               {loading ? "Adding..." : "Add Product"}
             </button>
           </div>
 
-          {/* Product List */}
+          {/* PRODUCT LIST */}
+          <h2 style={{ marginTop: "40px" }}>All Products</h2>
           <div
             style={{
+              marginTop: "20px",
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
               gap: "20px",
             }}
           >
             {products.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  background: "#111",
-                  padding: "15px",
-                  borderRadius: "12px",
-                }}
-              >
+              <div key={p.id} style={{ background: "#111", padding: "15px", borderRadius: "10px" }}>
                 {p.image_main && (
                   <Image
                     src={p.image_main}
                     alt={p.name}
                     width={300}
                     height={200}
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                      borderRadius: "8px",
-                      marginBottom: "10px",
-                    }}
+                    style={{ width: "100%", borderRadius: "8px" }}
                   />
                 )}
-                <h3>{p.name}</h3>
-                <p style={{ color: "#aaa", fontSize: "0.9rem" }}>
-                  {p.description}
-                </p>
-                <p style={{ color: "#c084fc", fontWeight: 600 }}>
-                  {p.price} AED
-                </p>
+                <h3 style={{ marginTop: "10px" }}>{p.name}</h3>
+                <p style={{ color: "#aaa" }}>{p.description}</p>
+                <p style={{ marginTop: "5px", color: "#c084fc" }}>{p.price} AED</p>
+
                 <button
                   onClick={() => deleteProduct(p.id)}
                   style={{
+                    marginTop: "10px",
                     background: "red",
                     color: "#fff",
-                    border: "none",
+                    padding: "8px",
                     borderRadius: "6px",
-                    padding: "6px 12px",
+                    border: "none",
                     cursor: "pointer",
-                    marginTop: "10px",
+                    width: "100%",
                   }}
                 >
                   Delete
@@ -381,57 +363,57 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* CATEGORIES TAB */}
+      {/* -------------------- CATEGORIES TAB -------------------- */}
       {tab === "categories" && (
         <>
-          <div style={{ marginBottom: "30px" }}>
-            <h2>Add Category</h2>
-            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-              <input
-                placeholder="Category name"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-              />
-              <button
-                onClick={addCategory}
-                style={{
-                  background: "#c084fc",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  color: "#000",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Add
-              </button>
-            </div>
+          <h2 style={{ marginTop: "30px" }}>Add Category</h2>
+          <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+            <input
+              placeholder="Category Name"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              style={{ padding: "10px", flex: 1 }}
+            />
+            <button
+              onClick={addCategory}
+              style={{
+                background: "#c084fc",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                cursor: "pointer",
+                color: "#000",
+                fontWeight: 700,
+              }}
+            >
+              Add
+            </button>
           </div>
 
-          <ul>
-            {categories.map((cat) => (
+          <ul style={{ marginTop: "30px", listStyle: "none", padding: 0 }}>
+            {categories.map((c) => (
               <li
-                key={cat.id}
+                key={c.id}
                 style={{
+                  background: "#111",
+                  padding: "12px",
+                  borderRadius: "8px",
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
-                  background: "#111",
-                  padding: "10px",
-                  borderRadius: "8px",
                   marginBottom: "10px",
                 }}
               >
-                <span>{cat.name}</span>
+                <span>
+                  {c.name} <span style={{ color: "#777" }}>({c.slug})</span>
+                </span>
                 <button
-                  onClick={() => deleteCategory(cat.id)}
+                  onClick={() => deleteCategory(c.id)}
                   style={{
                     background: "red",
                     color: "#fff",
                     border: "none",
+                    padding: "5px 10px",
                     borderRadius: "6px",
-                    padding: "6px 12px",
                     cursor: "pointer",
                   }}
                 >
