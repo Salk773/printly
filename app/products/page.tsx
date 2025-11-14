@@ -3,141 +3,137 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabaseServer } from "@/lib/supabaseServer";
 
+type Category = { id: string; name: string; slug: string };
 type Product = {
   id: string;
   name: string;
   description: string | null;
   price: number | null;
   image_main: string | null;
+  category_id: string | null;
 };
+
+interface ProductsPageProps {
+  searchParams?: { q?: string; category?: string };
+}
 
 export const metadata = {
   title: "Products | Printly",
-  description: "Browse ready-made 3D printed products from Printly.",
+  description: "Browse all ready-made 3D printed products.",
 };
 
-export default async function ProductsPage() {
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const supabase = supabaseServer();
 
-  const { data: products, error } = await supabase
+  const search = searchParams?.q?.trim() || "";
+  const selectedCategory = searchParams?.category || "";
+
+  // Load categories
+  const { data: categoriesData, error: catError } = await supabase
+    .from("categories")
+    .select("id, name, slug")
+    .order("name", { ascending: true });
+
+  if (catError) {
+    console.error("Error loading categories:", catError.message);
+  }
+
+  const categories: Category[] = categoriesData ?? [];
+
+  // Build products query
+  let query = supabase
     .from("products")
-    .select("id, name, description, price, image_main")
+    .select("id, name, description, price, image_main, category_id")
     .eq("active", true)
     .order("name", { ascending: true });
 
-  if (error) {
-    console.error("Error loading products:", error);
+  if (selectedCategory) {
+    query = query.eq("category_id", selectedCategory);
   }
 
-  const safeProducts: Product[] = products ?? [];
+  if (search) {
+    // Simple name filter
+    query = query.ilike("name", `%${search}%`);
+  }
+
+  const { data: productsData, error: prodError } = await query;
+
+  if (prodError) {
+    console.error("Error loading products:", prodError.message);
+  }
+
+  const products: Product[] = productsData ?? [];
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "40px 20px 60px",
-        maxWidth: "1200px",
-        margin: "0 auto",
-        color: "#fff",
-      }}
-    >
-      <header style={{ marginBottom: "30px" }}>
-        <h1 style={{ fontSize: "2.2rem", marginBottom: "8px" }}>All Products</h1>
-        <p style={{ color: "#aaa" }}>
-          Choose a design, then pick your material and colour on the product page.
-        </p>
-      </header>
+    <main className="section">
+      <div className="container">
+        <header className="section-header column">
+          <div>
+            <h1>Products</h1>
+            <p className="muted">
+              Filter by category or search by name. All items are 3D printed in the
+              UAE.
+            </p>
+          </div>
+          {/* Search + category filters */}
+          <form className="filters" method="get">
+            <input
+              type="text"
+              name="q"
+              placeholder="Search by name"
+              defaultValue={search}
+            />
+            <select name="category" defaultValue={selectedCategory}>
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="btn btn-primary">
+              Apply
+            </button>
+          </form>
+        </header>
 
-      {safeProducts.length === 0 ? (
-        <p style={{ color: "#aaa" }}>No products yet. Add some from the admin panel.</p>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: "24px",
-          }}
-        >
-          {safeProducts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/products/${p.id}`}
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <article
-                style={{
-                  background: "#111",
-                  borderRadius: "14px",
-                  border: "1px solid #222",
-                  padding: "16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100%",
-                  transition: "transform 0.15s ease, box-shadow 0.15s ease",
-                }}
+        {products.length === 0 ? (
+          <p className="muted" style={{ marginTop: "20px" }}>
+            No products found. Try clearing filters or add products from the admin panel.
+          </p>
+        ) : (
+          <div className="grid">
+            {products.map((p) => (
+              <Link
+                key={p.id}
+                href={`/products/${p.id}`}
+                className="card product-card"
               >
                 {p.image_main && (
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      aspectRatio: "4/3",
-                      marginBottom: "12px",
-                      overflow: "hidden",
-                      borderRadius: "10px",
-                      background: "#000",
-                    }}
-                  >
+                  <div className="product-image-wrap">
                     <Image
                       src={p.image_main}
                       alt={p.name}
                       fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      style={{
-                        objectFit: "cover",
-                      }}
+                      sizes="(max-width: 768px) 100vw, 25vw"
+                      style={{ objectFit: "cover" }}
                     />
                   </div>
                 )}
-
-                <h2 style={{ fontSize: "1.1rem", marginBottom: "6px" }}>{p.name}</h2>
-                <p
-                  style={{
-                    color: "#aaa",
-                    fontSize: "0.9rem",
-                    marginBottom: "10px",
-                  }}
-                >
-                  {p.description || "No description yet."}
-                </p>
-                <div
-                  style={{
-                    marginTop: "auto",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ fontWeight: 600, color: "#c084fc" }}>
+                <div className="product-body">
+                  <h3>{p.name}</h3>
+                  <p className="muted small">
+                    {p.description || "3D printed product"}
+                  </p>
+                  <p className="price">
                     {p.price != null ? `${p.price.toFixed(2)} AED` : "TBD"}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "#999",
-                    }}
-                  >
-                    View details →
-                  </span>
+                  </p>
                 </div>
-              </article>
-            </Link>
-          ))}
-        </div>
-      )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
