@@ -1,80 +1,116 @@
-// app/products/page.tsx
+// app/api/products/route.ts
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import Link from "next/link";
 
-export const revalidate = 0; // always fresh
+// ---------- GET /api/products ----------
+export async function GET() {
+  const admin = supabaseAdmin();
 
-export default async function ProductsPage() {
-  const supabase = supabaseAdmin();
-
-  const { data: products, error } = await supabase
+  const { data, error } = await admin
     .from("products")
-    .select("id, name, description, price, image_main")
-    .eq("active", true)
-    .order("name");
+    .select("id, name, description, price, image_main, category_id")
+    .order("name", { ascending: true });
 
   if (error) {
-    console.error("Supabase error:", error);
-    return <div>Error loading products.</div>;
+    console.error("GET /api/products error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 
-  return (
-    <main
-      style={{
-        background: "#0a0a0a",
-        color: "white",
-        minHeight: "100vh",
-        padding: "40px",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h1 style={{ fontSize: "2rem", marginBottom: "20px" }}>All Products</h1>
+  return NextResponse.json({ success: true, products: data ?? [] });
+}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "25px",
-        }}
-      >
-        {products?.map((product) => (
-          <Link
-            key={product.id}
-            href={`/products/${product.id}`}
-            style={{
-              background: "#111",
-              borderRadius: "12px",
-              padding: "20px",
-              textDecoration: "none",
-              color: "white",
-              border: "1px solid #222",
-            }}
-          >
-            {product.image_main && (
-              <img
-                src={product.image_main}
-                alt={product.name}
-                style={{
-                  width: "100%",
-                  height: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  marginBottom: "12px",
-                }}
-              />
-            )}
+// ---------- POST /api/products ----------
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => null);
 
-            <h3 style={{ fontSize: "1.2rem" }}>{product.name}</h3>
-            <p style={{ color: "#aaa", fontSize: "0.9rem" }}>
-              {product.description}
-            </p>
+    if (!body) {
+      return NextResponse.json(
+        { success: false, message: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
-            <p style={{ marginTop: "10px", color: "#c084fc", fontWeight: 600 }}>
-              {product.price} AED
-            </p>
-          </Link>
-        ))}
-      </div>
-    </main>
-  );
+    const { name, description, price, image_main, category_id } = body;
+
+    if (
+      !name ||
+      !image_main ||
+      !category_id ||
+      price === undefined ||
+      price === null
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "name, price, image_main and category_id are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const numericPrice = Number(price);
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid price value" },
+        { status: 400 }
+      );
+    }
+
+    const admin = supabaseAdmin();
+
+    const { error } = await admin.from("products").insert({
+      name: String(name),
+      description: description ? String(description) : "",
+      price: numericPrice,
+      image_main: String(image_main),
+      category_id: String(category_id),
+      active: true,
+    });
+
+    if (error) {
+      console.error("Insert product error:", error);
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Product created" });
+  } catch (e: any) {
+    console.error("POST /api/products exception:", e);
+    return NextResponse.json(
+      { success: false, message: "Unexpected server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// ---------- DELETE /api/products?id=... ----------
+export async function DELETE(req: Request) {
+  const url = new URL(req.url);
+  const id = url.searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Missing 'id' query parameter" },
+      { status: 400 }
+    );
+  }
+
+  const admin = supabaseAdmin();
+  const { error } = await admin.from("products").delete().eq("id", id);
+
+  if (error) {
+    console.error("DELETE /api/products error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, message: "Product deleted" });
 }
