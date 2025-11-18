@@ -37,7 +37,7 @@ export default function Navbar() {
         <div className="nav-contact">
           <span className="nav-contact-item">contact@printly.ae</span>
           <span className="nav-contact-dot">•</span>
-          <span className="nav-contact-item">+971 XX XXX XXXX</span>
+          <span className="nav-contact-item">+971 50 936 3626</span>
         </div>
       </div>
     </nav>
