@@ -48,6 +48,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     .eq("active", true)
     .order("name", { ascending: true });
 
+  // Only filter if category actually chosen
   if (selectedCategory) {
     query = query.eq("category_id", selectedCategory);
   }
