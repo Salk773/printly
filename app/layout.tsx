@@ -5,9 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Printly — Made layer by layer",
-  description: "UAE-based 3D printing marketplace for ready-made and custom parts.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  title: "Printly",
+  description: "UAE 3D printing marketplace – ready-made parts and decor.",
 };
 
 export default function RootLayout({
