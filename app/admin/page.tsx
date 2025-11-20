@@ -1,13 +1,20 @@
-// app/admin/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+
+// ----------------------------
+// SUPABASE CLIENT (anon key)
+// ----------------------------
 import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-const API_CATEGORIES = "/api/categories";
-const API_PRODUCTS = "/api/products";
-
+// ----------------------------
+// TYPES
+// ----------------------------
 interface Category {
   id: string;
   name: string;
@@ -19,273 +26,245 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  image_main: string;
+  image_main: string | null;
   category_id: string;
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
+// ----------------------------
+// MAIN ADMIN PANEL
+// ----------------------------
 export default function AdminPage() {
-  const [authorized, setAuthorized] = useState(false);
-  const [passcodeInput, setPasscodeInput] = useState("");
-
-  const PASSCODE = process.env.NEXT_PUBLIC_ADMIN_PASSCODE;
-
-  const checkPasscode = () => {
-    if (passcodeInput === PASSCODE) setAuthorized(true);
-    else alert("Wrong passcode.");
-  };
+  const [passcode, setPasscode] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
 
   const [tab, setTab] = useState<"products" | "categories">("products");
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadingEdit, setUploadingEdit] = useState(false);
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  // PRODUCT STATES
   const [products, setProducts] = useState<Product[]>([]);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
     price: "",
-    image_main: "",
     category_id: "",
+    image_main: "",
   });
 
+  // CATEGORY STATES
+  const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
 
-  const [editing, setEditing] = useState<Product | null>(null);
-  const [editingDraft, setEditingDraft] = useState({
-    name: "",
-    description: "",
-    price: "",
-    image_main: "",
-    category_id: "",
-  });
+  // IMAGE UPLOAD
+  const [uploading, setUploading] = useState(false);
 
-  async function loadCategories() {
-    const res = await fetch(API_CATEGORIES);
-    const json = await res.json();
-    if (json.success) setCategories(json.categories);
-  }
+  // ----------------------------
+  // LOGIN
+  // ----------------------------
+  const handleLogin = () => {
+    if (passcode === "printlyadmin123") setUnlocked(true);
+    else alert("Wrong passcode");
+  };
 
-  async function loadProducts() {
-    const res = await fetch(API_PRODUCTS);
-    const json = await res.json();
-    if (json.success) setProducts(json.products);
-  }
+  // ----------------------------
+  // FETCH DATA
+  // ----------------------------
+  const fetchProducts = async () => {
+    const { data } = await supabase.from("products").select("*").order("name");
+    setProducts(data || []);
+  };
+
+  const fetchCategories = async () => {
+    const res = await fetch("/api/categories");
+    const data = await res.json();
+    setCategories(data || []);
+  };
 
   useEffect(() => {
-    if (authorized) {
-      loadCategories();
-      loadProducts();
-    }
-  }, [authorized]);
+    fetchProducts();
+    fetchCategories();
+  }, []);
 
-  // --------- IMAGE UPLOAD HELPERS ---------
-  async function uploadImage(file: File): Promise<string | null> {
-    try {
-      setUploading(true);
-      const path = `products/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from("uploads")
-        .upload(path, file);
+  // ----------------------------
+  // FILE UPLOAD TO SUPABASE
+  // ----------------------------
+  const uploadImage = async (file: File) => {
+    setUploading(true);
 
-      if (error) {
-        console.error("Upload error:", error.message);
-        alert("Error uploading image");
-        setUploading(false);
-        return null;
-      }
+    const fileName = `${Date.now()}-${file.name}`;
+    const filePath = `products/${fileName}`;
 
-      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-      setUploading(false);
-      return data.publicUrl;
-    } catch (e) {
-      console.error(e);
+    const { error: uploadError } = await supabase.storage
+      .from("uploads")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      alert("Upload error: " + uploadError.message);
       setUploading(false);
       return null;
     }
-  }
 
-  async function uploadEditImage(file: File): Promise<string | null> {
-    try {
-      setUploadingEdit(true);
-      const path = `products/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from("uploads")
-        .upload(path, file);
+    const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${filePath}`;
 
-      if (error) {
-        console.error("Upload error:", error.message);
-        alert("Error uploading image");
-        setUploadingEdit(false);
-        return null;
-      }
+    setUploading(false);
+    return publicUrl;
+  };
 
-      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-      setUploadingEdit(false);
-      return data.publicUrl;
-    } catch (e) {
-      console.error(e);
-      setUploadingEdit(false);
-      return null;
+  // ----------------------------
+  // ADD NEW PRODUCT
+  // ----------------------------
+  const addProduct = async () => {
+    if (
+      !newProduct.name ||
+      !newProduct.price ||
+      !newProduct.category_id ||
+      !newProduct.image_main
+    ) {
+      alert("Fill all fields");
+      return;
     }
-  }
 
-  // --------- CATEGORY CRUD ---------
-  async function addCategory() {
-    if (!newCategory.trim()) return alert("Category name required.");
-
-    const res = await fetch(API_CATEGORIES, {
+    const res = await fetch("/api/products", {
       method: "POST",
-      body: JSON.stringify({ name: newCategory }),
+      body: JSON.stringify({
+        name: newProduct.name,
+        description: newProduct.description,
+        price: Number(newProduct.price),
+        image_main: newProduct.image_main,
+        category_id: newProduct.category_id,
+      }),
     });
 
-    const json = await res.json();
+    if (!res.ok) {
+      alert("Error adding product");
+      return;
+    }
 
-    if (!json.success) return alert(json.message);
+    setNewProduct({
+      name: "",
+      description: "",
+      price: "",
+      category_id: "",
+      image_main: "",
+    });
+
+    fetchProducts();
+  };
+
+  // ----------------------------
+  // DELETE PRODUCT
+  // ----------------------------
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Delete this product?")) return;
+
+    const res = await fetch("/api/products", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    });
+
+    if (!res.ok) {
+      alert("Delete failed");
+      return;
+    }
+
+    fetchProducts();
+  };
+
+  // ----------------------------
+  // EDIT PRODUCT
+  // ----------------------------
+  const saveEdit = async () => {
+    if (!editingProduct) return;
+
+    const res = await fetch("/api/products", {
+      method: "PUT",
+      body: JSON.stringify(editingProduct),
+    });
+
+    if (!res.ok) {
+      alert("Error updating product");
+      return;
+    }
+
+    setEditingProduct(null);
+    fetchProducts();
+  };
+
+  // ----------------------------
+  // ADD CATEGORY
+  // ----------------------------
+  const addCategory = async () => {
+    if (!newCategory.trim()) return;
+
+    const res = await fetch("/api/categories", {
+      method: "POST",
+      body: JSON.stringify({ name: newCategory.trim() }),
+    });
+
+    if (!res.ok) {
+      alert("Category error");
+      return;
+    }
 
     setNewCategory("");
-    loadCategories();
-  }
+    fetchCategories();
+  };
 
-  async function deleteCategory(id: string) {
+  // ----------------------------
+  // DELETE CATEGORY
+  // ----------------------------
+  const deleteCategory = async (id: string) => {
     if (!confirm("Delete category?")) return;
 
-    const res = await fetch(`${API_CATEGORIES}?id=${id}`, {
+    await fetch("/api/categories", {
       method: "DELETE",
+      body: JSON.stringify({ id }),
     });
 
-    const json = await res.json();
-    if (!json.success) alert(json.message);
-    else loadCategories();
-  }
+    fetchCategories();
+  };
 
-  // --------- PRODUCT CRUD ---------
-  async function addProduct() {
-    const { name, description, price, image_main, category_id } = newProduct;
-
-    if (!name || !price || !image_main || !category_id)
-      return alert("Please fill all fields and upload an image");
-
-    setLoading(true);
-
-    const res = await fetch(API_PRODUCTS, {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        description,
-        price: parseFloat(price),
-        image_main,
-        category_id,
-      }),
-    });
-
-    const json = await res.json();
-
-    if (!json.success) alert(json.message);
-    else {
-      setNewProduct({
-        name: "",
-        description: "",
-        price: "",
-        image_main: "",
-        category_id: "",
-      });
-      loadProducts();
-    }
-
-    setLoading(false);
-  }
-
-  async function deleteProduct(id: string) {
-    if (!confirm("Delete product?")) return;
-
-    const res = await fetch(`${API_PRODUCTS}?id=${id}`, {
-      method: "DELETE",
-    });
-
-    const json = await res.json();
-    if (!json.success) alert(json.message);
-    else loadProducts();
-  }
-
-  function openEdit(p: Product) {
-    setEditing(p);
-    setEditingDraft({
-      name: p.name,
-      description: p.description || "",
-      price: p.price.toString(),
-      image_main: p.image_main,
-      category_id: p.category_id,
-    });
-  }
-
-  async function saveEdit() {
-    if (!editing) return;
-
-    const { name, description, price, image_main, category_id } =
-      editingDraft;
-
-    if (!name || !price || !category_id)
-      return alert("Name, price and category are required");
-
-    const res = await fetch(API_PRODUCTS, {
-      method: "PATCH",
-      body: JSON.stringify({
-        id: editing.id,
-        name,
-        description,
-        price: parseFloat(price),
-        image_main,
-        category_id,
-      }),
-    });
-
-    const json = await res.json();
-    if (!json.success) alert(json.message);
-    else {
-      setEditing(null);
-      loadProducts();
-    }
-  }
-
-  // --------- RENDER ---------
-
-  if (!authorized) {
+  // ------------------------------------------------
+  // UI STARTS HERE
+  // ------------------------------------------------
+  if (!unlocked) {
     return (
       <main
         style={{
           background: "#0a0a0a",
-          color: "#fff",
+          color: "white",
           minHeight: "100vh",
           display: "flex",
-          justifyContent: "center",
           alignItems: "center",
+          justifyContent: "center",
           flexDirection: "column",
-          gap: "15px",
         }}
       >
-        <h2>Admin Login</h2>
+        <h1>Admin Login</h1>
+
         <input
-          type="password"
-          placeholder="Enter Admin Passcode"
-          value={passcodeInput}
-          onChange={(e) => setPasscodeInput(e.target.value)}
-          style={{ padding: "10px", width: "240px" }}
-        />
-        <button
-          onClick={checkPasscode}
           style={{
-            background: "#c084fc",
-            border: "none",
+            marginTop: "10px",
+            padding: "10px",
+            width: "200px",
+            borderRadius: "6px",
+          }}
+          placeholder="Passcode"
+          type="password"
+          value={passcode}
+          onChange={(e) => setPasscode(e.target.value)}
+        />
+
+        <button
+          onClick={handleLogin}
+          style={{
+            marginTop: "15px",
             padding: "10px 20px",
-            borderRadius: "8px",
+            background: "#c084fc",
+            borderRadius: "6px",
+            color: "#000",
             cursor: "pointer",
-            fontWeight: 700,
+            fontWeight: 600,
           }}
         >
           Enter
@@ -294,29 +273,29 @@ export default function AdminPage() {
     );
   }
 
+  // ------------------------------------------------
+  // FULL ADMIN PANEL
+  // ------------------------------------------------
   return (
     <main
       style={{
         background: "#0a0a0a",
         color: "#fff",
-        fontFamily: "system-ui",
-        padding: "30px",
         minHeight: "100vh",
+        padding: "40px",
       }}
     >
-      <h1>🛠️ Admin Panel</h1>
+      <h1 style={{ marginBottom: "20px" }}>🛠️ Admin Dashboard</h1>
 
       {/* TABS */}
-      <div style={{ marginTop: "20px", display: "flex", gap: "15px" }}>
+      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
         <button
           onClick={() => setTab("products")}
           style={{
-            background: tab === "products" ? "#c084fc" : "#333",
-            padding: "10px 18px",
+            background: tab === "products" ? "#c084fc" : "#222",
+            padding: "10px 20px",
             borderRadius: "8px",
-            border: "none",
             cursor: "pointer",
-            color: "#fff",
           }}
         >
           Products
@@ -325,135 +304,129 @@ export default function AdminPage() {
         <button
           onClick={() => setTab("categories")}
           style={{
-            background: tab === "categories" ? "#c084fc" : "#333",
-            padding: "10px 18px",
+            background: tab === "categories" ? "#c084fc" : "#222",
+            padding: "10px 20px",
             borderRadius: "8px",
-            border: "none",
             cursor: "pointer",
-            color: "#fff",
           }}
         >
           Categories
         </button>
       </div>
 
+      {/* ---------------------------- */}
       {/* PRODUCTS TAB */}
+      {/* ---------------------------- */}
       {tab === "products" && (
         <>
-          <h2 style={{ marginTop: "30px" }}>Add Product</h2>
+          <h2>Add Product</h2>
 
-          <div
-            style={{
-              background: "#111",
-              padding: "20px",
-              borderRadius: "12px",
-              marginTop: "15px",
+          {/* UPLOAD IMAGE */}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ marginTop: "10px" }}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+
+              const url = await uploadImage(file);
+              if (url) setNewProduct({ ...newProduct, image_main: url });
             }}
-          >
-            <div style={{ display: "grid", gap: "10px" }}>
-              <input
-                placeholder="Product Name"
-                value={newProduct.name}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, name: e.target.value })
-                }
-              />
-              <input
-                placeholder="Price (AED)"
-                type="number"
-                value={newProduct.price}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, price: e.target.value })
-                }
-              />
-              <select
-                value={newProduct.category_id}
-                onChange={(e) =>
-                  setNewProduct({
-                    ...newProduct,
-                    category_id: e.target.value,
-                  })
-                }
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+          />
 
-              {/* Image upload */}
-              <div>
-                <label style={{ fontSize: "0.85rem" }}>
-                  Product Image (upload):
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const url = await uploadImage(file);
-                    if (url) {
-                      setNewProduct((prev) => ({
-                        ...prev,
-                        image_main: url,
-                      }));
-                    }
-                  }}
-                />
-                {uploading && (
-                  <p style={{ fontSize: "0.8rem", color: "#c084fc" }}>
-                    Uploading...
-                  </p>
-                )}
-                {newProduct.image_main && (
-                  <p style={{ fontSize: "0.8rem", color: "#0f0" }}>
-                    Image set ✔
-                  </p>
-                )}
-              </div>
+          {newProduct.image_main && (
+            <Image
+              src={newProduct.image_main}
+              alt="preview"
+              width={300}
+              height={200}
+              unoptimized
+              style={{
+                marginTop: "10px",
+                borderRadius: "8px",
+                border: "1px solid #333",
+              }}
+            />
+          )}
 
-              <textarea
-                placeholder="Description"
-                value={newProduct.description}
-                onChange={(e) =>
-                  setNewProduct({
-                    ...newProduct,
-                    description: e.target.value,
-                  })
-                }
-                style={{ minHeight: "80px" }}
-              />
-            </div>
+          {/* PRODUCT FORM */}
+          <div style={{ marginTop: "20px" }}>
+            <input
+              placeholder="Name"
+              value={newProduct.name}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, name: e.target.value })
+              }
+              style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
+            />
+
+            <textarea
+              placeholder="Description"
+              value={newProduct.description}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, description: e.target.value })
+              }
+              style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
+            />
+
+            <input
+              placeholder="Price"
+              type="number"
+              value={newProduct.price}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, price: e.target.value })
+              }
+              style={{ padding: "10px", width: "100%", marginBottom: "10px" }}
+            />
+
+            <select
+              style={{
+                padding: "10px",
+                width: "100%",
+                marginBottom: "10px",
+                background: "#111",
+                color: "#fff",
+              }}
+              value={newProduct.category_id}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, category_id: e.target.value })
+              }
+            >
+              <option value="">Select Category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
             <button
               onClick={addProduct}
-              disabled={loading}
+              disabled={uploading}
               style={{
-                marginTop: "15px",
-                background: "#c084fc",
                 padding: "10px 20px",
+                background: "#c084fc",
                 borderRadius: "8px",
-                border: "none",
-                cursor: "pointer",
                 color: "#000",
-                fontWeight: 700,
+                fontWeight: 600,
+                cursor: "pointer",
               }}
             >
-              {loading ? "Adding..." : "Add Product"}
+              {uploading ? "Uploading..." : "Add Product"}
             </button>
           </div>
 
-          {/* PRODUCT LIST */}
-          <h2 style={{ marginTop: "40px" }}>All Products</h2>
+          <hr style={{ margin: "40px 0", borderColor: "#333" }} />
+
+          <h2>All Products</h2>
+
           <div
             style={{
-              marginTop: "20px",
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
               gap: "20px",
+              marginTop: "20px",
             }}
           >
             {products.map((p) => (
@@ -462,7 +435,8 @@ export default function AdminPage() {
                 style={{
                   background: "#111",
                   padding: "15px",
-                  borderRadius: "10px",
+                  borderRadius: "12px",
+                  border: "1px solid #222",
                 }}
               >
                 {p.image_main && (
@@ -471,107 +445,198 @@ export default function AdminPage() {
                     alt={p.name}
                     width={300}
                     height={200}
-                    style={{ width: "100%", borderRadius: "8px" }}
+                    unoptimized
+                    style={{
+                      borderRadius: "8px",
+                      width: "100%",
+                      height: "auto",
+                      marginBottom: "10px",
+                    }}
                   />
                 )}
-                <h3 style={{ marginTop: "10px" }}>{p.name}</h3>
+
+                <h3>{p.name}</h3>
                 <p style={{ color: "#aaa" }}>{p.description}</p>
-                <p style={{ marginTop: "5px", color: "#c084fc" }}>
+                <p style={{ color: "#c084fc", fontWeight: 600 }}>
                   {p.price} AED
                 </p>
 
-                <div
+                {/* EDIT BUTTON */}
+                <button
+                  onClick={() => setEditingProduct(p)}
                   style={{
-                    display: "flex",
-                    gap: "8px",
                     marginTop: "10px",
+                    padding: "6px 12px",
+                    background: "#c084fc",
+                    borderRadius: "6px",
+                    color: "#000",
+                    cursor: "pointer",
+                    width: "100%",
                   }}
                 >
-                  <button
-                    onClick={() => openEdit(p)}
-                    style={{
-                      flex: 1,
-                      background: "#444",
-                      color: "#fff",
-                      padding: "8px",
-                      borderRadius: "6px",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteProduct(p.id)}
-                    style={{
-                      flex: 1,
-                      background: "red",
-                      color: "#fff",
-                      padding: "8px",
-                      borderRadius: "6px",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
+                  Edit
+                </button>
+
+                {/* DELETE BUTTON */}
+                <button
+                  onClick={() => deleteProduct(p.id)}
+                  style={{
+                    marginTop: "10px",
+                    padding: "6px 12px",
+                    background: "red",
+                    borderRadius: "6px",
+                    color: "#fff",
+                    cursor: "pointer",
+                    width: "100%",
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             ))}
           </div>
         </>
       )}
 
+      {/* ---------------------------- */}
+      {/* EDIT POPUP */}
+      {/* ---------------------------- */}
+      {editingProduct && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 999,
+          }}
+        >
+          <div
+            style={{
+              background: "#111",
+              padding: "30px",
+              borderRadius: "12px",
+              width: "400px",
+            }}
+          >
+            <h3>Edit Product</h3>
+
+            <input
+              value={editingProduct.name}
+              onChange={(e) =>
+                setEditingProduct({ ...editingProduct, name: e.target.value })
+              }
+              style={{ padding: "10px", width: "100%", marginTop: "10px" }}
+            />
+
+            <textarea
+              value={editingProduct.description}
+              onChange={(e) =>
+                setEditingProduct({
+                  ...editingProduct,
+                  description: e.target.value,
+                })
+              }
+              style={{ padding: "10px", width: "100%", marginTop: "10px" }}
+            />
+
+            <input
+              type="number"
+              value={editingProduct.price}
+              onChange={(e) =>
+                setEditingProduct({
+                  ...editingProduct,
+                  price: Number(e.target.value),
+                })
+              }
+              style={{ padding: "10px", width: "100%", marginTop: "10px" }}
+            />
+
+            <button
+              onClick={saveEdit}
+              style={{
+                padding: "10px 20px",
+                background: "#c084fc",
+                color: "#000",
+                borderRadius: "8px",
+                marginTop: "20px",
+                width: "100%",
+              }}
+            >
+              Save
+            </button>
+
+            <button
+              onClick={() => setEditingProduct(null)}
+              style={{
+                marginTop: "10px",
+                padding: "10px 20px",
+                width: "100%",
+                background: "#333",
+                color: "#fff",
+                borderRadius: "6px",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------- */}
       {/* CATEGORIES TAB */}
+      {/* ---------------------------- */}
       {tab === "categories" && (
         <>
-          <h2 style={{ marginTop: "30px" }}>Add Category</h2>
-          <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+          <h2>Add Category</h2>
+
+          <div style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
             <input
-              placeholder="Category Name"
+              placeholder="Category name"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               style={{ padding: "10px", flex: 1 }}
             />
+
             <button
               onClick={addCategory}
               style={{
-                background: "#c084fc",
                 padding: "10px 20px",
-                borderRadius: "8px",
-                border: "none",
-                cursor: "pointer",
+                background: "#c084fc",
                 color: "#000",
-                fontWeight: 700,
+                borderRadius: "6px",
               }}
             >
               Add
             </button>
           </div>
 
-          <ul style={{ marginTop: "30px", listStyle: "none", padding: 0 }}>
-            {categories.map((c) => (
+          <ul style={{ marginTop: "30px" }}>
+            {categories.map((cat) => (
               <li
-                key={c.id}
+                key={cat.id}
                 style={{
                   background: "#111",
                   padding: "12px",
                   borderRadius: "8px",
+                  marginBottom: "10px",
                   display: "flex",
                   justifyContent: "space-between",
-                  marginBottom: "10px",
                 }}
               >
-                <span>
-                  {c.name} <span style={{ color: "#777" }}>({c.slug})</span>
-                </span>
+                {cat.name}
+
                 <button
-                  onClick={() => deleteCategory(c.id)}
+                  onClick={() => deleteCategory(cat.id)}
                   style={{
                     background: "red",
                     color: "#fff",
-                    border: "none",
-                    padding: "5px 10px",
+                    padding: "6px 12px",
                     borderRadius: "6px",
                     cursor: "pointer",
                   }}
@@ -582,152 +647,6 @@ export default function AdminPage() {
             ))}
           </ul>
         </>
-      )}
-
-      {/* EDIT MODAL */}
-      {editing && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.7)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              background: "#111",
-              padding: "20px",
-              borderRadius: "12px",
-              maxWidth: "500px",
-              width: "100%",
-            }}
-          >
-            <h2>Edit Product</h2>
-            <div style={{ display: "grid", gap: "10px", marginTop: "10px" }}>
-              <input
-                placeholder="Product Name"
-                value={editingDraft.name}
-                onChange={(e) =>
-                  setEditingDraft((prev) => ({
-                    ...prev,
-                    name: e.target.value,
-                  }))
-                }
-              />
-              <input
-                placeholder="Price (AED)"
-                type="number"
-                value={editingDraft.price}
-                onChange={(e) =>
-                  setEditingDraft((prev) => ({
-                    ...prev,
-                    price: e.target.value,
-                  }))
-                }
-              />
-              <select
-                value={editingDraft.category_id}
-                onChange={(e) =>
-                  setEditingDraft((prev) => ({
-                    ...prev,
-                    category_id: e.target.value,
-                  }))
-                }
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-
-              <div>
-                <label style={{ fontSize: "0.85rem" }}>
-                  Product Image (upload to replace):
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const url = await uploadEditImage(file);
-                    if (url) {
-                      setEditingDraft((prev) => ({
-                        ...prev,
-                        image_main: url,
-                      }));
-                    }
-                  }}
-                />
-                {uploadingEdit && (
-                  <p style={{ fontSize: "0.8rem", color: "#c084fc" }}>
-                    Uploading...
-                  </p>
-                )}
-                {editingDraft.image_main && (
-                  <p style={{ fontSize: "0.8rem", color: "#0f0" }}>
-                    Image set ✔
-                  </p>
-                )}
-              </div>
-
-              <textarea
-                placeholder="Description"
-                value={editingDraft.description}
-                onChange={(e) =>
-                  setEditingDraft((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                style={{ minHeight: "80px" }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                marginTop: "16px",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                onClick={() => setEditing(null)}
-                style={{
-                  background: "#333",
-                  color: "#fff",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveEdit}
-                style={{
-                  background: "#c084fc",
-                  color: "#000",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </main>
   );
