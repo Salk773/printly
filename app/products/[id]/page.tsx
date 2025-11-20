@@ -5,19 +5,29 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 0; // disable caching
 
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  image_main: string | null;
+}
+
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const supabase = supabaseServer();
 
-  const { data: product, error } = await supabase
+  const { data, error } = await supabase
     .from("products")
     .select("*")
     .eq("id", params.id)
     .single();
 
-  if (error || !product) {
+  if (error || !data) {
     console.error(error);
     return notFound();
   }
+
+  const product = data as Product;
 
   return (
     <main
@@ -74,7 +84,6 @@ export default async function ProductPage({ params }: { params: { id: string } }
             )}
           </div>
 
-          {/* DETAILS */}
           <div>
             <p style={{ color: "#ccc", fontSize: "1.1rem" }}>
               {product.description}
@@ -88,7 +97,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 fontWeight: 700,
               }}
             >
-              {product.price} AED
+              {product.price != null ? `${product.price} AED` : "Price on request"}
             </p>
 
             <div
