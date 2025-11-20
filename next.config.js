@@ -1,12 +1,15 @@
-/** @type {import('next').NextConfig} */
+/** @type {import("next").NextConfig} */
 const nextConfig = {
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-      // ⬇️ Replace "YOUR-PROJECT-REF.supabase.co" with your actual Supabase hostname
-      { protocol: 'https', hostname: 'YOUR-PROJECT-REF.supabase.co' },
+      {
+        protocol: "https",
+        hostname: "qctqgifnvhfstvqfnafn.supabase.co",
+        port: "",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
   },
-  reactStrictMode: true,
 };
+
 module.exports = nextConfig;
