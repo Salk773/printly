@@ -1,20 +1,11 @@
+// app/products/[id]/page.tsx
 import { supabaseServer } from "@/lib/supabaseServer";
 import Image from "next/image";
+import { notFound } from "next/navigation";
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_main: string | null;
-  category_id: string;
-}
+export const revalidate = 0; // disable caching
 
-export default async function ProductPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function ProductPage({ params }: { params: { id: string } }) {
   const supabase = supabaseServer();
 
   const { data: product, error } = await supabase
@@ -24,12 +15,8 @@ export default async function ProductPage({
     .single();
 
   if (error || !product) {
-    return (
-      <div style={{ padding: "40px", color: "#fff" }}>
-        <h1>Product not found</h1>
-        <p>{error?.message}</p>
-      </div>
-    );
+    console.error(error);
+    return notFound();
   }
 
   return (
@@ -37,14 +24,12 @@ export default async function ProductPage({
       style={{
         background: "#0a0a0a",
         color: "#fff",
-        fontFamily: "system-ui, sans-serif",
         minHeight: "100vh",
         padding: "40px",
       }}
     >
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        {/* PRODUCT TITLE */}
-        <h1 style={{ fontSize: "2.5rem", marginBottom: "30px" }}>
+        <h1 style={{ fontSize: "2.4rem", marginBottom: "20px" }}>
           {product.name}
         </h1>
 
@@ -55,7 +40,6 @@ export default async function ProductPage({
             gap: "40px",
           }}
         >
-          {/* PRODUCT IMAGE */}
           <div>
             {product.image_main ? (
               <Image
@@ -70,7 +54,6 @@ export default async function ProductPage({
                   borderRadius: "12px",
                   objectFit: "contain",
                   background: "#000",
-                  padding: "10px",
                 }}
               />
             ) : (
@@ -84,17 +67,16 @@ export default async function ProductPage({
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#555",
-                  fontSize: "1.2rem",
                 }}
               >
-                No image available
+                No image
               </div>
             )}
           </div>
 
-          {/* PRODUCT DETAILS */}
+          {/* DETAILS */}
           <div>
-            <p style={{ fontSize: "1.2rem", color: "#ccc" }}>
+            <p style={{ color: "#ccc", fontSize: "1.1rem" }}>
               {product.description}
             </p>
 
@@ -102,8 +84,8 @@ export default async function ProductPage({
               style={{
                 marginTop: "20px",
                 fontSize: "2rem",
-                fontWeight: 600,
                 color: "#c084fc",
+                fontWeight: 700,
               }}
             >
               {product.price} AED
@@ -118,10 +100,9 @@ export default async function ProductPage({
                 border: "1px solid #222",
               }}
             >
-              <h3>Printing options (coming soon)</h3>
-              <p style={{ marginTop: "10px", color: "#bbb" }}>
-                Later you’ll be able to pick material (PLA+ / PETG), colours and
-                quantity here. For now this is a read-only product preview.
+              <h3>Printing options (soon)</h3>
+              <p style={{ marginTop: "12px", color: "#999" }}>
+                Material, colour and quantity options will appear here later.
               </p>
             </div>
           </div>
