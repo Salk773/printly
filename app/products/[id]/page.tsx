@@ -1,75 +1,131 @@
-// app/products/[id]/page.tsx
-import { notFound } from "next/navigation";
-import Image from "next/image";
 import { supabaseServer } from "@/lib/supabaseServer";
+import Image from "next/image";
 
-type Product = {
+interface Product {
   id: string;
   name: string;
-  description: string | null;
-  price: number | null;
+  description: string;
+  price: number;
   image_main: string | null;
-};
-
-interface ProductPageProps {
-  params: { id: string };
+  category_id: string;
 }
 
-export const metadata = {
-  title: "Product | Printly",
-};
-
-export default async function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const supabase = supabaseServer();
 
-  const { data, error } = await supabase
+  const { data: product, error } = await supabase
     .from("products")
-    .select("id, name, description, price, image_main")
+    .select("*")
     .eq("id", params.id)
-    .maybeSingle();
+    .single();
 
-  if (error) {
-    console.error("Error loading product:", error.message);
+  if (error || !product) {
+    return (
+      <div style={{ padding: "40px", color: "#fff" }}>
+        <h1>Product not found</h1>
+        <p>{error?.message}</p>
+      </div>
+    );
   }
 
-  if (!data) return notFound();
-
-  const p = data as Product;
-
   return (
-    <main className="section">
-      <div className="container product-layout">
-        <section>
-          {p.image_main && (
-            <div className="product-detail-image">
+    <main
+      style={{
+        background: "#0a0a0a",
+        color: "#fff",
+        fontFamily: "system-ui, sans-serif",
+        minHeight: "100vh",
+        padding: "40px",
+      }}
+    >
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        {/* PRODUCT TITLE */}
+        <h1 style={{ fontSize: "2.5rem", marginBottom: "30px" }}>
+          {product.name}
+        </h1>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "40px",
+          }}
+        >
+          {/* PRODUCT IMAGE */}
+          <div>
+            {product.image_main ? (
               <Image
-                src={p.image_main}
-                alt={p.name}
-                fill
-                sizes="(max-width: 900px) 100vw, 50vw"
-                style={{ objectFit: "cover" }}
+                src={product.image_main}
+                alt={product.name}
+                width={1200}
+                height={900}
+                unoptimized
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: "12px",
+                  objectFit: "contain",
+                  background: "#000",
+                  padding: "10px",
+                }}
               />
-            </div>
-          )}
-        </section>
-
-        <section className="product-detail-info">
-          <h1>{p.name}</h1>
-          <p className="muted" style={{ marginBottom: "16px" }}>
-            {p.description || "3D printed item."}
-          </p>
-          <p className="price-lg">
-            {p.price != null ? `${p.price.toFixed(2)} AED` : "Price on request"}
-          </p>
-
-          <div className="card" style={{ marginTop: "16px" }}>
-            <h2 className="small">Printing options (coming soon)</h2>
-            <p className="muted small">
-              Later you’ll be able to pick material (PLA+ / PETG), colours and
-              quantity here. For now this is a read-only product preview.
-            </p>
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "400px",
+                  background: "#111",
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#555",
+                  fontSize: "1.2rem",
+                }}
+              >
+                No image available
+              </div>
+            )}
           </div>
-        </section>
+
+          {/* PRODUCT DETAILS */}
+          <div>
+            <p style={{ fontSize: "1.2rem", color: "#ccc" }}>
+              {product.description}
+            </p>
+
+            <p
+              style={{
+                marginTop: "20px",
+                fontSize: "2rem",
+                fontWeight: 600,
+                color: "#c084fc",
+              }}
+            >
+              {product.price} AED
+            </p>
+
+            <div
+              style={{
+                marginTop: "40px",
+                padding: "20px",
+                background: "#111",
+                borderRadius: "12px",
+                border: "1px solid #222",
+              }}
+            >
+              <h3>Printing options (coming soon)</h3>
+              <p style={{ marginTop: "10px", color: "#bbb" }}>
+                Later you’ll be able to pick material (PLA+ / PETG), colours and
+                quantity here. For now this is a read-only product preview.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
