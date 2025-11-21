@@ -1,6 +1,7 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
+import toast from "react-hot-toast";
 
 export default function AddToCartButton({
   id,
@@ -11,25 +12,26 @@ export default function AddToCartButton({
   id: string;
   name: string;
   price: number;
-  image: string | null;
+  image: string;
 }) {
-  const { addToCart } = useCart();
+  const { addItem } = useCart();
 
-  const handleClick = () => {
-    addToCart({ id, name, price, image, quantity: 1 });
+  const handleAdd = () => {
+    addItem({ id, name, price, image, quantity: 1 });
+    toast.success("Added to cart!");
   };
 
   return (
     <button
-      onClick={handleClick}
+      onClick={handleAdd}
       style={{
-        padding: "8px 14px",
-        borderRadius: "8px",
-        background: "#c084fc",
-        border: "none",
+        padding: "10px 16px",
+        backgroundColor: "#c084fc",
         color: "#000",
-        cursor: "pointer",
+        border: "none",
+        borderRadius: "6px",
         fontWeight: 600,
+        cursor: "pointer",
       }}
     >
       Add to Cart
