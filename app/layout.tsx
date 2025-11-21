@@ -1,9 +1,5 @@
-"use client";
-
 import "./globals.css";
-import { CartProvider } from "@/context/CartContext";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ClientWrapper from "@/components/ClientWrapper";
 
 export const metadata = {
   title: "Printly",
@@ -18,11 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body style={{ margin: 0 }}>
-        <CartProvider>
-          <Navbar />
-          {children}
-          <Footer />
-        </CartProvider>
+        <ClientWrapper>{children}</ClientWrapper>
       </body>
     </html>
   );
