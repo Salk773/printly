@@ -1,43 +1,29 @@
 import "./globals.css";
-import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/lib/cartContext";
-import CartDrawer from "@/components/CartDrawer";
+import { CartProvider } from "@/context/CartContext";
+import { Toaster } from "react-hot-toast";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Printly",
-  description: "Made layer by layer.",
+  description: "3D Printing Marketplace",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body
         style={{
-          margin: 0,
-          background: "radial-gradient(circle at top, #020617, #020617 55%)",
-          color: "#e5e7eb",
-          minHeight: "100vh",
+          background: "#0a0a0a",
+          color: "white",
+          fontFamily: "system-ui, sans-serif",
         }}
       >
         <CartProvider>
           <Navbar />
-          <div
-            style={{
-              maxWidth: "1100px",
-              margin: "0 auto",
-              padding: "24px 16px 60px",
-            }}
-          >
-            {children}
-          </div>
+          <main>{children}</main>
           <Footer />
-          <CartDrawer />
+          <Toaster position="top-center" />
         </CartProvider>
       </body>
     </html>
