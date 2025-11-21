@@ -1,75 +1,67 @@
-// components/AddToCartButton.tsx
 "use client";
 
 import { useState } from "react";
+import { useCart } from "@/lib/cartContext";
 
-interface AddToCartButtonProps {
+type Props = {
   product: {
     id: string;
     name: string;
-    price: number | null;
-    image_main: string | null;
+    price: number;
+    image_main?: string | null;
   };
-}
-
-type CartItem = {
-  id: string;
-  name: string;
-  price: number | null;
-  image_main: string | null;
-  quantity: number;
 };
 
-export default function AddToCartButton({ product }: AddToCartButtonProps) {
-  const [adding, setAdding] = useState(false);
+export default function AddToCartButton({ product }: Props) {
+  const { addItem } = useCart();
+  const [loading, setLoading] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
-  const handleAdd = () => {
-    setAdding(true);
+  const handleClick = () => {
+    if (loading) return;
+    setLoading(true);
 
-    try {
-      const raw = localStorage.getItem("printly_cart");
-      const current: CartItem[] = raw ? JSON.parse(raw) : [];
+    addItem(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image_main ?? undefined,
+      },
+      1
+    );
 
-      const existing = current.find((item) => item.id === product.id);
-
-      if (existing) {
-        existing.quantity += 1;
-      } else {
-        current.push({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image_main: product.image_main,
-          quantity: 1,
-        });
-      }
-
-      localStorage.setItem("printly_cart", JSON.stringify(current));
-      alert("Added to cart ✅");
-    } catch (e) {
-      console.error(e);
-      alert("Could not add to cart");
-    }
-
-    setAdding(false);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
+    setLoading(false);
   };
 
   return (
     <button
-      onClick={handleAdd}
-      disabled={adding}
+      onClick={handleClick}
+      disabled={loading}
       style={{
-        marginTop: "20px",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
         padding: "10px 18px",
-        borderRadius: "999px",
+        borderRadius: 999,
         border: "none",
-        background: "#c084fc",
-        color: "#000",
-        fontWeight: 600,
         cursor: "pointer",
+        fontWeight: 600,
+        fontSize: "0.9rem",
+        background:
+          "linear-gradient(135deg, #c084fc, #7c3aed, #22d3ee)",
+        color: "#020617",
+        boxShadow: "0 10px 25px rgba(59,130,246,0.35)",
       }}
     >
-      {adding ? "Adding..." : "Add to cart"}
+      {loading ? "Adding..." : "Add to Cart"}
+      {justAdded && (
+        <span style={{ fontSize: "1rem" }} aria-hidden="true">
+          ✅
+        </span>
+      )}
     </button>
   );
 }
