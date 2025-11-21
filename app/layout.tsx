@@ -1,12 +1,13 @@
-// app/layout.tsx
+import "./global.css";
 import type { Metadata } from "next";
-import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { CartProvider } from "@/lib/cartContext";
+import CartDrawer from "@/components/CartDrawer";
 
 export const metadata: Metadata = {
   title: "Printly",
-  description: "UAE 3D printing marketplace – ready-made parts and decor.",
+  description: "Made layer by layer.",
 };
 
 export default function RootLayout({
@@ -16,10 +17,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="printly-body">
-        <Navbar />
-        <div className="page-shell">{children}</div>
-        <Footer />
+      <body
+        style={{
+          margin: 0,
+          background: "radial-gradient(circle at top, #020617, #020617 55%)",
+          color: "#e5e7eb",
+          minHeight: "100vh",
+        }}
+      >
+        <CartProvider>
+          <Navbar />
+          <div
+            style={{
+              maxWidth: "1100px",
+              margin: "0 auto",
+              padding: "24px 16px 60px",
+            }}
+          >
+            {children}
+          </div>
+          <Footer />
+          <CartDrawer />
+        </CartProvider>
       </body>
     </html>
   );
