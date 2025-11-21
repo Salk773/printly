@@ -1,31 +1,39 @@
-// app/products/[id]/page.tsx
-import { supabaseServer } from "@/lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
-import { notFound } from "next/navigation";
 import AddToCartButton from "@/components/AddToCartButton";
 
-export const revalidate = 0;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface Product {
+type Product = {
   id: string;
   name: string;
   description: string | null;
-  price: number | null;
+  price: number;
   image_main: string | null;
-}
+};
 
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const supabase = supabaseServer();
+export const revalidate = 60;
 
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select("id,name,description,price,image_main,active")
     .eq("id", params.id)
-    .single();
+    .eq("active", true)
+    .maybeSingle();
 
   if (error || !data) {
-    console.error(error);
-    return notFound();
+    return (
+      <main>
+        <p>Product not found.</p>
+      </main>
+    );
   }
 
   const product = data as Product;
@@ -33,93 +41,116 @@ export default async function ProductPage({ params }: { params: { id: string } }
   return (
     <main
       style={{
-        background: "#0a0a0a",
-        color: "#fff",
-        minHeight: "100vh",
-        padding: "40px",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+        gap: 28,
       }}
     >
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        <h1 style={{ fontSize: "2.4rem", marginBottom: "20px" }}>
-          {product.name}
-        </h1>
+      {/* Image */}
+      <div
+        style={{
+          borderRadius: 20,
+          overflow: "hidden",
+          background:
+            "radial-gradient(circle at top left, #1e293b, #020617)",
+          border: "1px solid rgba(148,163,184,0.4)",
+          position: "relative",
+          minHeight: 320,
+        }}
+      >
+        {product.image_main ? (
+          <Image
+            src={product.image_main}
+            alt={product.name}
+            fill
+            style={{ objectFit: "contain" }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#6b7280",
+            }}
+          >
+            No image available
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <section
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: "1.8rem",
+              marginBottom: 4,
+            }}
+          >
+            {product.name}
+          </h1>
+          <p style={{ color: "#9ca3af" }}>
+            {product.description || "Custom 3D printed product."}
+          </p>
+        </div>
+
+        <div>
+          <div
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: 600,
+              marginBottom: 4,
+            }}
+          >
+            {product.price.toFixed(2)} AED
+          </div>
+          <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
+            Final price may vary slightly with material and size options.
+          </p>
+        </div>
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "40px",
+            marginTop: 10,
+            padding: "16px 16px 14px",
+            borderRadius: 16,
+            background: "rgba(15,23,42,0.9)",
+            border: "1px solid rgba(148,163,184,0.4)",
           }}
         >
-          <div>
-            {product.image_main ? (
-              <Image
-                src={product.image_main}
-                alt={product.name}
-                width={1200}
-                height={900}
-                unoptimized
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: "12px",
-                  objectFit: "contain",
-                  background: "#000",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "400px",
-                  background: "#111",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#555",
-                }}
-              >
-                No image
-              </div>
-            )}
-          </div>
-
-          <div>
-            <p style={{ color: "#ccc", fontSize: "1.1rem" }}>
-              {product.description}
-            </p>
-
-            <p
-              style={{
-                marginTop: "20px",
-                fontSize: "2rem",
-                color: "#c084fc",
-                fontWeight: 700,
-              }}
-            >
-              {product.price != null ? `${product.price} AED` : "Price on request"}
-            </p>
-
-            <AddToCartButton product={product} />
-
-            <div
-              style={{
-                marginTop: "40px",
-                padding: "20px",
-                background: "#111",
-                borderRadius: "12px",
-                border: "1px solid #222",
-              }}
-            >
-              <h3>Printing options (coming soon)</h3>
-              <p style={{ marginTop: "12px", color: "#999" }}>
-                Material, colour and quantity options will appear here later.
-              </p>
-            </div>
-          </div>
+          <h2
+            style={{
+              fontSize: "0.95rem",
+              marginBottom: 6,
+              fontWeight: 600,
+            }}
+          >
+            Printing options (coming soon)
+          </h2>
+          <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
+            Later you&apos;ll be able to pick material (PLA+ / PETG), colours
+            and quantity here. For now this is a read-only product preview.
+          </p>
         </div>
-      </div>
+
+        <AddToCartButton
+          product={{
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image_main: product.image_main,
+          }}
+        />
+      </section>
     </main>
   );
 }
