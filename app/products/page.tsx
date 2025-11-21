@@ -1,26 +1,27 @@
-import { createClient } from "@supabase/supabase-js";
+// app/products/page.tsx
+import { supabaseServer } from "@/lib/supabaseServer";
 import ProductsClient from "./ProductsClient";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-export const revalidate = 60;
-
 export default async function ProductsPage() {
-  const [{ data: categories }, { data: products }] = await Promise.all([
-    supabase.from("categories").select("id,name").order("name"),
-    supabase
-      .from("products")
-      .select("id,name,description,price,image_main,category_id,active")
-      .eq("active", true)
-      .order("name"),
-  ]);
+  const supabase = supabaseServer();
+
+  // Fetch categories
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name")
+    .order("name");
+
+  // Fetch products
+  const { data: products } = await supabase
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .order("name");
 
   return (
     <ProductsClient
-      categories={categories ?? []}
-      products={products ?? []}
+      products={products || []}
+      categories={categories || []}
     />
   );
 }
