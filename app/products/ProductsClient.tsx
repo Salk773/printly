@@ -44,7 +44,7 @@ export default function ProductsClient({
 
   return (
     <main style={{ display: "grid", gap: 20 }}>
-      {/* Filters + search */}
+      {/* Filters + Search */}
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <FilterPill
@@ -141,6 +141,8 @@ export default function ProductsClient({
 
               <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontWeight: 600 }}>{p.price} AED</span>
+
+                {/* ADD TO CART BUTTON ON PREVIEW */}
                 <AddToCartButton product={p} />
               </div>
             </div>
