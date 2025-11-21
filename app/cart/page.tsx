@@ -1,88 +1,79 @@
 "use client";
 
 import { useCart } from "@/context/CartContext";
-import Image from "next/image";
 
 export default function CartPage() {
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { items, removeItem, clearCart } = useCart();
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   return (
     <main
       style={{
-        background: "#0a0a0a",
-        minHeight: "100vh",
         padding: "40px",
         color: "#fff",
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      <h1 style={{ fontSize: "2rem", marginBottom: "20px" }}>🛒 Your Cart</h1>
+      <h1 style={{ fontSize: "2rem", marginBottom: "20px" }}>Your Cart</h1>
 
-      {cart.length === 0 ? (
-        <p style={{ color: "#bbb", marginTop: "20px" }}>
-          Your cart is empty.
-        </p>
+      {items.length === 0 ? (
+        <p style={{ color: "#bbb" }}>Your cart is empty.</p>
       ) : (
         <>
-          {/* Cart Items */}
-          <div style={{ display: "grid", gap: "20px", marginBottom: "30px" }}>
-            {cart.map((item) => (
+          <div
+            style={{
+              display: "grid",
+              gap: "20px",
+              marginBottom: "30px",
+            }}
+          >
+            {items.map((item) => (
               <div
                 key={item.id}
                 style={{
-                  display: "flex",
-                  gap: "20px",
-                  padding: "20px",
                   background: "#111",
-                  borderRadius: "12px",
+                  padding: "15px",
+                  borderRadius: "10px",
+                  border: "1px solid #222",
+                  display: "flex",
                   alignItems: "center",
+                  gap: "20px",
                 }}
               >
-                {item.image ? (
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    width={120}
-                    height={120}
-                    style={{
-                      borderRadius: "8px",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: "120px",
-                      height: "120px",
-                      background: "#222",
-                      borderRadius: "8px",
-                    }}
-                  />
-                )}
+                {/* Product Image */}
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "8px",
+                    objectFit: "cover",
+                  }}
+                />
 
-                <div style={{ flexGrow: 1 }}>
+                {/* Details */}
+                <div style={{ flex: 1 }}>
                   <h3 style={{ marginBottom: "5px" }}>{item.name}</h3>
-                  <p style={{ color: "#bbb" }}>
+                  <p style={{ color: "#c084fc", fontWeight: 600 }}>
                     {item.price} AED × {item.quantity}
-                  </p>
-                  <p style={{ marginTop: "6px", fontWeight: 600 }}>
-                    {item.price * item.quantity} AED
                   </p>
                 </div>
 
-                {/* Remove button */}
+                {/* Remove Button */}
                 <button
-                  onClick={() => removeFromCart(item.id)}
+                  onClick={() => removeItem(item.id)}
                   style={{
                     background: "red",
                     border: "none",
-                    padding: "10px 15px",
-                    borderRadius: "8px",
+                    padding: "8px 16px",
+                    borderRadius: "6px",
                     color: "#fff",
                     cursor: "pointer",
-                    fontWeight: 600,
                   }}
                 >
                   Remove
@@ -91,27 +82,23 @@ export default function CartPage() {
             ))}
           </div>
 
-          {/* Cart Summary */}
-          <div
-            style={{
-              padding: "20px",
-              background: "#111",
-              borderRadius: "12px",
-              marginBottom: "20px",
-            }}
-          >
-            <h2>Total: {total} AED</h2>
-          </div>
+          {/* Total */}
+          <h2 style={{ marginBottom: "20px" }}>
+            Total:{" "}
+            <span style={{ color: "#c084fc" }}>
+              {total.toFixed(2)} AED
+            </span>
+          </h2>
 
           {/* Clear Cart Button */}
           <button
             onClick={clearCart}
             style={{
-              padding: "12px 20px",
               background: "#c084fc",
-              border: "none",
-              borderRadius: "8px",
               color: "#000",
+              border: "none",
+              padding: "12px 20px",
+              borderRadius: "8px",
               fontWeight: 600,
               cursor: "pointer",
             }}
