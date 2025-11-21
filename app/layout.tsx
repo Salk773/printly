@@ -1,4 +1,5 @@
-// app/layout.tsx
+"use client";
+
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Navbar from "@/components/Navbar";
