@@ -3,8 +3,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabaseServer } from "@/lib/supabaseServer";
 import CategoryBar from "@/components/CategoryBar";
+import ProductsSearchBar from "@/components/ProductsSearchBar";
 
-export const revalidate = 0; // always fresh (no cache)
+export const revalidate = 0; // always fresh
 
 interface Product {
   id: string;
@@ -24,6 +25,7 @@ interface Category {
 interface ProductsPageProps {
   searchParams?: {
     category?: string;
+    q?: string;
   };
 }
 
@@ -31,8 +33,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const supabase = supabaseServer();
 
   const activeCategoryId = searchParams?.category ?? "";
+  const search = (searchParams?.q ?? "").trim();
 
-  // --- Load categories ---
+  // Load categories
   const { data: categoriesData, error: catError } = await supabase
     .from("categories")
     .select("id, name, slug")
@@ -44,7 +47,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   const categories: Category[] = categoriesData ?? [];
 
-  // --- Build product query ---
+  // Build product query
   let query = supabase
     .from("products")
     .select("*")
@@ -53,6 +56,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   if (activeCategoryId) {
     query = query.eq("category_id", activeCategoryId);
+  }
+
+  if (search) {
+    query = query.ilike("name", `%${search}%`);
   }
 
   const { data: productsData, error: prodError } = await query;
@@ -83,17 +90,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         }}
       >
         {/* Header */}
-        <header style={{ marginBottom: "20px" }}>
+        <header style={{ marginBottom: "8px" }}>
           <h1 style={{ fontSize: "2.2rem", marginBottom: "6px" }}>
             Products
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: "0.95rem", margin: 0 }}>
-            {activeCategoryId
-              ? `Showing ${activeCategoryName.toLowerCase()}`
-              : "Showing all products. Choose a category to filter."}
+            {activeCategoryId || search
+              ? `Showing ${activeCategoryName.toLowerCase()}${
+                  search ? ` matching “${search}”` : ""
+                }`
+              : "Showing all products. Use category or search to filter."}
           </p>
 
-          {/* Category bar */}
+          {/* Search + categories */}
+          <ProductsSearchBar initialSearch={search} />
           <CategoryBar
             categories={categories}
             activeCategoryId={activeCategoryId}
