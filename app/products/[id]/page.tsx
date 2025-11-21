@@ -2,8 +2,9 @@
 import { supabaseServer } from "@/lib/supabaseServer";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import AddToCartButton from "@/components/AddToCartButton";
 
-export const revalidate = 0; // disable caching
+export const revalidate = 0;
 
 interface Product {
   id: string;
@@ -100,6 +101,8 @@ export default async function ProductPage({ params }: { params: { id: string } }
               {product.price != null ? `${product.price} AED` : "Price on request"}
             </p>
 
+            <AddToCartButton product={product} />
+
             <div
               style={{
                 marginTop: "40px",
@@ -109,7 +112,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 border: "1px solid #222",
               }}
             >
-              <h3>Printing options (soon)</h3>
+              <h3>Printing options (coming soon)</h3>
               <p style={{ marginTop: "12px", color: "#999" }}>
                 Material, colour and quantity options will appear here later.
               </p>
