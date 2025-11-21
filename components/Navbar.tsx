@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/lib/cartContext";
+import { useCart } from "@/context/CartContext";
 
 export default function Navbar() {
-  const { count, openCart } = useCart();
+  const { items } = useCart();
+
+  const count = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <header
@@ -29,7 +31,7 @@ export default function Navbar() {
           gap: 16,
         }}
       >
-        {/* Left: Logo + links */}
+        {/* Left: Logo & Links */}
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <Link
             href="/"
@@ -44,6 +46,7 @@ export default function Navbar() {
           >
             <span style={{ color: "#c084fc" }}>Print</span>ly
           </Link>
+
           <div
             style={{
               display: "flex",
@@ -85,7 +88,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right: contact + cart */}
+        {/* Right: Contact + Cart */}
         <div
           style={{
             display: "flex",
@@ -112,9 +115,9 @@ export default function Navbar() {
             <span style={{ color: "#9ca3af" }}>+971 50 936 3626</span>
           </div>
 
-          {/* Cart button */}
-          <button
-            onClick={openCart}
+          {/* Cart Button */}
+          <Link
+            href="/cart"
             style={{
               position: "relative",
               borderRadius: 999,
@@ -126,6 +129,7 @@ export default function Navbar() {
               fontSize: "0.85rem",
               fontWeight: 500,
               cursor: "pointer",
+              textDecoration: "none",
             }}
           >
             🛒 Cart
@@ -135,8 +139,7 @@ export default function Navbar() {
                   position: "absolute",
                   top: -4,
                   right: -4,
-                  background:
-                    "linear-gradient(135deg, #f97373, #ef4444)",
+                  background: "linear-gradient(135deg, #f97373, #ef4444)",
                   color: "#fff",
                   borderRadius: 999,
                   padding: "0 6px",
@@ -148,7 +151,7 @@ export default function Navbar() {
                 {count}
               </span>
             )}
-          </button>
+          </Link>
         </div>
       </nav>
     </header>
