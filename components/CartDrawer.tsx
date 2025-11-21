@@ -1,10 +1,17 @@
 "use client";
 
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/lib/cartContext";
 
 export default function CartDrawer() {
-  const { items, total, count, isOpen, closeCart, removeItem, clearCart } =
-    useCart();
+  const {
+    items,
+    total,
+    count,
+    isOpen,
+    closeCart,
+    removeItem,
+    clearCart,
+  } = useCart();
 
   if (!isOpen) return null;
 
@@ -26,7 +33,6 @@ export default function CartDrawer() {
     >
       <h2 style={{ marginBottom: "20px" }}>Your Cart ({count})</h2>
 
-      {/* LIST ITEMS */}
       <div style={{ maxHeight: "65vh", overflowY: "auto" }}>
         {items.length === 0 && (
           <p style={{ color: "#94a3b8" }}>Your cart is empty.</p>
@@ -78,7 +84,6 @@ export default function CartDrawer() {
         ))}
       </div>
 
-      {/* FOOTER TOTAL + BUTTONS */}
       <div
         style={{
           marginTop: "20px",
