@@ -1,4 +1,4 @@
-import "./global.css";
+import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 
 export const metadata = {
