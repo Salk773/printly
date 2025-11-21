@@ -1,191 +1,280 @@
-// app/products/page.tsx
-import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
-import { supabaseServer } from "@/lib/supabaseServer";
-import CategoryBar from "@/components/CategoryBar";
-import ProductsSearchBar from "@/components/ProductsSearchBar";
+import AddToCartButton from "@/components/AddToCartButton";
 
-export const revalidate = 0; // always fresh
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface Product {
+type Category = {
+  id: string;
+  name: string;
+};
+
+type Product = {
   id: string;
   name: string;
   description: string | null;
-  price: number | null;
+  price: number;
   image_main: string | null;
   category_id: string | null;
-}
+};
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string | null;
-}
+export const revalidate = 60;
 
-interface ProductsPageProps {
-  searchParams?: {
-    category?: string;
-    q?: string;
-  };
-}
+export default async function ProductsPage() {
+  const [{ data: categories }, { data: products }] = await Promise.all([
+    supabase.from("categories").select("id,name").order("name"),
+    supabase
+      .from("products")
+      .select(
+        "id,name,description,price,image_main,category_id,active"
+      )
+      .eq("active", true)
+      .order("name"),
+  ]);
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const supabase = supabaseServer();
-
-  const activeCategoryId = searchParams?.category ?? "";
-  const search = (searchParams?.q ?? "").trim();
-
-  // Load categories
-  const { data: categoriesData, error: catError } = await supabase
-    .from("categories")
-    .select("id, name, slug")
-    .order("name", { ascending: true });
-
-  if (catError) {
-    console.error("Categories error:", catError.message);
-  }
-
-  const categories: Category[] = categoriesData ?? [];
-
-  // Build product query
-  let query = supabase
-    .from("products")
-    .select("*")
-    .eq("active", true)
-    .order("name", { ascending: true });
-
-  if (activeCategoryId) {
-    query = query.eq("category_id", activeCategoryId);
-  }
-
-  if (search) {
-    query = query.ilike("name", `%${search}%`);
-  }
-
-  const { data: productsData, error: prodError } = await query;
-
-  if (prodError) {
-    console.error("Products error:", prodError.message);
-  }
-
-  const products: Product[] = productsData ?? [];
-
-  const activeCategoryName =
-    categories.find((c) => c.id === activeCategoryId)?.name || "All products";
+  const safeCategories: Category[] = categories ?? [];
+  const safeProducts: Product[] = (products ?? []) as Product[];
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "40px 0 60px",
-        background: "#0a0a0a",
-        color: "#fff",
-      }}
-    >
+    <main>
+      <h1 style={{ fontSize: "1.7rem", marginBottom: 10 }}>Products</h1>
+      <p style={{ color: "#9ca3af", marginBottom: 22 }}>
+        Browse all 3D printed products available on Printly. Use categories to
+        narrow down, or view everything by default.
+      </p>
+
+      <ProductsClient categories={safeCategories} products={safeProducts} />
+    </main>
+  );
+}
+
+// ---------- Client-side filter + layout ----------
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+
+function ProductsClient({
+  categories,
+  products,
+}: {
+  categories: Category[];
+  products: Product[];
+}) {
+  const [selectedCategory, setSelectedCategory] = useState<string | "all">(
+    "all"
+  );
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedCategory !== "all" && p.category_id !== selectedCategory) {
+        return false;
+      }
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.description ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [products, selectedCategory, search]);
+
+  return (
+    <section style={{ display: "grid", gap: 20 }}>
+      {/* Controls */}
       <div
         style={{
-          maxWidth: "1120px",
-          margin: "0 auto",
-          padding: "0 20px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        {/* Header */}
-        <header style={{ marginBottom: "8px" }}>
-          <h1 style={{ fontSize: "2.2rem", marginBottom: "6px" }}>
-            Products
-          </h1>
-          <p style={{ color: "#c0c0d0", fontSize: "0.95rem", margin: 0 }}>
-            {activeCategoryId || search
-              ? `Showing ${activeCategoryName.toLowerCase()}${
-                  search ? ` matching “${search}”` : ""
-                }`
-              : "Showing all products. Use category or search to filter."}
-          </p>
-
-          {/* Search + categories */}
-          <ProductsSearchBar initialSearch={search} />
-          <CategoryBar
-            categories={categories}
-            activeCategoryId={activeCategoryId}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <FilterPill
+            label="All"
+            active={selectedCategory === "all"}
+            onClick={() => setSelectedCategory("all")}
           />
-        </header>
+          {categories.map((c) => (
+            <FilterPill
+              key={c.id}
+              label={c.name}
+              active={selectedCategory === c.id}
+              onClick={() => setSelectedCategory(c.id)}
+            />
+          ))}
+        </div>
 
-        {/* Products grid */}
-        {products.length === 0 ? (
-          <p style={{ color: "#c0c0d0", marginTop: "20px" }}>
-            No products found for this selection.
+        <input
+          placeholder="Search products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 999,
+            border: "1px solid rgba(148,163,184,0.5)",
+            background: "rgba(15,23,42,0.9)",
+            color: "#e5e7eb",
+            minWidth: 180,
+            fontSize: "0.85rem",
+          }}
+        />
+      </div>
+
+      {/* Grid */}
+      <div
+        style={{
+          display: "grid",
+          gap: 18,
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(220px, 1fr))",
+        }}
+      >
+        {filtered.length === 0 && (
+          <p style={{ color: "#9ca3af" }}>
+            No products match your filters.
           </p>
-        ) : (
-          <div
+        )}
+        {filtered.map((p) => (
+          <article
+            key={p.id}
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "24px",
-              marginTop: "20px",
+              borderRadius: 16,
+              overflow: "hidden",
+              background:
+                "linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,64,175,0.65))",
+              border: "1px solid rgba(129,140,248,0.55)",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 260,
             }}
           >
-            {products.map((p) => (
-              <Link
-                key={p.id}
-                href={`/products/${p.id}`}
-                style={{ textDecoration: "none", color: "inherit" }}
+            <Link
+              href={`/products/${p.id}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: 160,
+                  background: "#020617",
+                }}
               >
-                <div
+                {p.image_main ? (
+                  <Image
+                    src={p.image_main}
+                    alt={p.name}
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "0.8rem",
+                      color: "#6b7280",
+                    }}
+                  >
+                    No image
+                  </div>
+                )}
+              </div>
+            </Link>
+
+            <div style={{ padding: "12px 14px 14px", flex: 1 }}>
+              <Link
+                href={`/products/${p.id}`}
+                style={{
+                  display: "block",
+                  fontWeight: 600,
+                  marginBottom: 4,
+                  textDecoration: "none",
+                  color: "#e5e7eb",
+                }}
+              >
+                {p.name}
+              </Link>
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#cbd5f5",
+                  marginBottom: 8,
+                  minHeight: 32,
+                }}
+              >
+                {p.description}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 8,
+                  marginTop: 4,
+                }}
+              >
+                <span
                   style={{
-                    background: "#111118",
-                    border: "1px solid #262637",
-                    borderRadius: "12px",
-                    padding: "14px",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
                   }}
                 >
-                  {p.image_main && (
-                    <Image
-                      src={p.image_main}
-                      alt={p.name}
-                      width={400}
-                      height={300}
-                      unoptimized
-                      style={{
-                        width: "100%",
-                        height: "auto",
-                        borderRadius: "10px",
-                        marginBottom: "10px",
-                        background: "#000",
-                        objectFit: "cover",
-                      }}
-                    />
-                  )}
-
-                  <h2 style={{ fontSize: "1.1rem", marginBottom: "4px" }}>
-                    {p.name}
-                  </h2>
-                  <p
-                    style={{
-                      color: "#c0c0d0",
-                      fontSize: "0.9rem",
-                      minHeight: "2.4em",
-                    }}
-                  >
-                    {p.description
-                      ? p.description.slice(0, 80) + "..."
-                      : "3D printed product"}
-                  </p>
-
-                  <p
-                    style={{
-                      color: "#c084fc",
-                      fontWeight: 600,
-                      marginTop: "10px",
-                    }}
-                  >
-                    {p.price != null ? `${p.price} AED` : "TBD"}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+                  {p.price.toFixed(2)} AED
+                </span>
+                <AddToCartButton
+                  product={{
+                    id: p.id,
+                    name: p.name,
+                    price: p.price,
+                    image_main: p.image_main,
+                  }}
+                />
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
-    </main>
+    </section>
+  );
+}
+
+function FilterPill({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        borderRadius: 999,
+        padding: "6px 14px",
+        border: active
+          ? "1px solid rgba(196,181,253,0.9)"
+          : "1px solid rgba(148,163,184,0.6)",
+        background: active
+          ? "linear-gradient(135deg, #c4b5fd, #a855f7)"
+          : "rgba(15,23,42,0.9)",
+        color: active ? "#020617" : "#e5e7eb",
+        fontSize: "0.8rem",
+        cursor: "pointer",
+      }}
+    >
+      {label}
+    </button>
   );
 }
