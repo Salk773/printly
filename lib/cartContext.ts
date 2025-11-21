@@ -35,12 +35,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (exists) {
         return prev.map((p) =>
-          p.id === item.id ? { ...p, quantity: p.quantity + item.quantity } : p
+          p.id === item.id
+            ? { ...p, quantity: p.quantity + item.quantity }
+            : p
         );
       }
-
       return [...prev, item];
     });
+
     setIsOpen(true);
   };
 
@@ -51,7 +53,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = () => setItems([]);
 
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = items.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
 
   return (
     <CartContext.Provider
