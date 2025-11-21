@@ -1,156 +1,101 @@
-import { createClient } from "@supabase/supabase-js";
+// app/products/[id]/page.tsx
+import { supabaseServer } from "@/lib/supabaseServer";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-type Product = {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  image_main: string | null;
-};
-
-export const revalidate = 60;
-
-export default async function ProductDetailPage({
+export default async function ProductPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id,name,description,price,image_main,active")
-    .eq("id", params.id)
-    .eq("active", true)
-    .maybeSingle();
+  const supabase = supabaseServer();
 
-  if (error || !data) {
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", params.id)
+    .single();
+
+  if (!product || error) {
     return (
-      <main>
-        <p>Product not found.</p>
+      <main
+        style={{
+          color: "#fff",
+          padding: "50px",
+          fontFamily: "system-ui",
+        }}
+      >
+        <h1>Product not found</h1>
       </main>
     );
   }
 
-  const product = data as Product;
-
   return (
     <main
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-        gap: 28,
+        maxWidth: "1000px",
+        margin: "0 auto",
+        padding: "40px",
+        color: "#fff",
+        fontFamily: "system-ui",
       }}
     >
-      {/* Image */}
       <div
         style={{
-          borderRadius: 20,
-          overflow: "hidden",
-          background:
-            "radial-gradient(circle at top left, #1e293b, #020617)",
-          border: "1px solid rgba(148,163,184,0.4)",
-          position: "relative",
-          minHeight: 320,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "40px",
         }}
       >
-        {product.image_main ? (
-          <Image
-            src={product.image_main}
-            alt={product.name}
-            fill
-            style={{ objectFit: "contain" }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#6b7280",
-            }}
-          >
-            No image available
-          </div>
-        )}
-      </div>
-
-      {/* Info */}
-      <section
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
+        {/* IMAGE */}
         <div>
-          <h1
-            style={{
-              fontSize: "1.8rem",
-              marginBottom: 4,
-            }}
-          >
+          {product.image_main && (
+            <Image
+              src={product.image_main}
+              alt={product.name}
+              width={600}
+              height={600}
+              style={{
+                width: "100%",
+                height: "auto",
+                borderRadius: "12px",
+              }}
+            />
+          )}
+        </div>
+
+        {/* DETAILS */}
+        <div>
+          <h1 style={{ fontSize: "2rem", marginBottom: "10px" }}>
             {product.name}
           </h1>
-          <p style={{ color: "#9ca3af" }}>
-            {product.description || "Custom 3D printed product."}
-          </p>
-        </div>
 
-        <div>
-          <div
+          <p style={{ fontSize: "1.2rem", color: "#aaa" }}>
+            {product.description}
+          </p>
+
+          <p
             style={{
-              fontSize: "1.2rem",
-              fontWeight: 600,
-              marginBottom: 4,
+              marginTop: "20px",
+              fontSize: "1.5rem",
+              fontWeight: 700,
+              color: "#c084fc",
             }}
           >
-            {product.price.toFixed(2)} AED
+            {product.price} AED
+          </p>
+
+          {/* ADD TO CART BUTTON — FIXED */}
+          <div style={{ marginTop: "20px" }}>
+            <AddToCartButton
+              id={product.id}
+              name={product.name}
+              price={product.price}
+              image={product.image_main}
+            />
           </div>
-          <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
-            Final price may vary slightly with material and size options.
-          </p>
         </div>
-
-        <div
-          style={{
-            marginTop: 10,
-            padding: "16px 16px 14px",
-            borderRadius: 16,
-            background: "rgba(15,23,42,0.9)",
-            border: "1px solid rgba(148,163,184,0.4)",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "0.95rem",
-              marginBottom: 6,
-              fontWeight: 600,
-            }}
-          >
-            Printing options (coming soon)
-          </h2>
-          <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-            Later you&apos;ll be able to pick material (PLA+ / PETG), colours
-            and quantity here. For now this is a read-only product preview.
-          </p>
-        </div>
-
-        <AddToCartButton
-          product={{
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image_main: product.image_main,
-          }}
-        />
-      </section>
+      </div>
     </main>
   );
 }
