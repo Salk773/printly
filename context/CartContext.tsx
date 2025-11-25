@@ -1,61 +1,77 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-export interface CartItem {
+export type CartItem = {
   id: string;
   name: string;
   price: number;
   image: string;
   quantity: number;
-}
+};
 
-export interface CartContextType {
+type CartContextType = {
   items: CartItem[];
-  addItem: (item: CartItem) => void;
+  count: number;
+  total: number;
+  addItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-}
+};
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+const STORAGE_KEY = "printly_cart_v1";
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Add an item to the cart (or increase quantity if already added)
-  const addItem = (newItem: CartItem) => {
-    setItems((prev) => {
-      const existing = prev.find((p) => p.id === newItem.id);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) setItems(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  const addItem = (item: Omit<CartItem, "quantity">) => {
+    setItems(prev => {
+      const existing = prev.find(p => p.id === item.id);
       if (existing) {
-        return prev.map((p) =>
-          p.id === newItem.id
-            ? { ...p, quantity: p.quantity + newItem.quantity }
-            : p
+        return prev.map(p =>
+          p.id === item.id ? { ...p, quantity: p.quantity + 1 } : p
         );
       }
-      return [...prev, newItem];
+      return [...prev, { ...item, quantity: 1 }];
     });
   };
 
-  // Remove one item completely
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
+  const removeItem = (id: string) =>
+    setItems(prev => prev.filter(p => p.id !== id));
 
-  // Clear entire cart
-  const clearCart = () => {
-    setItems([]);
-  };
+  const clearCart = () => setItems([]);
+
+  const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, clearCart }}>
+    <CartContext.Provider
+      value={{ items, count, total, addItem, removeItem, clearCart }}
+    >
       {children}
     </CartContext.Provider>
   );
 }
 
 export function useCart() {
-  const context = useContext(CartContext);
-  if (!context) throw new Error("useCart must be used within CartProvider");
-  return context;
+  const ctx = useContext(CartContext);
+  if (!ctx) throw new Error("useCart must be used within <CartProvider>");
+  return ctx;
 }
