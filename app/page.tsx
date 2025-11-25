@@ -1,111 +1,166 @@
-// app/page.tsx
 import Link from "next/link";
 import Image from "next/image";
 import { supabaseServer } from "@/lib/supabaseServer";
 
-export const revalidate = 0;
-
-interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number | null;
-  image_main: string | null;
-}
+export const revalidate = 60; // ISR
 
 export default async function HomePage() {
   const supabase = supabaseServer();
-
-  const { data } = await supabase
+  const { data: products } = await supabase
     .from("products")
-    .select("*")
+    .select("id, name, description, price, image_main")
     .eq("active", true)
-    .order("created_at", { ascending: false })
     .limit(4);
 
-  const products = (data ?? []) as Product[];
-
   return (
-    <main>
-      <section className="hero">
-        <div className="container hero-inner">
-          <div>
-            <p className="hero-tag">UAE · 3D printing marketplace</p>
-            <h1 className="hero-title">
-              Made <span className="hero-accent">layer by layer</span>.
-            </h1>
-            <p className="hero-subtitle">
-              Browse ready-made 3D printed parts, decor, and useful tools from
-              creators across the UAE. Custom prints coming soon.
-            </p>
-            <div className="hero-actions">
-              <Link href="/products" className="btn btn-primary">
-                Browse Products
-              </Link>
-              <Link href="mailto:contact@printly.ae" className="btn btn-secondary">
-                List your prints
-              </Link>
-            </div>
+    <>
+      {/* Hero */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2.1fr)",
+          gap: 32,
+          marginTop: 32,
+          alignItems: "center"
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "0.8rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.16em",
+              color: "#9ca3af",
+              marginBottom: 12
+            }}
+          >
+            UAE · 3D printing marketplace
           </div>
 
-          <div className="hero-card">
-            <h3 className="hero-card-title">How Printly works</h3>
-            <p className="hero-card-text">
-              We start with curated, ready-to-print designs in PLA+ and PETG.
-              Later, you&apos;ll be able to upload your own models and choose
-              colours, materials, and print settings.
-            </p>
-          </div>
-        </div>
-      </section>
+          <h1
+            style={{
+              fontSize: "2.8rem",
+              lineHeight: 1.1,
+              margin: 0,
+              marginBottom: 12
+            }}
+          >
+            Made <span style={{ color: "#c084fc" }}>layer by layer</span>.
+          </h1>
 
-      <section className="section">
-        <div className="container">
-          <div className="section-header">
-            <h2>Featured products</h2>
-            <Link href="/products" className="section-link">
-              View all →
+          <p
+            style={{
+              color: "#9ca3af",
+              maxWidth: 520,
+              fontSize: "0.98rem",
+              lineHeight: 1.6
+            }}
+          >
+            Browse ready-made 3D printed parts, decor, and useful tools from
+            creators across the UAE. Custom prints coming soon.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+            <Link href="/products" className="btn-primary">
+              Browse Products
             </Link>
+            <button className="btn-ghost" style={{ fontSize: "0.85rem" }}>
+              List your prints
+            </button>
           </div>
+        </div>
 
-          {products.length === 0 ? (
-            <p className="muted">No products yet. Add some in the admin panel.</p>
-          ) : (
-            <div className="grid">
-              {products.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/products/${p.id}`}
-                  className="card product-card"
-                  style={{ textDecoration: "none", color: "inherit" }}
-                >
-                  {p.image_main && (
-                    <div className="product-image-wrap">
-                      <Image
-                        src={p.image_main}
-                        alt={p.name}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 768px) 100vw, 25vw"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </div>
-                  )}
-                  <div className="product-body">
-                    <h3>{p.name}</h3>
-                    <p className="muted small">
-                      {p.description ?? "3D printed product"}
-                    </p>
-                    <p className="price">
-                      {p.price != null ? `${p.price.toFixed(2)} AED` : "TBD"}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+        <div className="card-soft" style={{ padding: 20 }}>
+          <h3 style={{ marginTop: 4, marginBottom: 10, fontSize: "1rem" }}>
+            How Printly works
+          </h3>
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "#cbd5f5",
+              marginBottom: 8
+            }}
+          >
+            We start with curated, ready-to-print designs in PLA+ and PETG.
+          </p>
+          <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+            Later, you&apos;ll be able to upload your own models and choose
+            colours, materials, and print settings — all printed locally for
+            faster turnaround across the UAE.
+          </p>
         </div>
       </section>
-    </main>
+
+      {/* Featured products */}
+      <section style={{ marginTop: 48 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 16
+          }}
+        >
+          <h2 style={{ fontSize: "1.2rem" }}>Featured products</h2>
+          <Link
+            href="/products"
+            style={{ fontSize: "0.85rem", color: "#9ca3af" }}
+          >
+            View all →
+          </Link>
+        </div>
+
+        <div className="grid grid-4">
+          {products?.map(p => (
+            <Link
+              key={p.id}
+              href={`/products/${p.id}`}
+              className="card"
+              style={{ overflow: "hidden" }}
+            >
+              <div style={{ position: "relative", height: 230 }}>
+                {p.image_main && (
+                  <Image
+                    src={p.image_main}
+                    alt={p.name}
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                )}
+              </div>
+              <div style={{ padding: 14 }}>
+                <div
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    marginBottom: 4
+                  }}
+                >
+                  {p.name}
+                </div>
+                <p
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: "0.8rem",
+                    minHeight: 32
+                  }}
+                >
+                  {p.description}
+                </p>
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: "0.85rem",
+                    fontWeight: 600
+                  }}
+                >
+                  {p.price.toFixed(2)} AED
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
