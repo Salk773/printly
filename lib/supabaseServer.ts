@@ -2,10 +2,9 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export function supabaseServer() {
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false },
+export const supabaseServer = () =>
+  createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false }
   });
-}
