@@ -3,110 +3,104 @@
 import { useCart } from "@/context/CartContext";
 
 export default function CartPage() {
-  const { items, removeItem, clearCart } = useCart();
-
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const { items, total, removeItem, clearCart } = useCart();
 
   return (
-    <main
-      style={{
-        padding: "40px",
-        color: "#fff",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h1 style={{ fontSize: "2rem", marginBottom: "20px" }}>Your Cart</h1>
+    <div style={{ marginTop: 24 }}>
+      <h1 style={{ fontSize: "1.5rem", marginBottom: 12 }}>Cart</h1>
 
-      {items.length === 0 ? (
-        <p style={{ color: "#bbb" }}>Your cart is empty.</p>
-      ) : (
+      {items.length === 0 && (
+        <p style={{ color: "#9ca3af" }}>Your cart is currently empty.</p>
+      )}
+
+      {items.length > 0 && (
         <>
           <div
             style={{
-              display: "grid",
-              gap: "20px",
-              marginBottom: "30px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              marginBottom: 20
             }}
           >
-            {items.map((item) => (
+            {items.map(item => (
               <div
                 key={item.id}
+                className="card-soft"
                 style={{
-                  background: "#111",
-                  padding: "15px",
-                  borderRadius: "10px",
-                  border: "1px solid #222",
+                  padding: 12,
                   display: "flex",
-                  alignItems: "center",
-                  gap: "20px",
+                  justifyContent: "space-between",
+                  alignItems: "center"
                 }}
               >
-                {/* Product Image */}
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    borderRadius: "8px",
-                    objectFit: "cover",
-                  }}
-                />
-
-                {/* Details */}
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ marginBottom: "5px" }}>{item.name}</h3>
-                  <p style={{ color: "#c084fc", fontWeight: 600 }}>
-                    {item.price} AED × {item.quantity}
-                  </p>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.95rem",
+                      marginBottom: 2
+                    }}
+                  >
+                    {item.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.8rem",
+                      color: "#9ca3af"
+                    }}
+                  >
+                    {item.quantity} × {item.price.toFixed(2)} AED
+                  </div>
                 </div>
-
-                {/* Remove Button */}
-                <button
-                  onClick={() => removeItem(item.id)}
-                  style={{
-                    background: "red",
-                    border: "none",
-                    padding: "8px 16px",
-                    borderRadius: "6px",
-                    color: "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  Remove
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                    {(item.price * item.quantity).toFixed(2)} AED
+                  </div>
+                  <button
+                    className="btn-danger"
+                    onClick={() => removeItem(item.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Total */}
-          <h2 style={{ marginBottom: "20px" }}>
-            Total:{" "}
-            <span style={{ color: "#c084fc" }}>
-              {total.toFixed(2)} AED
-            </span>
-          </h2>
-
-          {/* Clear Cart Button */}
-          <button
-            onClick={clearCart}
+          <div
+            className="card-soft"
             style={{
-              background: "#c084fc",
-              color: "#000",
-              border: "none",
-              padding: "12px 20px",
-              borderRadius: "8px",
-              fontWeight: 600,
-              cursor: "pointer",
+              padding: 14,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
             }}
           >
-            Clear Cart
-          </button>
+            <div>
+              <div style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
+                Total
+              </div>
+              <div
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: 600
+                }}
+              >
+                {total.toFixed(2)} AED
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn-ghost" onClick={clearCart}>
+                Clear cart
+              </button>
+              <button className="btn-primary" disabled>
+                Checkout (coming soon)
+              </button>
+            </div>
+          </div>
         </>
       )}
-    </main>
+    </div>
   );
 }
