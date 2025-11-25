@@ -1,7 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
+// ---------- TYPES ----------
 export interface CartItem {
   id: string;
   name: string;
@@ -10,12 +11,11 @@ export interface CartItem {
   quantity: number;
 }
 
-interface CartContextType {
+export interface CartContextType {
   items: CartItem[];
   count: number;
   total: number;
   isOpen: boolean;
-
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -23,40 +23,37 @@ interface CartContextType {
   closeCart: () => void;
 }
 
+// ---------- CONTEXT ----------
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+// ---------- PROVIDER ----------
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   const addItem = (item: CartItem) => {
     setItems((prev) => {
-      const exists = prev.find((p) => p.id === item.id);
-
+      const exists = prev.find((i) => i.id === item.id);
       if (exists) {
-        return prev.map((p) =>
-          p.id === item.id
-            ? { ...p, quantity: p.quantity + item.quantity }
-            : p
+        return prev.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
       return [...prev, item];
     });
-
-    setIsOpen(true);
   };
 
   const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((p) => p.id !== id));
+    setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
   const clearCart = () => setItems([]);
 
-  const count = items.reduce((sum, item) => sum + item.quantity, 0);
-  const total = items.reduce(
-    (sum, item) => sum + item.quantity * item.price,
-    0
-  );
+  const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
+
+  const openCart = () => setIsOpen(true);
+  const closeCart = () => setIsOpen(false);
 
   return (
     <CartContext.Provider
@@ -68,8 +65,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         removeItem,
         clearCart,
-        openCart: () => setIsOpen(true),
-        closeCart: () => setIsOpen(false),
+        openCart,
+        closeCart,
       }}
     >
       {children}
@@ -77,8 +74,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ---------- HOOK ----------
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used within CartProvider");
-  return ctx;
+  const context = useContext(CartContext);
+  if (!context) throw new Error("useCart must be used within CartProvider");
+  return context;
 }
