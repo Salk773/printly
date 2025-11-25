@@ -3,17 +3,17 @@ import ClientWrapper from "@/components/ClientWrapper";
 
 export const metadata = {
   title: "Printly",
-  description: "Made layer by layer.",
+  description: "Made layer by layer."
 };
 
 export default function RootLayout({
-  children,
+  children
 }: {
   children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>
+      <body>
         <ClientWrapper>{children}</ClientWrapper>
       </body>
     </html>
