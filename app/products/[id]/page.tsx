@@ -12,21 +12,14 @@ export default async function ProductDetailPage({
 }) {
   const supabase = supabaseServer();
 
-  // SAFER QUERY — handles errors properly
   const { data: product, error } = await supabase
     .from("products")
     .select("id, name, description, price, image_main, long_description")
     .eq("id", params.id)
-    // .eq("active", true) // REMOVE OR KEEP ONLY IF column is guaranteed boolean TRUE
-    .maybeSingle(); // does NOT throw → allows debugging
+    .maybeSingle(); // prevents silent crashes
 
-  if (error) {
-    console.error("Supabase error:", error);
-    return notFound();
-  }
-
-  if (!product) {
-    console.warn("Product not found for id:", params.id);
+  if (!product || error) {
+    console.error("Product fetch error:", error);
     return notFound();
   }
 
@@ -53,12 +46,8 @@ export default async function ProductDetailPage({
       </div>
 
       <div>
-        <h1 style={{ fontSize: "1.6rem", marginBottom: 4 }}>
-          {product.name}
-        </h1>
-        <p style={{ color: "#9ca3af", marginBottom: 16 }}>
-          {product.description}
-        </p>
+        <h1 style={{ fontSize: "1.6rem", marginBottom: 4 }}>{product.name}</h1>
+        <p style={{ color: "#9ca3af", marginBottom: 16 }}>{product.description}</p>
 
         <div
           style={{
@@ -84,10 +73,6 @@ export default async function ProductDetailPage({
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>
             Printing options (coming soon)
           </h3>
-          <p style={{ color: "#cbd5f5", marginBottom: 6 }}>
-            Later you&apos;ll be able to pick material (PLA+ / PETG), colours
-            and quantity here. For now this is a read-only product preview.
-          </p>
 
           {product.long_description && (
             <p style={{ color: "#9ca3af" }}>{product.long_description}</p>
