@@ -11,65 +11,77 @@ export default function Navbar() {
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 40,
-        backdropFilter: "blur(18px)",
+        zIndex: 30,
+        backdropFilter: "blur(16px)",
         background:
-          "linear-gradient(90deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9))",
-        borderBottom: "1px solid rgba(148,163,184,0.35)"
+          "linear-gradient(90deg, rgba(15,23,42,0.98), rgba(15,23,42,0.94))",
+        borderBottom: "1px solid rgba(148,163,184,0.25)",
       }}
     >
       <nav
         style={{
-          maxWidth: 1120,
+          maxWidth: "1100px",
           margin: "0 auto",
           padding: "10px 20px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 16
+          gap: 16,
         }}
       >
-        {/* left */}
+        {/* Left: logo + links */}
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <Link
             href="/"
             style={{
               fontWeight: 800,
-              letterSpacing: "0.06em",
+              letterSpacing: "0.04em",
               textTransform: "uppercase",
-              fontSize: "1rem"
+              fontSize: "1rem",
+              color: "#e5e7eb",
+              textDecoration: "none",
             }}
           >
-            <span style={{ color: "#c084fc" }}>PRINT</span>
-            <span style={{ color: "#e5e7eb" }}>LY</span>
+            <span style={{ color: "#c084fc" }}>Print</span>ly
           </Link>
 
           <div
             style={{
               display: "flex",
+              alignItems: "center",
               gap: 14,
-              fontSize: "0.9rem"
+              fontSize: "0.9rem",
             }}
           >
-            <Link href="/" style={{ opacity: 0.9 }}>
+            <Link
+              href="/"
+              style={{ color: "#e5e7eb", textDecoration: "none", opacity: 0.9 }}
+            >
               Home
             </Link>
-            <Link href="/products" style={{ opacity: 0.9 }}>
+            <Link
+              href="/products"
+              style={{ color: "#e5e7eb", textDecoration: "none", opacity: 0.9 }}
+            >
               Products
             </Link>
-            <Link href="/cart" style={{ opacity: 0.9 }}>
+            <Link
+              href="/cart"
+              style={{ color: "#e5e7eb", textDecoration: "none", opacity: 0.9 }}
+            >
               Cart
             </Link>
           </div>
         </div>
 
-        {/* right */}
+        {/* Right: contact + cart count */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 16,
-            fontSize: "0.85rem"
+            fontSize: "0.85rem",
+            color: "#cbd5f5",
           }}
         >
           <div
@@ -77,10 +89,15 @@ export default function Navbar() {
               display: "flex",
               flexDirection: "column",
               textAlign: "right",
-              lineHeight: 1.25
+              lineHeight: 1.3,
             }}
           >
-            <a href="mailto:contact@printly.ae">contact@printly.ae</a>
+            <a
+              href="mailto:contact@printly.ae"
+              style={{ color: "#e5e7eb", textDecoration: "none" }}
+            >
+              contact@printly.ae
+            </a>
             <span style={{ color: "#9ca3af" }}>+971 50 936 3626</span>
           </div>
 
@@ -89,12 +106,14 @@ export default function Navbar() {
             style={{
               position: "relative",
               borderRadius: 999,
-              padding: "8px 16px",
-              border: "1px solid rgba(148,163,184,0.7)",
+              padding: "8px 14px",
+              border: "1px solid rgba(148,163,184,0.5)",
               background:
                 "radial-gradient(circle at top left, #22d3ee33, transparent 55%)",
+              color: "#e5e7eb",
               fontSize: "0.85rem",
-              fontWeight: 500
+              fontWeight: 500,
+              textDecoration: "none",
             }}
           >
             🛒 Cart
@@ -105,13 +124,13 @@ export default function Navbar() {
                   top: -4,
                   right: -4,
                   background:
-                    "linear-gradient(130deg, #fb7185, #ef4444, #f97316)",
+                    "linear-gradient(135deg, #f97373, #ef4444)",
                   color: "#fff",
                   borderRadius: 999,
-                  padding: "0 7px",
+                  padding: "0 6px",
                   fontSize: "0.7rem",
                   fontWeight: 700,
-                  boxShadow: "0 0 0 2px #020617"
+                  boxShadow: "0 0 0 2px #020617",
                 }}
               >
                 {count}
