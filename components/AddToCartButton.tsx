@@ -35,8 +35,7 @@ export default function AddToCartButton({
         cursor: "pointer",
         fontSize: small ? "0.8rem" : "0.9rem",
         fontWeight: 600,
-        background:
-          "linear-gradient(135deg, #c084fc, #a855f7)", // purple
+        background: "linear-gradient(135deg, #c084fc, #a855f7)",
         color: "#020617",
         boxShadow: "0 8px 24px rgba(192,132,252,0.25)",
         display: "inline-flex",
