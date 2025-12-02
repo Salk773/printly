@@ -1,36 +1,99 @@
-import { createClient } from "@/lib/supabase/server";
 import Image from "next/image";
+import { notFound } from "next/navigation";
+import { supabaseServer } from "@/lib/supabaseServer";
+import AddToCartButton from "@/components/AddToCartButton";
 
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const supabase = createClient();
+export const revalidate = 60;
 
-  // Fetch product
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const supabase = supabaseServer();
+
+  // SAFER QUERY — handles errors properly
   const { data: product, error } = await supabase
     .from("products")
-    .select("*")
+    .select("id, name, description, price, image_main, long_description")
     .eq("id", params.id)
-    .single(); // Ensures it returns one item
+    // .eq("active", true) // REMOVE OR KEEP ONLY IF column is guaranteed boolean TRUE
+    .maybeSingle(); // does NOT throw → allows debugging
 
-  if (error || !product) {
-    console.error("Product fetch error:", error);
-    return <div>Product not found</div>;
+  if (error) {
+    console.error("Supabase error:", error);
+    return notFound();
+  }
+
+  if (!product) {
+    console.warn("Product not found for id:", params.id);
+    return notFound();
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2.2fr)",
+        gap: 32,
+        marginTop: 24,
+      }}
+    >
+      <div className="card" style={{ overflow: "hidden" }}>
+        <div style={{ position: "relative", height: 420 }}>
+          {product.image_main && (
+            <Image
+              src={product.image_main}
+              alt={product.name}
+              fill
+              style={{ objectFit: "cover" }}
+            />
+          )}
+        </div>
+      </div>
 
-      <Image
-        src={product.image}
-        alt={product.name}
-        width={500}
-        height={500}
-        className="rounded-lg border"
-      />
+      <div>
+        <h1 style={{ fontSize: "1.6rem", marginBottom: 4 }}>
+          {product.name}
+        </h1>
+        <p style={{ color: "#9ca3af", marginBottom: 16 }}>
+          {product.description}
+        </p>
 
-      <p className="mt-4 text-lg">{product.description}</p>
+        <div
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            marginBottom: 20,
+          }}
+        >
+          {product.price.toFixed(2)} AED
+        </div>
 
-      <p className="mt-4 text-2xl font-bold">{product.price} AED</p>
+        <AddToCartButton
+          id={product.id}
+          name={product.name}
+          price={product.price}
+          image={product.image_main}
+        />
+
+        <div
+          className="card-soft"
+          style={{ padding: 16, marginTop: 28, fontSize: "0.9rem" }}
+        >
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>
+            Printing options (coming soon)
+          </h3>
+          <p style={{ color: "#cbd5f5", marginBottom: 6 }}>
+            Later you&apos;ll be able to pick material (PLA+ / PETG), colours
+            and quantity here. For now this is a read-only product preview.
+          </p>
+
+          {product.long_description && (
+            <p style={{ color: "#9ca3af" }}>{product.long_description}</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
