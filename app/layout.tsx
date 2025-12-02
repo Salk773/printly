@@ -1,13 +1,13 @@
+// app/layout.tsx
 import "./globals.css";
-import { Inter } from "next/font/google";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
 import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata = {
   title: "Printly",
-  description: "UAE 3D printing marketplace",
+  description: "Made layer by layer."
 };
 
 export default function RootLayout({
@@ -17,10 +17,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body style={{ margin: 0, background: "#0a0f1f", color: "white" }}>
         <CartProvider>
           <Toaster position="top-right" />
-          {children}
+
+          <Navbar />
+
+          <main
+            style={{
+              maxWidth: "1200px",
+              margin: "0 auto",
+              padding: "40px 20px",
+              minHeight: "80vh",
+            }}
+          >
+            {children}
+          </main>
+
+          <Footer />
         </CartProvider>
       </body>
     </html>
