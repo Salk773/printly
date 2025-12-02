@@ -1,50 +1,50 @@
 "use client";
 
-import { useCart } from "@/lib/cartContext";
+import { useCart } from "@/context/CartContext";
 import toast from "react-hot-toast";
+
+type AddToCartButtonProps = {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  small?: boolean;
+};
 
 export default function AddToCartButton({
   id,
   name,
   price,
   image,
-}: {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-}) {
+  small,
+}: AddToCartButtonProps) {
   const { addItem } = useCart();
 
   const handleClick = () => {
-    addItem({
-      id,
-      name,
-      price,
-      image,
-      quantity: 1, // 🔥 REQUIRED
-    });
-
-    toast.success("Added to cart", {
-      icon: "🛒",
-    });
+    addItem({ id, name, price, image, quantity: 1 });
+    toast.success("Added to cart ✅");
   };
 
   return (
     <button
       onClick={handleClick}
       style={{
-        marginTop: "10px",
-        padding: "10px 18px",
-        borderRadius: "6px",
-        background: "#c084fc",
-        color: "#000",
-        cursor: "pointer",
-        fontWeight: 600,
+        padding: small ? "6px 12px" : "10px 18px",
+        borderRadius: 999,
         border: "none",
+        cursor: "pointer",
+        fontSize: small ? "0.8rem" : "0.9rem",
+        fontWeight: 600,
+        background:
+          "linear-gradient(135deg, #c084fc, #a855f7)", // purple
+        color: "#020617",
+        boxShadow: "0 8px 24px rgba(192,132,252,0.25)",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
       }}
     >
-      Add to Cart
+      🛒 Add to cart
     </button>
   );
 }
