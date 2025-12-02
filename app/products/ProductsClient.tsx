@@ -1,17 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 
 type Product = {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
   image_main: string;
-  category_id: string | null;
+  category_id?: string;
 };
 
 type Category = {
@@ -21,54 +20,69 @@ type Category = {
 
 export default function ProductsClient({
   products,
-  categories
+  categories,
 }: {
   products: Product[];
   categories: Category[];
 }) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const filtered = useMemo(() => {
-    return products.filter(p => {
-      const matchesCategory =
-        category === "all" || p.category_id === category;
-      const matchesSearch =
-        !search ||
+  // 🔍 Filter products (search + category)
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const matchCategory =
+        selectedCategory === "all" || p.category_id === selectedCategory;
+
+      const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.description || "")
-          .toLowerCase()
-          .includes(search.toLowerCase());
-      return matchesCategory && matchesSearch;
+        p.description?.toLowerCase().includes(search.toLowerCase());
+
+      return matchCategory && matchSearch;
     });
-  }, [products, search, category]);
+  }, [products, search, selectedCategory]);
 
   return (
-    <>
-      {/* Filters */}
+    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "30px 20px" }}>
+      {/* 🔍Search + Category Bar */}
       <div
         style={{
           display: "flex",
+          gap: 20,
+          marginBottom: 30,
+          alignItems: "center",
+          justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 12,
-          marginBottom: 18
         }}
       >
         <input
-          className="input"
+          type="text"
           placeholder="Search products..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ maxWidth: 260 }}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            padding: "10px 14px",
+            width: "260px",
+            borderRadius: 8,
+            border: "1px solid #475569",
+            background: "#0f172a",
+            color: "white",
+          }}
         />
+
         <select
-          className="select"
-          value={category}
-          onChange={e => setCategory(e.target.value)}
-          style={{ maxWidth: 200 }}
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #475569",
+            background: "#0f172a",
+            color: "white",
+          }}
         >
           <option value="all">All categories</option>
-          {categories.map(c => (
+          {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
@@ -76,66 +90,83 @@ export default function ProductsClient({
         </select>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-4">
-        {filtered.map(p => (
-          <div key={p.id} className="card" style={{ overflow: "hidden" }}>
+      {/* PRODUCTS GRID */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: 25,
+        }}
+      >
+        {filteredProducts.map((p) => (
+          <div
+            key={p.id}
+            style={{
+              background: "#0f172a",
+              borderRadius: 12,
+              border: "1px solid #1e293b",
+              overflow: "hidden",
+              paddingBottom: 20,
+            }}
+          >
+            {/* IMAGE */}
             <Link href={`/products/${p.id}`}>
-              <div style={{ position: "relative", height: 220 }}>
-                {p.image_main && (
-                  <Image
-                    src={p.image_main}
-                    alt={p.name}
-                    fill
-                    style={{ objectFit: "cover" }}
-                  />
-                )}
-              </div>
+              <img
+                src={p.image_main}
+                alt={p.name}
+                style={{
+                  width: "100%",
+                  height: 220,
+                  objectFit: "cover",
+                }}
+              />
             </Link>
-            <div style={{ padding: 14 }}>
-              <Link
-                href={`/products/${p.id}`}
-                style={{ fontWeight: 600, fontSize: "0.95rem" }}
+
+            {/* CONTENT */}
+            <div style={{ padding: "15px" }}>
+              <h3
+                style={{
+                  color: "white",
+                  fontSize: "1.1rem",
+                  marginBottom: 6,
+                }}
               >
                 {p.name}
-              </Link>
-              <p
-                style={{
-                  color: "#9ca3af",
-                  fontSize: "0.8rem",
-                  minHeight: 32,
-                  marginTop: 4
-                }}
-              >
-                {p.description}
+              </h3>
+
+              <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: 8 }}>
+                {p.description?.slice(0, 60) ?? ""}
               </p>
+
               <div
                 style={{
-                  marginTop: 6,
-                  marginBottom: 8,
-                  fontWeight: 600,
-                  fontSize: "0.9rem"
+                  fontWeight: 700,
+                  color: "#c084fc",
+                  marginBottom: 12,
                 }}
               >
-                {p.price.toFixed(2)} AED
+                {p.price} AED
               </div>
+
+              {/* ADD TO CART (small button on preview cards) */}
               <AddToCartButton
                 id={p.id}
                 name={p.name}
                 price={p.price}
                 image={p.image_main}
-                compact
+                small
               />
             </div>
           </div>
         ))}
       </div>
 
-      {filtered.length === 0 && (
-        <p style={{ color: "#9ca3af", marginTop: 20 }}>
-          No products match your filters yet.
+      {/* No results */}
+      {filteredProducts.length === 0 && (
+        <p style={{ color: "#94a3b8", textAlign: "center", marginTop: 40 }}>
+          No products found.
         </p>
       )}
-    </>
+    </div>
   );
 }
