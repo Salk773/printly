@@ -11,29 +11,30 @@ const supabase = createClient(
 export default function AdminImageUpload({ onUploaded }: { onUploaded: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
 
-  const uploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `products/${fileName}`;
+    const ext = file.name.split(".").pop();
+    const filename = `${Date.now()}.${ext}`;
+    const path = `products/${filename}`;
 
     const { error } = await supabase.storage
       .from("uploads")
-      .upload(filePath, file);
+      .upload(path, file);
 
     if (error) {
       console.error(error);
+      alert("Upload failed");
       setUploading(false);
       return;
     }
 
     const { data } = supabase.storage
       .from("uploads")
-      .getPublicUrl(filePath);
+      .getPublicUrl(path);
 
     onUploaded(data.publicUrl);
     setUploading(false);
@@ -41,9 +42,8 @@ export default function AdminImageUpload({ onUploaded }: { onUploaded: (url: str
 
   return (
     <div>
-      <input type="file" onChange={uploadImage} />
-
-      {uploading && <p>Uploading…</p>}
+      <input type="file" onChange={upload} />
+      {uploading && <p style={{ fontSize: "0.8rem" }}>Uploading…</p>}
     </div>
   );
 }
