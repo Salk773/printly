@@ -10,7 +10,12 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type Category = { id: string; name: string };
+// ------------------ TYPES ------------------
+type Category = {
+  id: string;
+  name: string;
+};
+
 type Product = {
   id: string;
   name: string;
@@ -21,6 +26,7 @@ type Product = {
   active: boolean;
 };
 
+// ------------------ COMPONENT ------------------
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [pass, setPass] = useState("");
@@ -44,20 +50,22 @@ export default function AdminPage() {
   const ADMIN_PASS =
     process.env.NEXT_PUBLIC_ADMIN_PASSCODE || "printlysecure";
 
+  // ------------------ LOGIN ------------------
   const handleLogin = () => {
     if (pass === ADMIN_PASS) setAuthorized(true);
     else alert("Wrong passcode");
   };
 
+  // ------------------ LOAD DATA ------------------
   const loadData = async () => {
     setLoading(true);
 
     const [{ data: cats }, { data: prods }] = await Promise.all([
-      supabase.from("categories").select("*").order("name"),
+      supabase.from("categories").select("id, name").order("name"),
       supabase
         .from("products")
-        .select("*")
-        .order("name"),
+        .select("id, name, description, price, image_main, category_id, active")
+        .order("name")
     ]);
 
     setCategories(cats || []);
@@ -69,12 +77,15 @@ export default function AdminPage() {
     if (authorized) loadData();
   }, [authorized]);
 
+  // ------------------ CATEGORY FUNCS ------------------
   const addCategory = async () => {
     if (!newCategory.trim()) return;
 
-    const slug = newCategory.trim().toLowerCase().replace(/\s+/g, "-");
+    const slug = newCategory.toLowerCase().replace(/\s+/g, "-");
 
-    await supabase.from("categories").insert([{ name: newCategory.trim(), slug }]);
+    await supabase.from("categories").insert([
+      { name: newCategory.trim(), slug }
+    ]);
 
     setNewCategory("");
     loadData();
@@ -86,8 +97,14 @@ export default function AdminPage() {
     loadData();
   };
 
+  // ------------------ PRODUCT FUNCS ------------------
   const addProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.image_main || !newProduct.category_id) {
+    if (
+      !newProduct.name ||
+      !newProduct.price ||
+      !newProduct.image_main ||
+      !newProduct.category_id
+    ) {
       alert("Fill all required fields");
       return;
     }
@@ -121,20 +138,29 @@ export default function AdminPage() {
     loadData();
   };
 
-  // 🔥 FIXED — Uses service role via API so RLS can't block it
+  // ------------------ FIXED ACTIVE / INACTIVE TOGGLE ------------------
   const toggleActive = async (product: Product) => {
-    await fetch("/api/products", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: product.id,
-        active: !product.active
-      })
-    });
+    // ⚡ Optimistic UI update (instant response)
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === product.id ? { ...p, active: !product.active } : p
+      )
+    );
 
-    loadData();
+    // Update DB
+    const { error } = await supabase
+      .from("products")
+      .update({ active: !product.active })
+      .eq("id", product.id);
+
+    // If DB fails → revert to real DB state
+    if (error) {
+      console.error(error);
+      loadData();
+    }
   };
 
+  // ------------------ AUTH PAGE ------------------
   if (!authorized) {
     return (
       <div style={{ marginTop: 40, maxWidth: 360 }}>
@@ -148,17 +174,20 @@ export default function AdminPage() {
           onChange={(e) => setPass(e.target.value)}
         />
 
-        <button className="btn-primary" style={{ marginTop: 12 }} onClick={handleLogin}>
+        <button
+          className="btn-primary"
+          style={{ marginTop: 12 }}
+          onClick={handleLogin}
+        >
           Enter
         </button>
       </div>
     );
   }
 
+  // ------------------ MAIN ADMIN PAGE ------------------
   return (
     <div style={{ marginTop: 24 }}>
-
-      {/* EDIT PRODUCT MODAL */}
       {editingProduct && (
         <EditProductModal
           product={editingProduct}
@@ -170,6 +199,7 @@ export default function AdminPage() {
 
       <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin panel</h1>
 
+      {/* TAB BUTTONS */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
         <button
           className="btn-ghost"
@@ -190,7 +220,7 @@ export default function AdminPage() {
 
       {loading && <p style={{ color: "#9ca3af" }}>Loading…</p>}
 
-      {/* CATEGORIES TAB */}
+      {/* ------------------ CATEGORY TAB ------------------ */}
       {tab === "categories" && (
         <>
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
@@ -219,12 +249,15 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "center"
                 }}
               >
                 <span>{c.name}</span>
 
-                <button className="btn-danger" onClick={() => deleteCategory(c.id)}>
+                <button
+                  className="btn-danger"
+                  onClick={() => deleteCategory(c.id)}
+                >
                   Delete
                 </button>
               </div>
@@ -233,9 +266,10 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* PRODUCTS TAB */}
+      {/* ------------------ PRODUCTS TAB ------------------ */}
       {tab === "products" && (
         <>
+          {/* ---------- ADD PRODUCT CARD ---------- */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2 style={{ fontSize: "1rem" }}>Add product</h2>
 
@@ -244,14 +278,16 @@ export default function AdminPage() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
                 gap: 10,
-                marginTop: 8,
+                marginTop: 8
               }}
             >
               <input
                 className="input"
                 placeholder="Name"
                 value={newProduct.name}
-                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, name: e.target.value })
+                }
               />
 
               <input
@@ -259,14 +295,19 @@ export default function AdminPage() {
                 placeholder="Price (AED)"
                 type="number"
                 value={newProduct.price}
-                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, price: e.target.value })
+                }
               />
 
               <select
                 className="select"
                 value={newProduct.category_id}
                 onChange={(e) =>
-                  setNewProduct({ ...newProduct, category_id: e.target.value })
+                  setNewProduct({
+                    ...newProduct,
+                    category_id: e.target.value
+                  })
                 }
               >
                 <option value="">Category</option>
@@ -281,7 +322,9 @@ export default function AdminPage() {
 
             <div style={{ marginTop: 10 }}>
               <AdminImageUpload
-                onUploaded={(url) => setNewProduct({ ...newProduct, image_main: url })}
+                onUploaded={(url) =>
+                  setNewProduct({ ...newProduct, image_main: url })
+                }
               />
 
               {newProduct.image_main && (
@@ -291,7 +334,7 @@ export default function AdminPage() {
                     width: 120,
                     marginTop: 8,
                     borderRadius: 8,
-                    border: "1px solid #333",
+                    border: "1px solid #333"
                   }}
                 />
               )}
@@ -307,12 +350,16 @@ export default function AdminPage() {
               style={{ marginTop: 8, minHeight: 70 }}
             />
 
-            <button className="btn-primary" style={{ marginTop: 10 }} onClick={addProduct}>
+            <button
+              className="btn-primary"
+              style={{ marginTop: 10 }}
+              onClick={addProduct}
+            >
               Save product
             </button>
           </div>
 
-          {/* PRODUCT LIST */}
+          {/* ---------- PRODUCT LIST ---------- */}
           <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
             {products.map((p) => (
               <div
@@ -322,7 +369,7 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "center"
                 }}
               >
                 <div>
@@ -333,22 +380,33 @@ export default function AdminPage() {
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
+                  {/* ACTIVE / INACTIVE BUTTON (GREEN / RED) */}
                   <button
                     className="btn-ghost"
                     style={{
+                      background: p.active ? "#22c55e20" : "#f8717120",
                       color: p.active ? "#22c55e" : "#f87171",
+                      border: `1px solid ${p.active ? "#22c55e" : "#f87171"}`,
+                      borderRadius: 6,
                       fontWeight: 600,
+                      padding: "4px 10px"
                     }}
                     onClick={() => toggleActive(p)}
                   >
                     {p.active ? "Active" : "Inactive"}
                   </button>
 
-                  <button className="btn-ghost" onClick={() => setEditingProduct(p)}>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => setEditingProduct(p)}
+                  >
                     Edit
                   </button>
 
-                  <button className="btn-danger" onClick={() => deleteProduct(p.id)}>
+                  <button
+                    className="btn-danger"
+                    onClick={() => deleteProduct(p.id)}
+                  >
                     Delete
                   </button>
                 </div>
