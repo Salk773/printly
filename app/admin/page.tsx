@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import AdminImageUpload from "@/components/AdminImageUpload";
+import EditProductModal from "@/components/EditProductModal"; // ← ADDED
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type Category = {
   id: string;
@@ -32,6 +34,8 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // ← ADDED
+
   const [newCategory, setNewCategory] = useState("");
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -51,6 +55,7 @@ export default function AdminPage() {
 
   const loadData = async () => {
     setLoading(true);
+
     const [{ data: cats }, { data: prods }] = await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase
@@ -58,6 +63,7 @@ export default function AdminPage() {
         .select("id, name, description, price, image_main, category_id, active")
         .order("name")
     ]);
+
     setCategories(cats || []);
     setProducts(prods || []);
     setLoading(false);
@@ -69,29 +75,22 @@ export default function AdminPage() {
 
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-    const slug = newCategory.trim().toLowerCase().replace(/\s+/g, "-");
 
-    const { error } = await supabase
+    const slug = newCategory.toLowerCase().replace(/\s+/g, "-");
+
+    await supabase
       .from("categories")
       .insert([{ name: newCategory.trim(), slug }]);
 
-    if (error) alert(error.message);
-    else {
-      setNewCategory("");
-      loadData();
-    }
+    setNewCategory("");
+    loadData();
   };
 
   const deleteCategory = async (id: string) => {
     if (!confirm("Delete this category?")) return;
 
-    const { error } = await supabase
-      .from("categories")
-      .delete()
-      .eq("id", id);
-
-    if (error) alert(error.message);
-    else loadData();
+    await supabase.from("categories").delete().eq("id", id);
+    loadData();
   };
 
   const addProduct = async () => {
@@ -105,7 +104,7 @@ export default function AdminPage() {
       return;
     }
 
-    const { error } = await supabase.from("products").insert([
+    await supabase.from("products").insert([
       {
         name: newProduct.name,
         description: newProduct.description,
@@ -116,38 +115,29 @@ export default function AdminPage() {
       }
     ]);
 
-    if (error) alert(error.message);
-    else {
-      setNewProduct({
-        name: "",
-        description: "",
-        price: "",
-        image_main: "",
-        category_id: ""
-      });
-      loadData();
-    }
+    setNewProduct({
+      name: "",
+      description: "",
+      price: "",
+      image_main: "",
+      category_id: ""
+    });
+
+    loadData();
   };
 
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product?")) return;
 
-    const { error } = await supabase.from("products").delete().eq("id", id);
-
-    if (error) alert(error.message);
-    else loadData();
+    await supabase.from("products").delete().eq("id", id);
+    loadData();
   };
 
   const toggleActive = async (product: Product) => {
-    const { error } = await supabase
+    await supabase
       .from("products")
       .update({ active: !product.active })
       .eq("id", product.id);
-
-    if (error) {
-      alert("Failed to update status");
-      return;
-    }
 
     loadData();
   };
@@ -178,6 +168,16 @@ export default function AdminPage() {
 
   return (
     <div style={{ marginTop: 24 }}>
+      {/* EDIT MODAL */}
+      {editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          categories={categories}
+          onClose={() => setEditingProduct(null)}
+          onSaved={loadData}
+        />
+      )}
+
       <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin panel</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
@@ -360,7 +360,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8 }}>
                   <button
                     className="btn-ghost"
                     style={{
@@ -370,6 +370,13 @@ export default function AdminPage() {
                     onClick={() => toggleActive(p)}
                   >
                     {p.active ? "Active" : "Inactive"}
+                  </button>
+
+                  <button
+                    className="btn-ghost"
+                    onClick={() => setEditingProduct(p)} // ← ADDED
+                  >
+                    Edit
                   </button>
 
                   <button className="btn-danger" onClick={() => deleteProduct(p.id)}>
