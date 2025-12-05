@@ -12,19 +12,14 @@ export default async function ProductDetailPage({
 }) {
   const supabase = supabaseServer();
 
-  // Fetch the product
   const { data: product, error } = await supabase
     .from("products")
     .select("id, name, description, price, image_main, long_description, active")
     .eq("id", params.id)
-    .eq("active", true) // 👈 BOOLEAN check
+    .eq("active", true)
     .maybeSingle();
 
-  // If product missing, throw 404
-  if (!product || error) {
-    console.error("Product fetch error:", error);
-    return notFound();
-  }
+  if (!product || error) return notFound();
 
   return (
     <div
@@ -35,7 +30,7 @@ export default async function ProductDetailPage({
         marginTop: 24,
       }}
     >
-      {/* Left: Image */}
+      {/* Image */}
       <div className="card" style={{ overflow: "hidden" }}>
         <div style={{ position: "relative", height: 420 }}>
           {product.image_main && (
@@ -49,7 +44,7 @@ export default async function ProductDetailPage({
         </div>
       </div>
 
-      {/* Right: Info */}
+      {/* Info */}
       <div>
         <h1 style={{ fontSize: "1.6rem", marginBottom: 4 }}>{product.name}</h1>
 
@@ -67,7 +62,6 @@ export default async function ProductDetailPage({
           {product.price.toFixed(2)} AED
         </div>
 
-        {/* Add to Cart */}
         <AddToCartButton
           id={product.id}
           name={product.name}
@@ -75,7 +69,6 @@ export default async function ProductDetailPage({
           image={product.image_main}
         />
 
-        {/* Additional section */}
         <div
           className="card-soft"
           style={{ padding: 16, marginTop: 28, fontSize: "0.9rem" }}
