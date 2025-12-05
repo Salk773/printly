@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import AdminImageUpload from "@/components/AdminImageUpload";
-import EditProductModal from "@/components/EditProductModal"; // ← ADDED
+import EditProductModal from "@/components/EditProductModal";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type Category = {
-  id: string;
-  name: string;
-};
-
+type Category = { id: string; name: string };
 type Product = {
   id: string;
   name: string;
@@ -34,7 +30,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // ← ADDED
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
   const [newProduct, setNewProduct] = useState({
@@ -57,11 +53,11 @@ export default function AdminPage() {
     setLoading(true);
 
     const [{ data: cats }, { data: prods }] = await Promise.all([
-      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("categories").select("*").order("name"),
       supabase
         .from("products")
-        .select("id, name, description, price, image_main, category_id, active")
-        .order("name")
+        .select("*")
+        .order("name"),
     ]);
 
     setCategories(cats || []);
@@ -76,11 +72,9 @@ export default function AdminPage() {
   const addCategory = async () => {
     if (!newCategory.trim()) return;
 
-    const slug = newCategory.toLowerCase().replace(/\s+/g, "-");
+    const slug = newCategory.trim().toLowerCase().replace(/\s+/g, "-");
 
-    await supabase
-      .from("categories")
-      .insert([{ name: newCategory.trim(), slug }]);
+    await supabase.from("categories").insert([{ name: newCategory.trim(), slug }]);
 
     setNewCategory("");
     loadData();
@@ -88,18 +82,12 @@ export default function AdminPage() {
 
   const deleteCategory = async (id: string) => {
     if (!confirm("Delete this category?")) return;
-
     await supabase.from("categories").delete().eq("id", id);
     loadData();
   };
 
   const addProduct = async () => {
-    if (
-      !newProduct.name ||
-      !newProduct.price ||
-      !newProduct.image_main ||
-      !newProduct.category_id
-    ) {
+    if (!newProduct.name || !newProduct.price || !newProduct.image_main || !newProduct.category_id) {
       alert("Fill all required fields");
       return;
     }
@@ -133,11 +121,16 @@ export default function AdminPage() {
     loadData();
   };
 
+  // 🔥 FIXED — Uses service role via API so RLS can't block it
   const toggleActive = async (product: Product) => {
-    await supabase
-      .from("products")
-      .update({ active: !product.active })
-      .eq("id", product.id);
+    await fetch("/api/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: product.id,
+        active: !product.active
+      })
+    });
 
     loadData();
   };
@@ -155,11 +148,7 @@ export default function AdminPage() {
           onChange={(e) => setPass(e.target.value)}
         />
 
-        <button
-          className="btn-primary"
-          style={{ marginTop: 12 }}
-          onClick={handleLogin}
-        >
+        <button className="btn-primary" style={{ marginTop: 12 }} onClick={handleLogin}>
           Enter
         </button>
       </div>
@@ -168,7 +157,8 @@ export default function AdminPage() {
 
   return (
     <div style={{ marginTop: 24 }}>
-      {/* EDIT MODAL */}
+
+      {/* EDIT PRODUCT MODAL */}
       {editingProduct && (
         <EditProductModal
           product={editingProduct}
@@ -200,7 +190,7 @@ export default function AdminPage() {
 
       {loading && <p style={{ color: "#9ca3af" }}>Loading…</p>}
 
-      {/* ----------- CATEGORIES ----------- */}
+      {/* CATEGORIES TAB */}
       {tab === "categories" && (
         <>
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
@@ -229,15 +219,12 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
               >
                 <span>{c.name}</span>
 
-                <button
-                  className="btn-danger"
-                  onClick={() => deleteCategory(c.id)}
-                >
+                <button className="btn-danger" onClick={() => deleteCategory(c.id)}>
                   Delete
                 </button>
               </div>
@@ -246,7 +233,7 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ----------- PRODUCTS ----------- */}
+      {/* PRODUCTS TAB */}
       {tab === "products" && (
         <>
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
@@ -257,16 +244,14 @@ export default function AdminPage() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
                 gap: 10,
-                marginTop: 8
+                marginTop: 8,
               }}
             >
               <input
                 className="input"
                 placeholder="Name"
                 value={newProduct.name}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, name: e.target.value })
-                }
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
               />
 
               <input
@@ -274,19 +259,14 @@ export default function AdminPage() {
                 placeholder="Price (AED)"
                 type="number"
                 value={newProduct.price}
-                onChange={(e) =>
-                  setNewProduct({ ...newProduct, price: e.target.value })
-                }
+                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
               />
 
               <select
                 className="select"
                 value={newProduct.category_id}
                 onChange={(e) =>
-                  setNewProduct({
-                    ...newProduct,
-                    category_id: e.target.value
-                  })
+                  setNewProduct({ ...newProduct, category_id: e.target.value })
                 }
               >
                 <option value="">Category</option>
@@ -301,9 +281,7 @@ export default function AdminPage() {
 
             <div style={{ marginTop: 10 }}>
               <AdminImageUpload
-                onUploaded={(url) =>
-                  setNewProduct({ ...newProduct, image_main: url })
-                }
+                onUploaded={(url) => setNewProduct({ ...newProduct, image_main: url })}
               />
 
               {newProduct.image_main && (
@@ -313,7 +291,7 @@ export default function AdminPage() {
                     width: 120,
                     marginTop: 8,
                     borderRadius: 8,
-                    border: "1px solid #333"
+                    border: "1px solid #333",
                   }}
                 />
               )}
@@ -324,23 +302,17 @@ export default function AdminPage() {
               placeholder="Short description"
               value={newProduct.description}
               onChange={(e) =>
-                setNewProduct({
-                  ...newProduct,
-                  description: e.target.value
-                })
+                setNewProduct({ ...newProduct, description: e.target.value })
               }
               style={{ marginTop: 8, minHeight: 70 }}
             />
 
-            <button
-              className="btn-primary"
-              style={{ marginTop: 10 }}
-              onClick={addProduct}
-            >
+            <button className="btn-primary" style={{ marginTop: 10 }} onClick={addProduct}>
               Save product
             </button>
           </div>
 
+          {/* PRODUCT LIST */}
           <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
             {products.map((p) => (
               <div
@@ -350,7 +322,7 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
               >
                 <div>
@@ -365,17 +337,14 @@ export default function AdminPage() {
                     className="btn-ghost"
                     style={{
                       color: p.active ? "#22c55e" : "#f87171",
-                      fontWeight: 600
+                      fontWeight: 600,
                     }}
                     onClick={() => toggleActive(p)}
                   >
                     {p.active ? "Active" : "Inactive"}
                   </button>
 
-                  <button
-                    className="btn-ghost"
-                    onClick={() => setEditingProduct(p)} // ← ADDED
-                  >
+                  <button className="btn-ghost" onClick={() => setEditingProduct(p)}>
                     Edit
                   </button>
 
