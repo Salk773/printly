@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import AdminImageUpload from "@/components/AdminImageUpload";
-import EditProductModal from "@/components/EditProductModal";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -33,8 +32,6 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
   const [newCategory, setNewCategory] = useState("");
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -54,15 +51,13 @@ export default function AdminPage() {
 
   const loadData = async () => {
     setLoading(true);
-
     const [{ data: cats }, { data: prods }] = await Promise.all([
       supabase.from("categories").select("id, name").order("name"),
       supabase
         .from("products")
-        .select("*")
+        .select("id, name, description, price, image_main, category_id, active")
         .order("name")
     ]);
-
     setCategories(cats || []);
     setProducts(prods || []);
     setLoading(false);
@@ -74,7 +69,6 @@ export default function AdminPage() {
 
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-
     const slug = newCategory.trim().toLowerCase().replace(/\s+/g, "-");
 
     const { error } = await supabase
@@ -138,22 +132,30 @@ export default function AdminPage() {
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product?")) return;
 
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("products").delete().eq("id", id);
 
     if (error) alert(error.message);
     else loadData();
+  };
+
+  const toggleActive = async (product: Product) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ active: !product.active })
+      .eq("id", product.id);
+
+    if (error) {
+      alert("Failed to update status");
+      return;
+    }
+
+    loadData();
   };
 
   if (!authorized) {
     return (
       <div style={{ marginTop: 40, maxWidth: 360 }}>
         <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin login</h1>
-        <p style={{ color: "#9ca3af", marginBottom: 14 }}>
-          Enter the admin passcode to manage products and categories.
-        </p>
 
         <input
           type="password"
@@ -196,15 +198,13 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {loading && (
-        <p style={{ color: "#9ca3af", marginBottom: 16 }}>Loading…</p>
-      )}
+      {loading && <p style={{ color: "#9ca3af" }}>Loading…</p>}
 
-      {/* ===================== CATEGORIES ===================== */}
+      {/* ----------- CATEGORIES ----------- */}
       {tab === "categories" && (
         <>
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
-            <h2 style={{ marginTop: 0 }}>Add category</h2>
+            <h2 style={{ fontSize: "1rem" }}>Add category</h2>
 
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
               <input
@@ -246,12 +246,11 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ===================== PRODUCTS ===================== */}
+      {/* ----------- PRODUCTS ----------- */}
       {tab === "products" && (
         <>
-          {/* ---- Add product ---- */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
-            <h2 style={{ marginTop: 0 }}>Add product</h2>
+            <h2 style={{ fontSize: "1rem" }}>Add product</h2>
 
             <div
               style={{
@@ -284,7 +283,10 @@ export default function AdminPage() {
                 className="select"
                 value={newProduct.category_id}
                 onChange={(e) =>
-                  setNewProduct({ ...newProduct, category_id: e.target.value })
+                  setNewProduct({
+                    ...newProduct,
+                    category_id: e.target.value
+                  })
                 }
               >
                 <option value="">Category</option>
@@ -297,7 +299,6 @@ export default function AdminPage() {
               </select>
             </div>
 
-            {/* IMAGE UPLOAD */}
             <div style={{ marginTop: 10 }}>
               <AdminImageUpload
                 onUploaded={(url) =>
@@ -323,17 +324,23 @@ export default function AdminPage() {
               placeholder="Short description"
               value={newProduct.description}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, description: e.target.value })
+                setNewProduct({
+                  ...newProduct,
+                  description: e.target.value
+                })
               }
               style={{ marginTop: 8, minHeight: 70 }}
             />
 
-            <button className="btn-primary" style={{ marginTop: 10 }} onClick={addProduct}>
+            <button
+              className="btn-primary"
+              style={{ marginTop: 10 }}
+              onClick={addProduct}
+            >
               Save product
             </button>
           </div>
 
-          {/* ---- Product list ---- */}
           <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
             {products.map((p) => (
               <div
@@ -348,19 +355,23 @@ export default function AdminPage() {
               >
                 <div>
                   <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ color: "#9ca3af" }}>{p.price} AED</div>
+                  <div style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                    {p.price.toFixed(2)} AED
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                  {/* EDIT BUTTON */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
                     className="btn-ghost"
-                    onClick={() => setEditingProduct(p)}
+                    style={{
+                      color: p.active ? "#22c55e" : "#f87171",
+                      fontWeight: 600
+                    }}
+                    onClick={() => toggleActive(p)}
                   >
-                    Edit
+                    {p.active ? "Active" : "Inactive"}
                   </button>
 
-                  {/* DELETE BUTTON */}
                   <button className="btn-danger" onClick={() => deleteProduct(p.id)}>
                     Delete
                   </button>
@@ -369,16 +380,6 @@ export default function AdminPage() {
             ))}
           </div>
         </>
-      )}
-
-      {/* ---- EDIT MODAL ---- */}
-      {editingProduct && (
-        <EditProductModal
-          product={editingProduct}
-          categories={categories}
-          onClose={() => setEditingProduct(null)}
-          onSaved={loadData}
-        />
       )}
     </div>
   );
