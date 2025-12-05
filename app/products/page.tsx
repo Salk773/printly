@@ -10,13 +10,10 @@ export default async function ProductsPage() {
     supabase
       .from("products")
       .select("id, name, description, price, image_main, category_id")
-      .eq("active", true)
+      .eq("active", true)   // boolean filter
       .order("name", { ascending: true }),
 
-    supabase
-      .from("categories")
-      .select("id, name")
-      .order("name"),
+    supabase.from("categories").select("id, name").order("name"),
   ]);
 
   return (
