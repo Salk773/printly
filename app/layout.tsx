@@ -2,12 +2,13 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/context/CartContext";
+import { CartProvider } from "@/context/CartProvider";
+import SideCart from "@/components/SideCart";
 import { Toaster } from "react-hot-toast";
 
 export const metadata = {
   title: "Printly",
-  description: "Made layer by layer."
+  description: "Made layer by layer.",
 };
 
 export default function RootLayout({
@@ -20,6 +21,9 @@ export default function RootLayout({
       <body style={{ margin: 0, background: "#0a0f1f", color: "white" }}>
         <CartProvider>
           <Toaster position="top-right" />
+
+          {/* Global Cart Drawer */}
+          <SideCart />
 
           <Navbar />
 
