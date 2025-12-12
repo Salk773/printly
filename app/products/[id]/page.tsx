@@ -1,10 +1,9 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useWishlist } from "@/context/WishlistProvider";
 import { supabaseServer } from "@/lib/supabaseServer";
+
+export const revalidate = 30;
 
 export default async function ProductPage({ params }) {
   const supabase = supabaseServer();
@@ -32,13 +31,17 @@ export default async function ProductPage({ params }) {
   return <ProductPageClient product={product} />;
 }
 
+"use client";
+
+import { useState } from "react";
+
 function ProductPageClient({ product }) {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const inWishlist = isInWishlist(product.id);
 
-  const images = product.images?.length
-    ? [product.image_main, ...product.images]
-    : [product.image_main];
+  // SAFEST MULTI-IMAGE FIX
+  const extraImages = Array.isArray(product.images) ? product.images : [];
+  const images = [product.image_main, ...extraImages].filter(Boolean);
 
   const [mainImage, setMainImage] = useState(images[0]);
 
@@ -58,9 +61,8 @@ function ProductPageClient({ product }) {
           gap: 40,
         }}
       >
-        {/* LEFT: IMAGE GALLERY */}
+        {/* LEFT — GALLERY */}
         <div>
-          {/* Main image */}
           <div
             style={{
               position: "relative",
@@ -77,20 +79,16 @@ function ProductPageClient({ product }) {
               src={mainImage}
               alt={product.name}
               fill
-              style={{
-                objectFit: "cover",
-                transition: "0.3s ease",
-              }}
+              style={{ objectFit: "cover" }}
             />
           </div>
 
-          {/* Thumbnails */}
           <div
             style={{
               display: "flex",
               gap: 10,
               overflowX: "auto",
-              paddingBottom: 4,
+              paddingBottom: 6,
             }}
           >
             {images.map((img) => (
@@ -101,18 +99,18 @@ function ProductPageClient({ product }) {
                   position: "relative",
                   width: 90,
                   height: 90,
-                  cursor: "pointer",
                   borderRadius: 10,
                   overflow: "hidden",
+                  cursor: "pointer",
                   border:
-                    mainImage === img
+                    img === mainImage
                       ? "2px solid #c084fc"
-                      : "1px solid rgba(148,163,184,0.25)",
+                      : "1px solid rgba(148,163,184,0.2)",
                 }}
               >
                 <Image
                   src={img}
-                  alt="thumb"
+                  alt="Thumbnail"
                   fill
                   style={{ objectFit: "cover" }}
                 />
@@ -123,9 +121,10 @@ function ProductPageClient({ product }) {
 
         {/* RIGHT SIDE */}
         <div>
-          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>{product.name}</h1>
+          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>
+            {product.name}
+          </h1>
 
-          {/* Wishlist button */}
           <button
             onClick={() =>
               toggleWishlist({
@@ -136,24 +135,18 @@ function ProductPageClient({ product }) {
               })
             }
             style={{
-              border: "none",
               background: "transparent",
-              fontSize: "1.4rem",
+              border: "none",
               color: inWishlist ? "#fb7185" : "#64748b",
+              fontSize: "1.3rem",
               cursor: "pointer",
               marginBottom: 16,
             }}
           >
-            {inWishlist ? "♥ Added to wishlist" : "♡ Add to wishlist"}
+            {inWishlist ? "♥ Wishlisted" : "♡ Add to wishlist"}
           </button>
 
-          <p
-            style={{
-              color: "#94a3b8",
-              lineHeight: 1.6,
-              marginBottom: 20,
-            }}
-          >
+          <p style={{ color: "#94a3b8", marginBottom: 20 }}>
             {product.description}
           </p>
 
@@ -164,7 +157,7 @@ function ProductPageClient({ product }) {
               background: "linear-gradient(135deg, #c084fc, #a855f7)",
               backgroundClip: "text",
               color: "transparent",
-              marginBottom: 24,
+              marginBottom: 20,
             }}
           >
             {product.price} AED
