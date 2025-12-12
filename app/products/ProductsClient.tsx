@@ -3,9 +3,29 @@
 import { useState, useMemo } from "react";
 import ProductCard from "@/components/ProductCard";
 
-export default function ProductsClient({ products, categories }) {
+type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_main: string;
+  category_id?: string;
+};
+
+type Category = {
+  id: string;
+  name: string;
+};
+
+export default function ProductsClient({
+  products,
+  categories,
+}: {
+  products: Product[];
+  categories: Category[];
+}) {
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -22,7 +42,7 @@ export default function ProductsClient({ products, categories }) {
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
-      {/* SEARCH + FILTERS */}
+      {/* Search + Filters */}
       <div
         style={{
           display: "flex",
@@ -32,7 +52,6 @@ export default function ProductsClient({ products, categories }) {
           alignItems: "center",
         }}
       >
-        {/* Search */}
         <input
           type="text"
           placeholder="Search products..."
@@ -48,7 +67,6 @@ export default function ProductsClient({ products, categories }) {
           }}
         />
 
-        {/* Category filter */}
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
@@ -70,7 +88,7 @@ export default function ProductsClient({ products, categories }) {
         </select>
       </div>
 
-      {/* PRODUCT GRID */}
+      {/* Grid */}
       <div
         style={{
           display: "grid",
@@ -83,7 +101,6 @@ export default function ProductsClient({ products, categories }) {
         ))}
       </div>
 
-      {/* NO RESULTS */}
       {filteredProducts.length === 0 && (
         <p
           style={{
