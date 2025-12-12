@@ -17,14 +17,27 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#0a0f1f", color: "white" }}>
+      <body
+        style={{
+          margin: 0,
+          background: "#0a0f1f",
+          color: "white",
+          overflowX: "hidden",
+        }}
+      >
+        {/* GLOBAL PROVIDERS */}
         <WishlistProvider>
           <CartProvider>
+            {/* GLOBAL TOAST SYSTEM */}
             <Toaster position="top-right" />
 
+            {/* ALWAYS AVAILABLE SIDECART */}
             <SideCart />
+
+            {/* NAVIGATION BAR */}
             <Navbar />
 
+            {/* PAGE CONTENT */}
             <main
               style={{
                 maxWidth: "1200px",
@@ -36,6 +49,7 @@ export default function RootLayout({ children }) {
               {children}
             </main>
 
+            {/* FOOTER */}
             <Footer />
           </CartProvider>
         </WishlistProvider>
