@@ -1,72 +1,45 @@
-"use client";
+import "./globals.css";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useMemo,
-  ReactNode,
-} from "react";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import SideCart from "@/components/SideCart";
 
-export type WishlistItem = {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
+import { CartProvider } from "@/context/CartProvider";
+import { WishlistProvider } from "@/context/WishlistProvider";
+
+import { Toaster } from "react-hot-toast";
+
+export const metadata = {
+  title: "Printly",
+  description: "Made layer by layer.",
 };
 
-type WishlistContextType = {
-  items: WishlistItem[];
-  toggleWishlist: (item: WishlistItem) => void;
-  isInWishlist: (id: string) => boolean;
-  removeItem: (id: string) => void;
-  clearWishlist: () => void;
-};
-
-const WishlistContext = createContext<WishlistContextType | undefined>(
-  undefined
-);
-
-export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>([]);
-
-  const toggleWishlist = (item: WishlistItem) => {
-    setItems((prev) => {
-      const exists = prev.some((w) => w.id === item.id);
-      if (exists) {
-        return prev.filter((w) => w.id !== item.id);
-      }
-      return [...prev, item];
-    });
-  };
-
-  const isInWishlist = (id: string) => items.some((w) => w.id === id);
-
-  const removeItem = (id: string) =>
-    setItems((prev) => prev.filter((w) => w.id !== id));
-
-  const clearWishlist = () => setItems([]);
-
-  const value = useMemo(
-    () => ({
-      items,
-      toggleWishlist,
-      isInWishlist,
-      removeItem,
-      clearWishlist,
-    }),
-    [items]
-  );
-
+export default function RootLayout({ children }) {
   return (
-    <WishlistContext.Provider value={value}>
-      {children}
-    </WishlistContext.Provider>
-  );
-}
+    <html lang="en">
+      <body style={{ margin: 0, background: "#0a0f1f", color: "white" }}>
+        <WishlistProvider>
+          <CartProvider>
+            <Toaster position="top-right" />
 
-export function useWishlist() {
-  const ctx = useContext(WishlistContext);
-  if (!ctx) throw new Error("useWishlist must be used inside WishlistProvider");
-  return ctx;
+            <SideCart />
+            <Navbar />
+
+            <main
+              style={{
+                maxWidth: "1200px",
+                margin: "0 auto",
+                padding: "40px 20px",
+                minHeight: "80vh",
+              }}
+            >
+              {children}
+            </main>
+
+            <Footer />
+          </CartProvider>
+        </WishlistProvider>
+      </body>
+    </html>
+  );
 }
