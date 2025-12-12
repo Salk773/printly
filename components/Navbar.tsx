@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/CartProvider";   // ✅ FIXED IMPORT
 
 export default function Navbar() {
   const { count } = useCart();
