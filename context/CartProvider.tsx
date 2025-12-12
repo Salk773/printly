@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -20,24 +20,25 @@ type CartContextType = {
   items: CartItem[];
   count: number;
   total: number;
-  isCartOpen: boolean;
+
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (id: string) => void;
+  clearCart: () => void;
+
   increaseQuantity: (id: string) => void;
   decreaseQuantity: (id: string) => void;
-  clearCart: () => void;
-  openCart: () => void;
-  closeCart: () => void;
+
+  sideCartOpen: boolean;
+  toggleSideCart: () => void;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [sideCartOpen, setSideCartOpen] = useState(false);
 
-  const openCart = () => setIsCartOpen(true);
-  const closeCart = () => setIsCartOpen(false);
+  const toggleSideCart = () => setSideCartOpen((prev) => !prev);
 
   const addItem = (
     item: Omit<CartItem, "quantity"> & { quantity?: number }
@@ -48,39 +49,41 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) {
         return prev.map((i) =>
           i.id === item.id
-            ? { ...i, quantity: i.quantity + (item.quantity || 1) }
+            ? { ...i, quantity: i.quantity + (item.quantity ?? 1) }
             : i
         );
       }
 
-      return [...prev, { ...item, quantity: item.quantity || 1 }];
+      return [...prev, { ...item, quantity: item.quantity ?? 1 }];
     });
 
-    setIsCartOpen(true);
+    setSideCartOpen(true); // auto open on add
   };
 
-  const removeItem = (id: string) =>
+  const removeItem = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
-
-  const increaseQuantity = (id: string) =>
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, quantity: i.quantity + 1 } : i
-      )
-    );
-
-  const decreaseQuantity = (id: string) =>
-    setItems((prev) =>
-      prev
-        .map((i) =>
-          i.id === id ? { ...i, quantity: i.quantity - 1 } : i
-        )
-        .filter((i) => i.quantity > 0)
-    );
+  };
 
   const clearCart = () => setItems([]);
 
+  const increaseQuantity = (id: string) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, quantity: i.quantity + 1 } : i))
+    );
+  };
+
+  const decreaseQuantity = (id: string) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? { ...i, quantity: Math.max(1, i.quantity - 1) }
+          : i
+      )
+    );
+  };
+
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
+
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const value = useMemo(
@@ -88,16 +91,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       count,
       total,
-      isCartOpen,
       addItem,
       removeItem,
+      clearCart,
       increaseQuantity,
       decreaseQuantity,
-      clearCart,
-      openCart,
-      closeCart,
+      sideCartOpen,
+      toggleSideCart,
     }),
-    [items, count, total, isCartOpen]
+    [items, sideCartOpen]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
