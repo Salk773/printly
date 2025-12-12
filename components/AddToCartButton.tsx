@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useCart } from "@/context/CartProvider";
 import toast from "react-hot-toast";
 
@@ -19,10 +20,13 @@ export default function AddToCartButton({
   small,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
+  const [pressed, setPressed] = useState(false);
 
   const handleClick = () => {
+    setPressed(true);
     addItem({ id, name, price, image, quantity: 1 });
     toast.success("Added to cart ✅");
+    setTimeout(() => setPressed(false), 150);
   };
 
   return (
@@ -37,10 +41,14 @@ export default function AddToCartButton({
         fontWeight: 600,
         background: "linear-gradient(135deg, #c084fc, #a855f7)",
         color: "#020617",
-        boxShadow: "0 8px 24px rgba(192,132,252,0.25)",
+        boxShadow: pressed
+          ? "0 4px 12px rgba(192,132,252,0.3)"
+          : "0 8px 24px rgba(192,132,252,0.35)",
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
+        transform: pressed ? "scale(0.96)" : "scale(1)",
+        transition: "transform 0.12s ease, box-shadow 0.12s ease",
       }}
     >
       🛒 Add to cart
