@@ -34,10 +34,7 @@ export default function SideCart() {
     >
       <div style={{ fontSize: 20, fontWeight: 600 }}>Your Cart</div>
 
-      <button
-        onClick={closeCart}
-        style={{ marginTop: 10, marginBottom: 20 }}
-      >
+      <button onClick={closeCart} style={{ marginTop: 10, marginBottom: 20 }}>
         Close
       </button>
 
