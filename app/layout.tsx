@@ -1,8 +1,7 @@
-// app/layout.tsx
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/context/CartProvider";
+import { CartProvider } from "@/context/CartProvider";   // FIXED
 import SideCart from "@/components/SideCart";
 import { Toaster } from "react-hot-toast";
 
@@ -11,18 +10,12 @@ export const metadata = {
   description: "Made layer by layer.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body style={{ margin: 0, background: "#0a0f1f", color: "white" }}>
         <CartProvider>
           <Toaster position="top-right" />
-
-          {/* Global Cart Drawer */}
           <SideCart />
 
           <Navbar />
