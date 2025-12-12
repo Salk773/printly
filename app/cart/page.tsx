@@ -93,37 +93,37 @@ export default function CartPage() {
                     alignItems: "center",
                   }}
                 >
-                  {/* IMAGE */}
-                  <div
-                    style={{
-                      position: "relative",
-                      width: 96,
-                      height: 96,
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                    }}
+                  {/* CLICKABLE PRODUCT LINK */}
+                  <Link
+                    href={`/products/${item.id}`}
+                    style={{ display: "block", position: "relative", width: 96, height: 96 }}
                   >
                     <Image
                       src={item.image}
                       alt={item.name}
                       fill
-                      style={{ objectFit: "cover" }}
+                      style={{ objectFit: "cover", borderRadius: 12 }}
                     />
-                  </div>
+                  </Link>
 
                   {/* NAME + QUANTITY */}
                   <div style={{ overflow: "hidden" }}>
-                    <div
+                    {/* CLICKABLE PRODUCT NAME */}
+                    <Link
+                      href={`/products/${item.id}`}
                       style={{
                         fontWeight: 600,
                         marginBottom: 4,
                         whiteSpace: "nowrap",
                         textOverflow: "ellipsis",
                         overflow: "hidden",
+                        display: "block",
+                        color: "white",
+                        textDecoration: "none",
                       }}
                     >
                       {item.name}
-                    </div>
+                    </Link>
 
                     {/* QUANTITY CONTROLS */}
                     <div
