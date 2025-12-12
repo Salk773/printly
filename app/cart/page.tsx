@@ -2,10 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/context/CartProvider";   // FIXED
+import { useCart } from "@/context/CartProvider";
 
 export default function CartPage() {
-  const { items, total, clearCart, removeItem } = useCart();
+  const {
+    items,
+    total,
+    clearCart,
+    removeItem,
+    increaseQuantity,
+    decreaseQuantity,
+  } = useCart();
 
   const hasItems = items.length > 0;
 
@@ -29,8 +36,7 @@ export default function CartPage() {
             style={{
               padding: "30px",
               borderRadius: "16px",
-              background:
-                "radial-gradient(circle at top left, #1e293b, #020617)",
+              background: "radial-gradient(circle at top left, #1e293b, #020617)",
               border: "1px dashed rgba(148,163,184,0.4)",
               textAlign: "center",
             }}
@@ -63,14 +69,12 @@ export default function CartPage() {
               gap: 24,
             }}
           >
-            {/* Items */}
+            {/* CART ITEMS */}
             <div
               style={{
                 borderRadius: "16px",
-                background:
-                  "radial-gradient(circle at top left, #020617, #020617)",
-                border: "1px solid rgba(15,23,42,0.9)",
-                boxShadow: "0 18px 60px rgba(15,23,42,0.9)",
+                background: "#0f172a",
+                border: "1px solid rgba(148,163,184,0.2)",
                 padding: "16px",
                 display: "flex",
                 flexDirection: "column",
@@ -89,6 +93,7 @@ export default function CartPage() {
                     alignItems: "center",
                   }}
                 >
+                  {/* IMAGE */}
                   <div
                     style={{
                       position: "relative",
@@ -96,22 +101,17 @@ export default function CartPage() {
                       height: 96,
                       borderRadius: "12px",
                       overflow: "hidden",
-                      background: "#020617",
                     }}
                   >
-                    {item.image && (
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        style={{
-                          objectFit: "cover",
-                          borderRadius: "12px",
-                        }}
-                      />
-                    )}
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      fill
+                      style={{ objectFit: "cover" }}
+                    />
                   </div>
 
+                  {/* NAME + QUANTITY */}
                   <div style={{ overflow: "hidden" }}>
                     <div
                       style={{
@@ -124,15 +124,47 @@ export default function CartPage() {
                     >
                       {item.name}
                     </div>
+
+                    {/* QUANTITY CONTROLS */}
                     <div
                       style={{
-                        fontSize: "0.85rem",
-                        color: "#9ca3af",
-                        marginBottom: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        marginBottom: 6,
                       }}
                     >
-                      Quantity: {item.quantity}
+                      <button
+                        onClick={() => decreaseQuantity(item.id)}
+                        style={{
+                          padding: "4px 8px",
+                          background: "#1e293b",
+                          borderRadius: 6,
+                          border: "none",
+                          cursor: "pointer",
+                          color: "white",
+                        }}
+                      >
+                        –
+                      </button>
+
+                      <span>{item.quantity}</span>
+
+                      <button
+                        onClick={() => increaseQuantity(item.id)}
+                        style={{
+                          padding: "4px 8px",
+                          background: "#1e293b",
+                          borderRadius: 6,
+                          border: "none",
+                          cursor: "pointer",
+                          color: "white",
+                        }}
+                      >
+                        +
+                      </button>
                     </div>
+
                     <div
                       style={{
                         fontSize: "0.9rem",
@@ -144,11 +176,12 @@ export default function CartPage() {
                     </div>
                   </div>
 
+                  {/* REMOVE */}
                   <button
                     onClick={() => removeItem(item.id)}
                     style={{
-                      border: "none",
                       background: "transparent",
+                      border: "none",
                       color: "#f97373",
                       cursor: "pointer",
                       fontSize: "0.8rem",
@@ -160,14 +193,13 @@ export default function CartPage() {
               ))}
             </div>
 
-            {/* Summary */}
+            {/* SUMMARY */}
             <aside
               style={{
                 borderRadius: "16px",
-                background:
-                  "radial-gradient(circle at top left, #0b1120, #020617)",
-                border: "1px solid rgba(148,163,184,0.5)",
-                padding: "18px 16px 20px",
+                background: "#0b1120",
+                border: "1px solid rgba(148,163,184,0.4)",
+                padding: "18px 16px",
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
@@ -176,12 +208,12 @@ export default function CartPage() {
               <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
                 Summary
               </h2>
+
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   fontSize: "0.95rem",
-                  marginTop: 4,
                 }}
               >
                 <span>Subtotal</span>
@@ -189,17 +221,6 @@ export default function CartPage() {
                   {total.toFixed(2)} AED
                 </span>
               </div>
-
-              <p
-                style={{
-                  fontSize: "0.8rem",
-                  color: "#9ca3af",
-                  marginTop: 8,
-                }}
-              >
-                Payment & shipping will be handled manually for now. This is a
-                prototype cart.
-              </p>
 
               <button
                 onClick={clearCart}
