@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartProvider";
+import { useWishlist } from "@/context/WishlistProvider";
 import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { count } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const pathname = usePathname();
 
   return (
@@ -15,7 +17,7 @@ export default function Navbar() {
         top: 0,
         zIndex: 40,
         backdropFilter: "blur(16px)",
-        background: "rgba(10, 15, 31, 0.75)",
+        background: "rgba(10, 15, 31, 0.85)",
         borderBottom: "1px solid rgba(148,163,184,0.15)",
       }}
     >
@@ -27,6 +29,7 @@ export default function Navbar() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 16,
         }}
       >
         {/* LOGO */}
@@ -45,18 +48,24 @@ export default function Navbar() {
         </Link>
 
         {/* NAV LINKS */}
-        <div style={{ display: "flex", gap: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 18,
+            fontSize: "0.95rem",
+            alignItems: "center",
+          }}
+        >
           {[
             { name: "Home", path: "/" },
             { name: "Products", path: "/products" },
-            { name: "Cart", path: "/cart" },
+            { name: "Wishlist", path: "/wishlist" },
           ].map((item) => (
             <Link
               key={item.path}
               href={item.path}
               style={{
                 textDecoration: "none",
-                fontSize: "0.95rem",
                 fontWeight: 500,
                 color:
                   pathname === item.path
@@ -68,6 +77,32 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
+
+          {/* Wishlist icon */}
+          <Link
+            href="/wishlist"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: "0.9rem",
+              color: "#e5e7eb",
+              textDecoration: "none",
+            }}
+          >
+            <span>♡</span>
+            {wishlistItems.length > 0 && (
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#c084fc",
+                  fontWeight: 600,
+                }}
+              >
+                {wishlistItems.length}
+              </span>
+            )}
+          </Link>
         </div>
 
         {/* CART ICON */}
@@ -101,7 +136,7 @@ export default function Navbar() {
                 padding: "0px 7px",
                 fontSize: "0.75rem",
                 fontWeight: 700,
-                boxShadow: "0 0 0 2px rgba(10, 15, 31, 1)",
+                boxShadow: "0 0 0 2px rgba(10,15,31,1)",
               }}
             >
               {count}
