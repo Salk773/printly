@@ -1,34 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
-import AddToCartButton from "@/components/AddToCartButton";
+import ProductCard from "@/components/ProductCard";
 
-type Product = {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  image_main: string;
-  category_id?: string;
-};
-
-type Category = {
-  id: string;
-  name: string;
-};
-
-export default function ProductsClient({
-  products,
-  categories,
-}: {
-  products: Product[];
-  categories: Category[];
-}) {
+export default function ProductsClient({ products, categories }) {
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
-  // 🔍 Filter products (search + category)
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchCategory =
@@ -43,18 +21,18 @@ export default function ProductsClient({
   }, [products, search, selectedCategory]);
 
   return (
-    <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "30px 20px" }}>
-      {/* 🔍Search + Category Bar */}
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
+      {/* SEARCH + FILTERS */}
       <div
         style={{
           display: "flex",
-          gap: 20,
-          marginBottom: 30,
-          alignItems: "center",
-          justifyContent: "space-between",
+          gap: 16,
+          marginBottom: 26,
           flexWrap: "wrap",
+          alignItems: "center",
         }}
       >
+        {/* Search */}
         <input
           type="text"
           placeholder="Search products..."
@@ -62,26 +40,28 @@ export default function ProductsClient({
           onChange={(e) => setSearch(e.target.value)}
           style={{
             padding: "10px 14px",
-            width: "260px",
-            borderRadius: 8,
-            border: "1px solid #475569",
+            borderRadius: 10,
+            border: "1px solid rgba(148,163,184,0.25)",
             background: "#0f172a",
             color: "white",
+            width: 260,
           }}
         />
 
+        {/* Category filter */}
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           style={{
             padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #475569",
+            borderRadius: 10,
+            border: "1px solid rgba(148,163,184,0.25)",
             background: "#0f172a",
             color: "white",
+            cursor: "pointer",
           }}
         >
-          <option value="all">All categories</option>
+          <option value="all">All Categories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -90,80 +70,28 @@ export default function ProductsClient({
         </select>
       </div>
 
-      {/* PRODUCTS GRID */}
+      {/* PRODUCT GRID */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-          gap: 25,
+          gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+          gap: 22,
         }}
       >
         {filteredProducts.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              background: "#0f172a",
-              borderRadius: 12,
-              border: "1px solid #1e293b",
-              overflow: "hidden",
-              paddingBottom: 20,
-            }}
-          >
-            {/* IMAGE */}
-            <Link href={`/products/${p.id}`}>
-              <img
-                src={p.image_main}
-                alt={p.name}
-                style={{
-                  width: "100%",
-                  height: 220,
-                  objectFit: "cover",
-                }}
-              />
-            </Link>
-
-            {/* CONTENT */}
-            <div style={{ padding: "15px" }}>
-              <h3
-                style={{
-                  color: "white",
-                  fontSize: "1.1rem",
-                  marginBottom: 6,
-                }}
-              >
-                {p.name}
-              </h3>
-
-              <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: 8 }}>
-                {p.description?.slice(0, 60) ?? ""}
-              </p>
-
-              <div
-                style={{
-                  fontWeight: 700,
-                  color: "#c084fc",
-                  marginBottom: 12,
-                }}
-              >
-                {p.price} AED
-              </div>
-
-              {/* ADD TO CART (small button on preview cards) */}
-              <AddToCartButton
-                id={p.id}
-                name={p.name}
-                price={p.price}
-                image={p.image_main}
-                small
-              />
-            </div>
-          </div>
+          <ProductCard key={p.id} product={p} />
         ))}
       </div>
 
-      {/* No results */}
+      {/* NO RESULTS */}
       {filteredProducts.length === 0 && (
-        <p style={{ color: "#94a3b8", textAlign: "center", marginTop: 40 }}>
+        <p
+          style={{
+            color: "#94a3b8",
+            textAlign: "center",
+            marginTop: 40,
+          }}
+        >
           No products found.
         </p>
       )}
