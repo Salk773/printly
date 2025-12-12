@@ -1,8 +1,54 @@
 import Image from "next/image";
+import type { Metadata } from "next";
 import { supabaseServer } from "@/lib/supabaseServer";
 import AddToCartButton from "@/components/AddToCartButton";
 
-export default async function ProductPage({ params }) {
+type Product = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  image_main: string;
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
+  const supabase = supabaseServer();
+  const { data: product } = await supabase
+    .from("products")
+    .select("name, description, image_main")
+    .eq("id", params.id)
+    .single();
+
+  if (!product) {
+    return {
+      title: "Product not found | Printly",
+    };
+  }
+
+  return {
+    title: `${product.name} | Printly`,
+    description:
+      product.description ??
+      `3D printed ${product.name} — locally made in the UAE.`,
+    openGraph: {
+      title: `${product.name} | Printly`,
+      description:
+        product.description ??
+        `3D printed ${product.name} — locally made in the UAE.`,
+      images: product.image_main ? [{ url: product.image_main }] : [],
+    },
+  };
+}
+
+export default async function ProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const supabase = supabaseServer();
 
   const { data: product } = await supabase
@@ -25,6 +71,8 @@ export default async function ProductPage({ params }) {
     );
   }
 
+  const typedProduct = product as Product;
+
   return (
     <main
       style={{
@@ -42,7 +90,7 @@ export default async function ProductPage({ params }) {
           alignItems: "start",
         }}
       >
-        {/* LEFT: IMAGE GALLERY */}
+        {/* IMAGE */}
         <div>
           <div
             style={{
@@ -56,8 +104,8 @@ export default async function ProductPage({ params }) {
             }}
           >
             <Image
-              src={product.image_main}
-              alt={product.name}
+              src={typedProduct.image_main}
+              alt={typedProduct.name}
               fill
               style={{
                 objectFit: "cover",
@@ -65,11 +113,9 @@ export default async function ProductPage({ params }) {
               }}
             />
           </div>
-
-          {/* Gallery thumbnails (optional future) */}
         </div>
 
-        {/* RIGHT: PRODUCT INFO */}
+        {/* INFO */}
         <div>
           <h1
             style={{
@@ -78,7 +124,7 @@ export default async function ProductPage({ params }) {
               marginBottom: 14,
             }}
           >
-            {product.name}
+            {typedProduct.name}
           </h1>
 
           <p
@@ -89,10 +135,9 @@ export default async function ProductPage({ params }) {
               lineHeight: 1.6,
             }}
           >
-            {product.description}
+            {typedProduct.description}
           </p>
 
-          {/* PRICE */}
           <div
             style={{
               fontSize: "1.8rem",
@@ -105,18 +150,16 @@ export default async function ProductPage({ params }) {
               marginBottom: 28,
             }}
           >
-            {product.price} AED
+            {typedProduct.price} AED
           </div>
 
-          {/* ADD TO CART */}
           <AddToCartButton
-            id={product.id}
-            name={product.name}
-            price={product.price}
-            image={product.image_main}
+            id={typedProduct.id}
+            name={typedProduct.name}
+            price={typedProduct.price}
+            image={typedProduct.image_main}
           />
 
-          {/* ADDITIONAL DETAILS */}
           <div
             style={{
               marginTop: 40,
@@ -131,10 +174,10 @@ export default async function ProductPage({ params }) {
             </h3>
 
             <p>
-              • Printed with high-quality PLA+ or PETG  
-              <br />• Locally printed in the UAE  
-              <br />• Durability and dimensional accuracy guaranteed  
-              <br />• Custom color options coming soon  
+              • Printed with high-quality PLA+ or PETG
+              <br />• Locally printed in the UAE
+              <br />• Durability and dimensional accuracy ensured
+              <br />• Custom colour options coming soon
             </p>
           </div>
         </div>
