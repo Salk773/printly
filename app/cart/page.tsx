@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/CartProvider";   // FIXED
 
 export default function CartPage() {
   const { items, total, clearCart, removeItem } = useCart();
@@ -44,8 +44,7 @@ export default function CartPage() {
                 display: "inline-block",
                 padding: "10px 20px",
                 borderRadius: 999,
-                background:
-                  "linear-gradient(135deg, #c084fc, #a855f7)",
+                background: "linear-gradient(135deg, #c084fc, #a855f7)",
                 color: "#020617",
                 fontWeight: 600,
                 textDecoration: "none",
