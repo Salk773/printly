@@ -1,247 +1,197 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useCart } from "@/context/CartProvider";
-import { useRouter } from "next/navigation";
+import { useWishlist } from "@/context/WishlistProvider";
 
 export default function SideCart() {
   const {
     items,
-    isCartOpen,
-    closeCart,
+    sideCartOpen,
+    toggleSideCart,
+    removeItem,
     increaseQuantity,
     decreaseQuantity,
-    removeItem,
     total,
   } = useCart();
 
-  const router = useRouter();
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   return (
     <>
-      {/* OVERLAY BACKDROP */}
-      <div
-        onClick={closeCart}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          background: isCartOpen ? "rgba(0,0,0,0.45)" : "transparent",
-          backdropFilter: isCartOpen ? "blur(2px)" : "none",
-          opacity: isCartOpen ? 1 : 0,
-          transition: "opacity 0.25s ease",
-          pointerEvents: isCartOpen ? "auto" : "none",
-          zIndex: 9998,
-        }}
-      />
+      {/* BACKDROP */}
+      {sideCartOpen && (
+        <div
+          onClick={toggleSideCart}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(3px)",
+            zIndex: 90,
+          }}
+        />
+      )}
 
-      {/* SIDE CART DRAWER */}
+      {/* PANEL */}
       <div
         style={{
           position: "fixed",
-          right: 0,
           top: 0,
-          width: 330,
+          right: sideCartOpen ? 0 : "-420px",
+          width: 360,
           height: "100vh",
-          background: "rgba(15,23,42,0.92)",
-          backdropFilter: "blur(18px)",
-          padding: 18,
+          background: "#0f172a",
+          borderLeft: "1px solid rgba(148,163,184,0.25)",
+          padding: 16,
+          zIndex: 99,
+          transition: "right 0.3s ease",
           overflowY: "auto",
-          zIndex: 9999,
-          transform: isCartOpen ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.35s cubic-bezier(0.2,0.8,0.4,1)",
-          borderLeft: "1px solid rgba(255,255,255,0.05)",
-          boxShadow: "-4px 0 26px rgba(0,0,0,0.45)",
         }}
       >
-        {/* HEADER */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 18,
-            alignItems: "center",
-          }}
-        >
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 700 }}>Your Cart</h2>
+        <h2 style={{ fontSize: "1.2rem", marginBottom: 14 }}>Your cart</h2>
 
-          <button
-            onClick={closeCart}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: "#94a3b8",
-              fontSize: "1.3rem",
-              cursor: "pointer",
-              transition: "0.2s",
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* CART ITEMS */}
         {items.length === 0 && (
-          <p style={{ color: "#94a3b8", marginTop: 20 }}>Your cart is empty.</p>
+          <p style={{ color: "#94a3b8" }}>Cart is empty.</p>
         )}
 
-        {items.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              borderBottom: "1px solid rgba(148,163,184,0.12)",
-              paddingBottom: 12,
-              marginBottom: 14,
-            }}
-          >
-            {/* CLICKABLE PRODUCT AREA */}
+        {items.map((item) => {
+          const inWishlist = isInWishlist(item.id);
+
+          return (
             <div
-              onClick={() => {
-                closeCart();
-                router.push(`/products/${item.id}`);
-              }}
+              key={item.id}
               style={{
-                display: "flex",
+                display: "grid",
+                gridTemplateColumns: "70px 1fr auto",
                 gap: 12,
-                cursor: "pointer",
+                marginBottom: 16,
               }}
             >
-              <img
-                src={item.image}
-                width={70}
-                height={70}
+              <Link
+                href={`/products/${item.id}`}
+                onClick={toggleSideCart}
                 style={{
-                  borderRadius: 12,
-                  objectFit: "cover",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                  transition: "0.25s",
+                  position: "relative",
+                  width: 70,
+                  height: 70,
+                  borderRadius: 10,
+                  overflow: "hidden",
                 }}
-              />
+              >
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  fill
+                  style={{ objectFit: "cover" }}
+                />
+              </Link>
 
               <div>
-                <div
+                <Link
+                  href={`/products/${item.id}`}
+                  onClick={toggleSideCart}
                   style={{
+                    color: "white",
                     fontWeight: 600,
-                    marginBottom: 4,
-                    fontSize: "0.95rem",
+                    textDecoration: "none",
                   }}
                 >
                   {item.name}
+                </Link>
+
+                <div style={{ marginTop: 6 }}>
+                  <button onClick={() => decreaseQuantity(item.id)} style={qtyBtn}>
+                    –
+                  </button>
+                  <span style={{ margin: "0 8px" }}>{item.quantity}</span>
+                  <button onClick={() => increaseQuantity(item.id)} style={qtyBtn}>
+                    +
+                  </button>
                 </div>
 
-                <div style={{ fontSize: "0.85rem", color: "#c084fc" }}>
-                  {item.price} AED
-                </div>
+                {/* ❤️ Wishlist */}
+                <button
+                  onClick={() =>
+                    toggleWishlist({
+                      id: item.id,
+                      name: item.name,
+                      price: item.price,
+                      image: item.image,
+                    })
+                  }
+                  style={{
+                    marginTop: 6,
+                    background: "transparent",
+                    border: "none",
+                    color: inWishlist ? "#fb7185" : "#64748b",
+                    fontSize: "0.9rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  {inWishlist ? "♥ Wishlisted" : "♡ Wishlist"}
+                </button>
               </div>
-            </div>
 
-            {/* QUANTITY + REMOVE */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                marginTop: 10,
-              }}
-            >
-              {/* QUANTITY BUTTONS */}
-              <button
-                onClick={() => decreaseQuantity(item.id)}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "#1e293b",
-                  border: "none",
-                  color: "white",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  transition: "0.2s",
-                }}
-              >
-                –
-              </button>
-
-              <span style={{ fontWeight: 600 }}>{item.quantity}</span>
-
-              <button
-                onClick={() => increaseQuantity(item.id)}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "#1e293b",
-                  border: "none",
-                  color: "white",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  transition: "0.2s",
-                }}
-              >
-                +
-              </button>
-
-              {/* REMOVE */}
               <button
                 onClick={() => removeItem(item.id)}
                 style={{
-                  marginLeft: "auto",
                   background: "transparent",
                   border: "none",
                   color: "#f87171",
                   cursor: "pointer",
-                  fontSize: "0.85rem",
-                  transition: "0.2s",
                 }}
               >
-                Remove
+                ✕
               </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
-        {/* FOOTER — TOTAL + VIEW CART BUTTON */}
+        {/* TOTAL */}
         {items.length > 0 && (
-          <div style={{ marginTop: 20 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "white",
-                marginBottom: 14,
-              }}
-            >
-              <span>Total</span>
-              <span>{total.toFixed(2)} AED</span>
-            </div>
-
-            <button
-              onClick={() => {
-                closeCart();
-                router.push("/cart");
-              }}
-              style={{
-                width: "100%",
-                padding: "12px 18px",
-                borderRadius: 999,
-                background: "linear-gradient(135deg, #c084fc, #a855f7)",
-                color: "#020617",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                boxShadow: "0 8px 20px rgba(192,132,252,0.35)",
-                transition: "0.2s",
-              }}
-            >
-              View Cart
-            </button>
+          <div
+            style={{
+              marginTop: 20,
+              fontWeight: 700,
+              fontSize: "1.1rem",
+            }}
+          >
+            Total: {total.toFixed(2)} AED
           </div>
+        )}
+
+        {/* BUTTONS */}
+        {items.length > 0 && (
+          <Link
+            href="/cart"
+            onClick={toggleSideCart}
+            style={{
+              display: "block",
+              marginTop: 20,
+              padding: "10px 16px",
+              textAlign: "center",
+              borderRadius: 999,
+              background: "#c084fc",
+              color: "#020617",
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            Go to cart →
+          </Link>
         )}
       </div>
     </>
   );
 }
+
+const qtyBtn = {
+  padding: "3px 8px",
+  borderRadius: 6,
+  background: "#1e293b",
+  border: "none",
+  cursor: "pointer",
+  color: "white",
+};
