@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useMemo,
+  useEffect,
   ReactNode,
 } from "react";
 
@@ -38,6 +39,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [sideCartOpen, setSideCartOpen] = useState(false);
 
+  // ✅ Load from localStorage on first render
+  useEffect(() => {
+    const stored = localStorage.getItem("cart");
+    if (stored) setItems(JSON.parse(stored));
+  }, []);
+
+  // ✅ Save to localStorage whenever items change
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(items));
+  }, [items]);
+
   const toggleSideCart = () => setSideCartOpen((prev) => !prev);
 
   const addItem = (
@@ -57,7 +69,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...item, quantity: item.quantity ?? 1 }];
     });
 
-    setSideCartOpen(true); // auto open on add
+    // open cart automatically
+    setSideCartOpen(true);
   };
 
   const removeItem = (id: string) => {
@@ -75,15 +88,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const decreaseQuantity = (id: string) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id
-          ? { ...i, quantity: Math.max(1, i.quantity - 1) }
-          : i
+        i.id === id ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i
       )
     );
   };
 
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
-
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const value = useMemo(
