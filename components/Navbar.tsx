@@ -6,7 +6,7 @@ import { useWishlist } from "@/context/WishlistProvider";
 import { usePathname } from "next/navigation";
 
 export default function Navbar() {
-  const { count } = useCart();
+  const { count, toggleSideCart, cartJustUpdated, isSyncing } = useCart();
   const { items: wishlistItems } = useWishlist();
   const pathname = usePathname();
 
@@ -105,9 +105,11 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* CART ICON */}
-        <Link
-          href="/cart"
+        {/* ------------------------------- */}
+        {/*     CART BUTTON WITH ANIMATION  */}
+        {/* ------------------------------- */}
+        <button
+          onClick={toggleSideCart}
           style={{
             position: "relative",
             padding: "8px 14px",
@@ -115,15 +117,20 @@ export default function Navbar() {
             background: "rgba(148,163,184,0.15)",
             border: "1px solid rgba(148,163,184,0.25)",
             color: "white",
-            textDecoration: "none",
             fontSize: "0.9rem",
             display: "flex",
             alignItems: "center",
             gap: 6,
             transition: "0.25s",
+            cursor: "pointer",
+
+            // 🔥 BOUNCE EFFECT ON CART UPDATE
+            transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
           }}
         >
           🛒 Cart
+
+          {/* COUNT BADGE */}
           {count > 0 && (
             <span
               style={{
@@ -142,7 +149,34 @@ export default function Navbar() {
               {count}
             </span>
           )}
-        </Link>
+
+          {/* 🔄 SYNC DOT (ONLY SHOWS DURING Supabase WRITE) */}
+          {isSyncing && (
+            <span
+              style={{
+                position: "absolute",
+                bottom: -4,
+                right: -4,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#c084fc",
+                animation: "pulse 0.8s infinite",
+              }}
+            />
+          )}
+
+          {/* Keyframes */}
+          <style>
+            {`
+              @keyframes pulse {
+                0% { transform: scale(0.9); opacity: 0.6; }
+                50% { transform: scale(1.1); opacity: 1; }
+                100% { transform: scale(0.9); opacity: 0.6; }
+              }
+            `}
+          </style>
+        </button>
       </nav>
     </header>
   );
