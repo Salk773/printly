@@ -19,6 +19,7 @@ export default function SideCart() {
   const router = useRouter();
 
   const closeCart = () => toggleSideCart();
+  const hasItems = items.length > 0;
 
   return (
     <>
@@ -28,8 +29,6 @@ export default function SideCart() {
         style={{
           position: "fixed",
           inset: 0,
-          width: "100vw",
-          height: "100vh",
           background: sideCartOpen ? "rgba(0,0,0,0.45)" : "transparent",
           backdropFilter: sideCartOpen ? "blur(2px)" : "none",
           opacity: sideCartOpen ? 1 : 0,
@@ -52,10 +51,8 @@ export default function SideCart() {
           padding: 18,
           overflowY: "auto",
           zIndex: 9999,
-
           transform: sideCartOpen ? "translateX(0)" : "translateX(102%)",
           transition: "transform 0.45s cubic-bezier(0.25, 1, 0.3, 1)",
-
           borderLeft: "1px solid rgba(255,255,255,0.05)",
           boxShadow: sideCartOpen
             ? "-6px 0 28px rgba(0,0,0,0.55)"
@@ -89,7 +86,6 @@ export default function SideCart() {
               color: "#94a3b8",
               fontSize: "1.3rem",
               cursor: "pointer",
-              transition: "0.2s",
             }}
           >
             ✕
@@ -97,13 +93,15 @@ export default function SideCart() {
         </div>
 
         {/* EMPTY */}
-        {items.length === 0 && (
-          <p style={{ color: "#94a3b8", marginTop: 20 }}>Your cart is empty.</p>
+        {!hasItems && (
+          <p style={{ color: "#94a3b8", marginTop: 20 }}>
+            Your cart is empty.
+          </p>
         )}
 
         {/* ITEMS */}
         {items.map((item) => {
-          const wishlist = isInWishlist?.(item.id);
+          const inWishlist = isInWishlist(item.id);
 
           return (
             <div
@@ -134,7 +132,6 @@ export default function SideCart() {
                     borderRadius: 12,
                     objectFit: "cover",
                     boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                    transition: "0.25s",
                   }}
                 />
 
@@ -156,7 +153,7 @@ export default function SideCart() {
                 </div>
               </div>
 
-              {/* QUANTITY + WISHLIST + REMOVE */}
+              {/* CONTROLS */}
               <div
                 style={{
                   display: "flex",
@@ -165,7 +162,6 @@ export default function SideCart() {
                   marginTop: 10,
                 }}
               >
-                {/* - */}
                 <button
                   onClick={() => decreaseQuantity(item.id)}
                   style={qtyBtn}
@@ -177,7 +173,6 @@ export default function SideCart() {
                   {item.quantity}
                 </span>
 
-                {/* + */}
                 <button
                   onClick={() => increaseQuantity(item.id)}
                   style={qtyBtn}
@@ -185,36 +180,33 @@ export default function SideCart() {
                   +
                 </button>
 
-                {/* ❤️ WISHLIST BUTTON (FIXED) */}
-                {toggleWishlist && (
-                  <button
-                    onClick={() =>
-                      toggleWishlist({
-                        id: item.id,
-                        name: item.name,
-                        price: item.price,
-                        image: item.image,
-                      })
-                    }
-                    style={{
-                      marginLeft: "auto",
-                      background: wishlist
-                        ? "rgba(192,132,252,0.2)"
-                        : "rgba(148,163,184,0.07)",
-                      color: wishlist ? "#c084fc" : "#94a3b8",
-                      border: wishlist
-                        ? "1px solid rgba(192,132,252,0.45)"
-                        : "1px solid rgba(148,163,184,0.15)",
-                      borderRadius: 50,
-                      padding: "4px 10px",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      transition: "0.2s",
-                    }}
-                  >
-                    {wishlist ? "♥" : "♡"}
-                  </button>
-                )}
+                {/* ❤️ WISHLIST */}
+                <button
+                  onClick={() =>
+                    toggleWishlist({
+                      id: item.id,
+                      name: item.name,
+                      price: item.price,
+                      image: item.image,
+                    })
+                  }
+                  style={{
+                    marginLeft: "auto",
+                    background: inWishlist
+                      ? "rgba(192,132,252,0.2)"
+                      : "rgba(148,163,184,0.07)",
+                    color: inWishlist ? "#c084fc" : "#94a3b8",
+                    border: inWishlist
+                      ? "1px solid rgba(192,132,252,0.45)"
+                      : "1px solid rgba(148,163,184,0.15)",
+                    borderRadius: 50,
+                    padding: "4px 10px",
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {inWishlist ? "♥" : "♡"}
+                </button>
 
                 {/* REMOVE */}
                 <button
@@ -235,7 +227,7 @@ export default function SideCart() {
         })}
 
         {/* FOOTER */}
-        {items.length > 0 && (
+        {hasItems && (
           <div style={{ marginTop: 20 }}>
             <div
               style={{
@@ -251,12 +243,31 @@ export default function SideCart() {
               <span>{total.toFixed(2)} AED</span>
             </div>
 
+            {/* CHECKOUT */}
+            <button
+              onClick={() => {
+                closeCart();
+                router.push("/checkout");
+              }}
+              style={checkoutBtn}
+            >
+              Checkout
+            </button>
+
+            {/* VIEW CART */}
             <button
               onClick={() => {
                 closeCart();
                 router.push("/cart");
               }}
-              style={checkoutBtn}
+              style={{
+                ...checkoutBtn,
+                marginTop: 10,
+                background: "transparent",
+                color: "white",
+                border: "1px solid rgba(148,163,184,0.25)",
+                boxShadow: "none",
+              }}
             >
               View Cart
             </button>
@@ -267,9 +278,8 @@ export default function SideCart() {
   );
 }
 
-/* INLINE STYLES */
+/* STYLES */
 
-// Quantity buttons
 const qtyBtn: React.CSSProperties = {
   width: 30,
   height: 30,
@@ -279,10 +289,8 @@ const qtyBtn: React.CSSProperties = {
   color: "white",
   cursor: "pointer",
   fontSize: "1rem",
-  transition: "0.2s",
 };
 
-// Checkout button
 const checkoutBtn: React.CSSProperties = {
   width: "100%",
   padding: "12px 18px",
@@ -294,5 +302,4 @@ const checkoutBtn: React.CSSProperties = {
   fontWeight: 700,
   fontSize: "0.95rem",
   boxShadow: "0 8px 20px rgba(192,132,252,0.35)",
-  transition: "0.2s",
 };
