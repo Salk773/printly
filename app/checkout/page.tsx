@@ -3,33 +3,72 @@
 import { useCart } from "@/context/CartProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import toast from "react-hot-toast";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { useAuth } from "@/context/AuthProvider";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const hasItems = items.length > 0;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Redirect if cart empty
+  useEffect(() => {
     if (!hasItems) {
-      toast.error("Your cart is empty.");
-      return;
+      router.push("/cart");
     }
-    if (!name || !email) {
-      toast.error("Please fill in name and email.");
+  }, [hasItems, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!hasItems) return;
+
+    // Guests must provide name & email
+    if (!user && (!name || !email)) {
+      alert("Please fill in name and email.");
       return;
     }
 
-    toast.success("Checkout submitted (demo). We will contact you soon.");
+    setLoading(true);
+
+    const orderPayload = {
+      user_id: user?.id ?? null,
+      guest_name: user ? null : name,
+      guest_email: user ? null : email,
+      items,
+      total,
+      status: "pending",
+      notes,
+    };
+
+    const { data, error } = await supabase
+      .from("orders")
+      .insert([orderPayload])
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error(error);
+      alert("Failed to place order. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     clearCart();
-    router.push("/");
+    router.push(`/checkout/success?order=${data.id}`);
   };
 
   return (
@@ -51,8 +90,9 @@ export default function CheckoutPage() {
         >
           Checkout
         </h1>
+
         <p style={{ color: "#9ca3af", marginBottom: 30 }}>
-          This is a demo checkout. No payment is processed.
+          Complete your order below. No payment is required yet.
         </p>
 
         <div
@@ -80,40 +120,46 @@ export default function CheckoutPage() {
               Contact details
             </h2>
 
-            <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-              Name
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(148,163,184,0.3)",
-                  background: "#020617",
-                  color: "white",
-                }}
-              />
-            </label>
+            {!user && (
+              <>
+                <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+                  Name
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    style={{
+                      marginTop: 4,
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,0.3)",
+                      background: "#020617",
+                      color: "white",
+                    }}
+                  />
+                </label>
 
-            <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(148,163,184,0.3)",
-                  background: "#020617",
-                  color: "white",
-                }}
-              />
-            </label>
+                <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+                  Email
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    style={{
+                      marginTop: 4,
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(148,163,184,0.3)",
+                      background: "#020617",
+                      color: "white",
+                    }}
+                  />
+                </label>
+              </>
+            )}
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
               Notes / requirements
@@ -135,6 +181,7 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
+              disabled={loading}
               style={{
                 marginTop: 12,
                 padding: "12px 18px",
@@ -147,9 +194,10 @@ export default function CheckoutPage() {
                 cursor: "pointer",
                 fontSize: "0.95rem",
                 boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
+                opacity: loading ? 0.7 : 1,
               }}
             >
-              Submit order (demo)
+              {loading ? "Placing order…" : "Place order"}
             </button>
 
             <Link
@@ -182,54 +230,44 @@ export default function CheckoutPage() {
               Order summary
             </h2>
 
-            {!hasItems && (
-              <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
-                No items in cart.
-              </p>
-            )}
-
-            {hasItems && (
-              <>
+            <div
+              style={{
+                maxHeight: 220,
+                overflowY: "auto",
+                paddingRight: 4,
+              }}
+            >
+              {items.map((item) => (
                 <div
-                  style={{
-                    maxHeight: 220,
-                    overflowY: "auto",
-                    paddingRight: 4,
-                  }}
-                >
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.9rem",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span>
-                        {item.name} x {item.quantity}
-                      </span>
-                      <span>
-                        {(item.price * item.quantity).toFixed(2)} AED
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div
+                  key={item.id}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    marginTop: 10,
-                    fontWeight: 700,
+                    fontSize: "0.9rem",
+                    marginBottom: 6,
                   }}
                 >
-                  <span>Total</span>
-                  <span>{total.toFixed(2)} AED</span>
+                  <span>
+                    {item.name} x {item.quantity}
+                  </span>
+                  <span>
+                    {(item.price * item.quantity).toFixed(2)} AED
+                  </span>
                 </div>
-              </>
-            )}
+              ))}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 10,
+                fontWeight: 700,
+              }}
+            >
+              <span>Total</span>
+              <span>{total.toFixed(2)} AED</span>
+            </div>
           </aside>
         </div>
       </div>
