@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useWishlist } from "@/context/WishlistProvider";
@@ -13,6 +13,23 @@ export default function ProductPageClient({ product }) {
   const images = [product.image_main, ...extraImages].filter(Boolean);
 
   const [mainImage, setMainImage] = useState(images[0]);
+  const [fadeImage, setFadeImage] = useState(true);
+
+  // ✨ Smooth fade transition when switching images
+  const handleImageSwitch = (image) => {
+    setFadeImage(false);
+    setTimeout(() => {
+      setMainImage(image);
+      setFadeImage(true);
+    }, 160);
+  };
+
+  // ✨ Fade the entire product in on mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 30);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <main
@@ -21,6 +38,9 @@ export default function ProductPageClient({ product }) {
         margin: "0 auto",
         padding: "40px 20px",
         color: "white",
+        opacity: mounted ? 1 : 0,
+        transform: mounted ? "translateY(0px)" : "translateY(10px)",
+        transition: "opacity 0.5s ease, transform 0.5s ease",
       }}
     >
       <div
@@ -32,6 +52,7 @@ export default function ProductPageClient({ product }) {
       >
         {/* LEFT — GALLERY */}
         <div>
+          {/* MAIN IMAGE */}
           <div
             style={{
               position: "relative",
@@ -41,6 +62,7 @@ export default function ProductPageClient({ product }) {
               overflow: "hidden",
               border: "1px solid rgba(148,163,184,0.15)",
               marginBottom: 16,
+              transition: "box-shadow 0.3s ease",
             }}
           >
             <Image
@@ -48,10 +70,15 @@ export default function ProductPageClient({ product }) {
               src={mainImage}
               alt={product.name}
               fill
-              style={{ objectFit: "cover" }}
+              style={{
+                objectFit: "cover",
+                opacity: fadeImage ? 1 : 0,
+                transition: "opacity 0.35s ease",
+              }}
             />
           </div>
 
+          {/* THUMBNAILS */}
           <div
             style={{
               display: "flex",
@@ -60,33 +87,55 @@ export default function ProductPageClient({ product }) {
               paddingBottom: 6,
             }}
           >
-            {images.map((img) => (
-              <div
-                key={img}
-                onClick={() => setMainImage(img)}
-                style={{
-                  position: "relative",
-                  width: 90,
-                  height: 90,
-                  cursor: "pointer",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  border:
-                    img === mainImage
+            {images.map((img) => {
+              const active = img === mainImage;
+
+              return (
+                <div
+                  key={img}
+                  onClick={() => handleImageSwitch(img)}
+                  style={{
+                    position: "relative",
+                    width: 90,
+                    height: 90,
+                    cursor: "pointer",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: active
                       ? "2px solid #c084fc"
                       : "1px solid rgba(148,163,184,0.2)",
-                }}
-              >
-                <Image src={img} alt="thumb" fill style={{ objectFit: "cover" }} />
-              </div>
-            ))}
+                    transform: active ? "scale(1.05)" : "scale(1)",
+                    transition:
+                      "border 0.25s ease, transform 0.25s ease, opacity 0.25s ease",
+                    opacity: active ? 1 : 0.85,
+                  }}
+                >
+                  <Image
+                    src={img}
+                    alt="thumb"
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* RIGHT SIDE */}
         <div>
-          <h1 style={{ fontSize: "2rem", fontWeight: 700 }}>{product.name}</h1>
+          <h1
+            style={{
+              fontSize: "2.2rem",
+              fontWeight: 800,
+              marginBottom: 10,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {product.name}
+          </h1>
 
+          {/* WISHLIST BUTTON */}
           <button
             onClick={() =>
               toggleWishlist({
@@ -100,31 +149,41 @@ export default function ProductPageClient({ product }) {
               background: "transparent",
               border: "none",
               color: inWishlist ? "#fb7185" : "#64748b",
-              fontSize: "1.3rem",
+              fontSize: "1.1rem",
               cursor: "pointer",
               marginBottom: 16,
+              transition: "color 0.2s ease, transform 0.25s ease",
+              transform: inWishlist ? "scale(1.06)" : "scale(1)",
             }}
           >
             {inWishlist ? "♥ Wishlisted" : "♡ Add to wishlist"}
           </button>
 
-          <p style={{ color: "#94a3b8", marginBottom: 20 }}>
+          <p
+            style={{
+              color: "#94a3b8",
+              marginBottom: 20,
+              lineHeight: 1.55,
+            }}
+          >
             {product.description}
           </p>
 
+          {/* PRICE */}
           <div
             style={{
               fontSize: "2rem",
-              fontWeight: 700,
+              fontWeight: 800,
               background: "linear-gradient(135deg, #c084fc, #a855f7)",
               backgroundClip: "text",
               color: "transparent",
-              marginBottom: 20,
+              marginBottom: 24,
             }}
           >
             {product.price} AED
           </div>
 
+          {/* ADD TO CART */}
           <AddToCartButton
             id={product.id}
             name={product.name}
