@@ -1,12 +1,11 @@
-// /context/CartProvider.tsx
 "use client";
 
 import React, {
   createContext,
   useContext,
+  useState,
   useEffect,
   useMemo,
-  useState,
   ReactNode,
 } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -23,16 +22,27 @@ type CartContextType = {
   items: CartItem[];
   count: number;
   total: number;
-  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
-  removeItem: (id: string) => void;
-  clearCart: () => void;
-  increaseQuantity: (id: string) => void;
-  decreaseQuantity: (id: string) => void;
+
+  /** Drawer state */
   sideCartOpen: boolean;
   toggleSideCart: () => void;
-  /** true briefly after any cart change – use for icon animation */
+
+  /** Old naming preserved for compatibility */
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+
+  /** Cart logic */
+  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
+  removeItem: (id: string) => void;
+  increaseQuantity: (id: string) => void;
+  decreaseQuantity: (id: string) => void;
+  clearCart: () => void;
+
+  /** Animation trigger for Navbar */
   cartJustUpdated: boolean;
-  /** true while syncing cart to Supabase (if logged in) */
+
+  /** Background sync (safe even without auth) */
   isSyncing: boolean;
 };
 
@@ -47,150 +57,135 @@ const supabase = createClient(
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [sideCartOpen, setSideCartOpen] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
+
+  /** Drawer */
+  const [sideCartOpen, setSideCartOpen] = useState(false);
+
+  /** Backwards-compatibility with older code */
+  const isCartOpen = sideCartOpen;
+  const openCart = () => setSideCartOpen(true);
+  const closeCart = () => setSideCartOpen(false);
+  const toggleSideCart = () => setSideCartOpen((prev) => !prev);
+
+  /** Animations */
   const [cartJustUpdated, setCartJustUpdated] = useState(false);
+
+  /** Sync state */
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // ---- Hydrate from localStorage once on mount ----
+  // ---------------------------------------------
+  // 🟣 Load from localStorage
+  // ---------------------------------------------
   useEffect(() => {
     try {
       const raw = typeof window !== "undefined"
-        ? window.localStorage.getItem(LOCAL_STORAGE_KEY)
+        ? localStorage.getItem(LOCAL_STORAGE_KEY)
         : null;
+
       if (raw) {
-        const parsed = JSON.parse(raw) as CartItem[];
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setItems(parsed);
       }
     } catch (err) {
-      console.error("Failed to load cart from localStorage", err);
+      console.error("Failed to load cart:", err);
     } finally {
       setHasHydrated(true);
     }
   }, []);
 
-  // ---- Persist to localStorage whenever items change ----
+  // ---------------------------------------------
+  // 🟣 Save to localStorage
+  // ---------------------------------------------
   useEffect(() => {
     if (!hasHydrated) return;
     try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-      }
-    } catch (err) {
-      console.error("Failed to save cart to localStorage", err);
-    }
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+    } catch {}
   }, [items, hasHydrated]);
 
-  // ---- Trigger brief "cart updated" animation ----
+  // ---------------------------------------------
+  // 🟣 Animate cart icon on updates
+  // ---------------------------------------------
   useEffect(() => {
     if (!hasHydrated) return;
-    if (items.length === 0) return; // don't animate clearing at load
+    if (items.length === 0) return;
 
     setCartJustUpdated(true);
-    const timeout = window.setTimeout(() => {
-      setCartJustUpdated(false);
-    }, 300);
-
-    return () => window.clearTimeout(timeout);
+    const t = setTimeout(() => setCartJustUpdated(false), 300);
+    return () => clearTimeout(t);
   }, [items, hasHydrated]);
 
-  // ---- Sync to Supabase if a user is logged in ----
+  // ---------------------------------------------
+  // 🟣 Optional Supabase sync (only works if logged in)
+  // ---------------------------------------------
   useEffect(() => {
     if (!hasHydrated) return;
 
     let cancelled = false;
 
-    async function syncCart() {
+    const sync = async () => {
+      setIsSyncing(true);
       try {
-        setIsSyncing(true);
-
         const {
           data: { user },
-          error: userError,
         } = await supabase.auth.getUser();
-
-        if (userError) {
-          console.warn("Supabase getUser error (cart sync):", userError.message);
-          return;
-        }
 
         if (!user || cancelled) return;
 
-        const { error } = await supabase.from("carts").upsert({
+        await supabase.from("carts").upsert({
           user_id: user.id,
           items,
           updated_at: new Date().toISOString(),
         });
-
-        if (error) {
-          console.warn("Supabase upsert carts error:", error.message);
-        }
       } catch (err) {
-        console.error("Unexpected cart sync error:", err);
+        console.log("Cart sync skipped / unavailable:", err);
       } finally {
-        if (!cancelled) {
-          setIsSyncing(false);
-        }
+        if (!cancelled) setIsSyncing(false);
       }
-    }
+    };
 
-    // debounce a bit so we don't spam Supabase
-    const timeout = window.setTimeout(syncCart, 500);
-
+    const t = setTimeout(sync, 400);
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
+      clearTimeout(t);
     };
   }, [items, hasHydrated]);
 
-  const addItem: CartContextType["addItem"] = (item) => {
+  // ---------------------------------------------
+  // 🟣 Cart logic (same as old version, preserved)
+  // ---------------------------------------------
+  const addItem = (
+    item: Omit<CartItem, "quantity"> & { quantity?: number }
+  ) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
+
       if (existing) {
         return prev.map((i) =>
           i.id === item.id
-            ? {
-                ...i,
-                quantity: i.quantity + (item.quantity ?? 1),
-              }
+            ? { ...i, quantity: i.quantity + (item.quantity || 1) }
             : i
         );
       }
 
-      return [
-        ...prev,
-        {
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          image: item.image,
-          quantity: item.quantity ?? 1,
-        },
-      ];
+      return [...prev, { ...item, quantity: item.quantity || 1 }];
     });
 
-    setSideCartOpen(true);
+    setSideCartOpen(true); // auto-open
   };
 
-  const removeItem = (id: string) => {
+  const removeItem = (id: string) =>
     setItems((prev) => prev.filter((i) => i.id !== id));
-  };
 
-  const clearCart = () => {
-    setItems([]);
-  };
-
-  const increaseQuantity = (id: string) => {
+  const increaseQuantity = (id: string) =>
     setItems((prev) =>
       prev.map((i) =>
         i.id === id ? { ...i, quantity: i.quantity + 1 } : i
       )
     );
-  };
 
-  const decreaseQuantity = (id: string) => {
+  const decreaseQuantity = (id: string) =>
     setItems((prev) =>
       prev
         .map((i) =>
@@ -198,42 +193,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
         )
         .filter((i) => i.quantity > 0)
     );
-  };
 
-  const toggleSideCart = () => {
-    setSideCartOpen((prev) => !prev);
-  };
+  const clearCart = () => setItems([]);
 
-  const count = useMemo(
-    () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items]
+  const count = items.reduce((sum, i) => sum + i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
+
+  const value = useMemo(
+    () => ({
+      items,
+      count,
+      total,
+
+      sideCartOpen,
+      toggleSideCart,
+
+      isCartOpen,
+      openCart,
+      closeCart,
+
+      addItem,
+      removeItem,
+      increaseQuantity,
+      decreaseQuantity,
+      clearCart,
+
+      cartJustUpdated,
+      isSyncing,
+    }),
+    [items, count, total, sideCartOpen, cartJustUpdated, isSyncing]
   );
-
-  const total = useMemo(
-    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [items]
-  );
-
-  const value: CartContextType = {
-    items,
-    count,
-    total,
-    addItem,
-    removeItem,
-    clearCart,
-    increaseQuantity,
-    decreaseQuantity,
-    sideCartOpen,
-    toggleSideCart,
-    cartJustUpdated,
-    isSyncing,
-  };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used within CartProvider");
+  if (!ctx) throw new Error("useCart must be inside CartProvider");
   return ctx;
 }
