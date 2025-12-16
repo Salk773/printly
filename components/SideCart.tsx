@@ -1,183 +1,283 @@
-// /components/SideCart.tsx
 "use client";
 
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
+import { useRouter } from "next/navigation";
 
 export default function SideCart() {
   const {
     items,
-    total,
     sideCartOpen,
     toggleSideCart,
     increaseQuantity,
     decreaseQuantity,
     removeItem,
-    clearCart,
+    total,
   } = useCart();
 
-  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const router = useRouter();
+
+  const closeCart = () => toggleSideCart();
 
   return (
-    <div
-      className={`fixed inset-0 z-40 flex justify-end ${
-        sideCartOpen ? "pointer-events-auto" : "pointer-events-none"
-      }`}
-      aria-hidden={!sideCartOpen}
-    >
-      {/* Backdrop */}
+    <>
+      {/* BACKDROP */}
       <div
-        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
-          sideCartOpen ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={toggleSideCart}
+        onClick={closeCart}
+        style={{
+          position: "fixed",
+          inset: 0,
+          width: "100vw",
+          height: "100vh",
+          background: sideCartOpen ? "rgba(0,0,0,0.45)" : "transparent",
+          backdropFilter: sideCartOpen ? "blur(2px)" : "none",
+          opacity: sideCartOpen ? 1 : 0,
+          transition: "opacity 0.35s ease",
+          pointerEvents: sideCartOpen ? "auto" : "none",
+          zIndex: 9998,
+        }}
       />
 
-      {/* Panel */}
-      <aside
-        className={`relative z-50 h-full w-full max-w-md transform bg-slate-950/90 backdrop-blur-xl border-l border-slate-800 p-4 shadow-2xl transition-transform duration-300 ease-out ${
-          sideCartOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+      {/* SIDE CART DRAWER */}
+      <div
+        style={{
+          position: "fixed",
+          right: 0,
+          top: 0,
+          width: 330,
+          height: "100vh",
+          background: "rgba(15,23,42,0.92)",
+          backdropFilter: "blur(18px)",
+          padding: 18,
+          overflowY: "auto",
+          zIndex: 9999,
+
+          // 🔥 Updated animation:
+          transform: sideCartOpen ? "translateX(0)" : "translateX(102%)",
+          transition: "transform 0.45s cubic-bezier(0.25, 1, 0.3, 1)",
+
+          borderLeft: "1px solid rgba(255,255,255,0.05)",
+          boxShadow: sideCartOpen
+            ? "-6px 0 28px rgba(0,0,0,0.55)"
+            : "-3px 0 22px rgba(0,0,0,0.25)",
+        }}
       >
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-50">
-              Your Cart
-            </h2>
-            <p className="text-xs text-slate-400">
-              Review items before checkout
-            </p>
-          </div>
+        {/* HEADER */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 18,
+            alignItems: "center",
+          }}
+        >
+          <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "white" }}>
+            Your Cart
+          </h2>
 
           <button
-            onClick={toggleSideCart}
-            className="rounded-full bg-slate-900/80 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition"
+            onClick={closeCart}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "#94a3b8",
+              fontSize: "1.3rem",
+              cursor: "pointer",
+              transition: "0.2s",
+            }}
           >
-            Close
+            ✕
           </button>
         </div>
 
-        {/* Empty state */}
-        {items.length === 0 ? (
-          <div className="flex h-[70vh] flex-col items-center justify-center text-center text-slate-400">
-            <p className="mb-1 text-sm">Your cart is empty</p>
-            <p className="text-xs text-slate-500">
-              Add a product to see it here.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Items */}
-            <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-2">
-              {items.map((item) => {
-                const inWishlist = isInWishlist(item.id);
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3 shadow-sm"
-                  >
-                    {/* Image */}
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-800">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex flex-1 flex-col justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-50 line-clamp-1">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {(item.price * item.quantity).toFixed(2)} AED
-                        </p>
-                      </div>
-
-                      <div className="mt-1 flex items-center justify-between">
-                        {/* Quantity controls */}
-                        <div className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950/80 text-slate-100">
-                          <button
-                            onClick={() => decreaseQuantity(item.id)}
-                            className="px-2 py-1 text-xs hover:bg-slate-800 rounded-l-full"
-                          >
-                            –
-                          </button>
-                          <span className="px-2 text-xs">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => increaseQuantity(item.id)}
-                            className="px-2 py-1 text-xs hover:bg-slate-800 rounded-r-full"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {/* Wishlist toggle */}
-                          <button
-                            onClick={() => toggleWishlist(item.id)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs transition ${
-                              inWishlist
-                                ? "border-[#c084fc]/80 bg-[#c084fc]/15 text-[#c084fc]"
-                                : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-[#a855f7]/80 hover:text-[#a855f7]"
-                            }`}
-                            aria-label="Toggle wishlist"
-                          >
-                            {inWishlist ? "♥" : "♡"}
-                          </button>
-
-                          {/* Remove */}
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="text-[11px] text-slate-400 hover:text-red-400 transition"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="mt-4 border-t border-slate-800 pt-4">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-slate-400">Subtotal</span>
-                <span className="text-base font-semibold text-slate-50">
-                  {total.toFixed(2)} AED
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={clearCart}
-                  className="flex-1 rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-xs text-slate-300 hover:bg-slate-900 transition"
-                >
-                  Clear cart
-                </button>
-                <button
-                  className="flex-1 rounded-lg bg-gradient-to-r from-[#c084fc] to-[#a855f7] px-3 py-2 text-xs font-medium text-slate-950 shadow-lg shadow-[#a855f7]/30 hover:opacity-95 transition"
-                >
-                  Checkout
-                </button>
-              </div>
-
-              <p className="mt-2 text-[10px] text-slate-500">
-                Checkout flow not wired yet – we’ll implement it next.
-              </p>
-            </div>
-          </>
+        {/* EMPTY STATE */}
+        {items.length === 0 && (
+          <p style={{ color: "#94a3b8", marginTop: 20 }}>Your cart is empty.</p>
         )}
-      </aside>
-    </div>
+
+        {/* ITEMS */}
+        {items.map((item) => {
+          const wishlist = isInWishlist?.(item.id);
+
+          return (
+            <div
+              key={item.id}
+              style={{
+                borderBottom: "1px solid rgba(148,163,184,0.12)",
+                paddingBottom: 12,
+                marginBottom: 14,
+              }}
+            >
+              <div
+                onClick={() => {
+                  closeCart();
+                  router.push(`/products/${item.id}`);
+                }}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  cursor: "pointer",
+                }}
+              >
+                <img
+                  src={item.image}
+                  width={70}
+                  height={70}
+                  alt={item.name}
+                  style={{
+                    borderRadius: 12,
+                    objectFit: "cover",
+                    boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                    transition: "0.25s",
+                  }}
+                />
+
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      marginBottom: 4,
+                      fontSize: "0.95rem",
+                      color: "white",
+                    }}
+                  >
+                    {item.name}
+                  </div>
+
+                  <div style={{ fontSize: "0.85rem", color: "#c084fc" }}>
+                    {item.price} AED
+                  </div>
+                </div>
+              </div>
+
+              {/* QUANTITY + REMOVE + WISHLIST */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginTop: 10,
+                }}
+              >
+                {/* QUANTITY BUTTONS */}
+                <button
+                  onClick={() => decreaseQuantity(item.id)}
+                  style={qtyBtn}
+                >
+                  –
+                </button>
+
+                <span style={{ fontWeight: 600, color: "white" }}>
+                  {item.quantity}
+                </span>
+
+                <button
+                  onClick={() => increaseQuantity(item.id)}
+                  style={qtyBtn}
+                >
+                  +
+                </button>
+
+                {/* ❤️ WISHLIST BUTTON */}
+                {toggleWishlist && (
+                  <button
+                    onClick={() => toggleWishlist(item.id)}
+                    style={{
+                      marginLeft: "auto",
+                      background: wishlist
+                        ? "rgba(192,132,252,0.2)"
+                        : "rgba(148,163,184,0.07)",
+                      color: wishlist ? "#c084fc" : "#94a3b8",
+                      border: wishlist
+                        ? "1px solid rgba(192,132,252,0.45)"
+                        : "1px solid rgba(148,163,184,0.15)",
+                      borderRadius: 50,
+                      padding: "4px 10px",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      transition: "0.2s",
+                    }}
+                  >
+                    {wishlist ? "♥" : "♡"}
+                  </button>
+                )}
+
+                {/* REMOVE */}
+                <button
+                  onClick={() => removeItem(item.id)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#f87171",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    marginLeft: wishlist ? 8 : "auto",
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* FOOTER */}
+        {items.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: "white",
+                marginBottom: 14,
+              }}
+            >
+              <span>Total</span>
+              <span>{total.toFixed(2)} AED</span>
+            </div>
+
+            <button
+              onClick={() => {
+                closeCart();
+                router.push("/cart");
+              }}
+              style={checkoutBtn}
+            >
+              View Cart
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
+
+/* INLINE STYLE PRESETS TO MATCH YOUR CURRENT DESIGN */
+const qtyBtn: React.CSSProperties = {
+  width: 30,
+  height: 30,
+  borderRadius: "50%",
+  background: "#1e293b",
+  border: "none",
+  color: "white",
+  cursor: "pointer",
+  fontSize: "1rem",
+  transition: "0.2s",
+};
+
+const checkoutBtn: React.CSSProperties = {
+  width: "100%",
+  padding: "12px 18px",
+  borderRadius: 999,
+  background: "linear-gradient(135deg, #c084fc, #a855f7)",
+  color: "#020617",
+  border: "none",
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: "0.95rem",
+  boxShadow: "0 8px 20px rgba(192,132,252,0.35)",
+  transition: "0.2s",
+};
