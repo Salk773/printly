@@ -39,7 +39,7 @@ export default function SideCart() {
         }}
       />
 
-      {/* SIDE CART DRAWER */}
+      {/* SIDE CART */}
       <div
         style={{
           position: "fixed",
@@ -53,7 +53,6 @@ export default function SideCart() {
           overflowY: "auto",
           zIndex: 9999,
 
-          // 🔥 Updated animation:
           transform: sideCartOpen ? "translateX(0)" : "translateX(102%)",
           transition: "transform 0.45s cubic-bezier(0.25, 1, 0.3, 1)",
 
@@ -72,7 +71,13 @@ export default function SideCart() {
             alignItems: "center",
           }}
         >
-          <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "white" }}>
+          <h2
+            style={{
+              fontSize: "1.3rem",
+              fontWeight: 700,
+              color: "white",
+            }}
+          >
             Your Cart
           </h2>
 
@@ -91,7 +96,7 @@ export default function SideCart() {
           </button>
         </div>
 
-        {/* EMPTY STATE */}
+        {/* EMPTY */}
         {items.length === 0 && (
           <p style={{ color: "#94a3b8", marginTop: 20 }}>Your cart is empty.</p>
         )}
@@ -151,7 +156,7 @@ export default function SideCart() {
                 </div>
               </div>
 
-              {/* QUANTITY + REMOVE + WISHLIST */}
+              {/* QUANTITY + WISHLIST + REMOVE */}
               <div
                 style={{
                   display: "flex",
@@ -160,7 +165,7 @@ export default function SideCart() {
                   marginTop: 10,
                 }}
               >
-                {/* QUANTITY BUTTONS */}
+                {/* - */}
                 <button
                   onClick={() => decreaseQuantity(item.id)}
                   style={qtyBtn}
@@ -172,6 +177,7 @@ export default function SideCart() {
                   {item.quantity}
                 </span>
 
+                {/* + */}
                 <button
                   onClick={() => increaseQuantity(item.id)}
                   style={qtyBtn}
@@ -179,10 +185,17 @@ export default function SideCart() {
                   +
                 </button>
 
-                {/* ❤️ WISHLIST BUTTON */}
+                {/* ❤️ WISHLIST BUTTON (FIXED) */}
                 {toggleWishlist && (
                   <button
-                    onClick={() => toggleWishlist(item.id)}
+                    onClick={() =>
+                      toggleWishlist({
+                        id: item.id,
+                        name: item.name,
+                        price: item.price,
+                        image: item.image,
+                      })
+                    }
                     style={{
                       marginLeft: "auto",
                       background: wishlist
@@ -212,7 +225,6 @@ export default function SideCart() {
                     color: "#f87171",
                     cursor: "pointer",
                     fontSize: "0.85rem",
-                    marginLeft: wishlist ? 8 : "auto",
                   }}
                 >
                   Remove
@@ -255,7 +267,9 @@ export default function SideCart() {
   );
 }
 
-/* INLINE STYLE PRESETS TO MATCH YOUR CURRENT DESIGN */
+/* INLINE STYLES */
+
+// Quantity buttons
 const qtyBtn: React.CSSProperties = {
   width: 30,
   height: 30,
@@ -268,6 +282,7 @@ const qtyBtn: React.CSSProperties = {
   transition: "0.2s",
 };
 
+// Checkout button
 const checkoutBtn: React.CSSProperties = {
   width: "100%",
   padding: "12px 18px",
