@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthProvider";
 import { createClient } from "@supabase/supabase-js";
+
 import AdminImageUpload from "@/components/AdminImageUpload";
 import EditProductModal from "@/components/EditProductModal";
 
@@ -10,12 +13,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ------------------ TYPES ------------------
-type Category = {
-  id: string;
-  name: string;
-};
-
+type Category = { id: string; name: string };
 type Product = {
   id: string;
   name: string;
@@ -26,16 +24,14 @@ type Product = {
   active: boolean;
 };
 
-// ------------------ COMPONENT ------------------
 export default function AdminPage() {
-  const [authorized, setAuthorized] = useState(false);
-  const [pass, setPass] = useState("");
-  const [tab, setTab] = useState<"products" | "categories">("products");
+  const router = useRouter();
+  const { user, profile, loading } = useAuth();
 
+  const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-
+  const [loadingData, setLoadingData] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
@@ -44,49 +40,46 @@ export default function AdminPage() {
     description: "",
     price: "",
     image_main: "",
-    category_id: ""
+    category_id: "",
   });
 
-  const ADMIN_PASS =
-    process.env.NEXT_PUBLIC_ADMIN_PASSCODE || "printlysecure";
+  // Protect admin access
+  useEffect(() => {
+    if (loading) return;
 
-  // ------------------ LOGIN ------------------
-  const handleLogin = () => {
-    if (pass === ADMIN_PASS) setAuthorized(true);
-    else alert("Wrong passcode");
-  };
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
 
-  // ------------------ LOAD DATA ------------------
+    if (profile?.role !== "admin") {
+      router.push("/");
+      return;
+    }
+  }, [user, profile, loading, router]);
+
   const loadData = async () => {
-    setLoading(true);
+    setLoadingData(true);
 
     const [{ data: cats }, { data: prods }] = await Promise.all([
-      supabase.from("categories").select("id, name").order("name"),
-      supabase
-        .from("products")
-        .select("id, name, description, price, image_main, category_id, active")
-        .order("name")
+      supabase.from("categories").select("*").order("name"),
+      supabase.from("products").select("*").order("name"),
     ]);
 
     setCategories(cats || []);
     setProducts(prods || []);
-    setLoading(false);
+    setLoadingData(false);
   };
 
   useEffect(() => {
-    if (authorized) loadData();
-  }, [authorized]);
+    if (user && profile?.role === "admin") loadData();
+  }, [user, profile]);
 
-  // ------------------ CATEGORY FUNCS ------------------
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-
     const slug = newCategory.toLowerCase().replace(/\s+/g, "-");
 
-    await supabase.from("categories").insert([
-      { name: newCategory.trim(), slug }
-    ]);
-
+    await supabase.from("categories").insert([{ name: newCategory, slug }]);
     setNewCategory("");
     loadData();
   };
@@ -97,7 +90,6 @@ export default function AdminPage() {
     loadData();
   };
 
-  // ------------------ PRODUCT FUNCS ------------------
   const addProduct = async () => {
     if (
       !newProduct.name ||
@@ -113,11 +105,11 @@ export default function AdminPage() {
       {
         name: newProduct.name,
         description: newProduct.description,
-        price: parseFloat(newProduct.price),
+        price: Number(newProduct.price),
         image_main: newProduct.image_main,
         category_id: newProduct.category_id,
-        active: true
-      }
+        active: true,
+      },
     ]);
 
     setNewProduct({
@@ -125,7 +117,7 @@ export default function AdminPage() {
       description: "",
       price: "",
       image_main: "",
-      category_id: ""
+      category_id: "",
     });
 
     loadData();
@@ -133,59 +125,32 @@ export default function AdminPage() {
 
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-
     await supabase.from("products").delete().eq("id", id);
     loadData();
   };
 
-  // ------------------ FIXED ACTIVE / INACTIVE TOGGLE ------------------
   const toggleActive = async (product: Product) => {
-    // ⚡ Optimistic UI update (instant response)
     setProducts((prev) =>
       prev.map((p) =>
         p.id === product.id ? { ...p, active: !product.active } : p
       )
     );
 
-    // Update DB
     const { error } = await supabase
       .from("products")
       .update({ active: !product.active })
       .eq("id", product.id);
 
-    // If DB fails → revert to real DB state
     if (error) {
       console.error(error);
       loadData();
     }
   };
 
-  // ------------------ AUTH PAGE ------------------
-  if (!authorized) {
-    return (
-      <div style={{ marginTop: 40, maxWidth: 360 }}>
-        <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin login</h1>
-
-        <input
-          type="password"
-          className="input"
-          placeholder="Passcode"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-        />
-
-        <button
-          className="btn-primary"
-          style={{ marginTop: 12 }}
-          onClick={handleLogin}
-        >
-          Enter
-        </button>
-      </div>
-    );
+  if (!user || profile?.role !== "admin") {
+    return <p style={{ marginTop: 40 }}>Checking admin access...</p>;
   }
 
-  // ------------------ MAIN ADMIN PAGE ------------------
   return (
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
@@ -197,9 +162,8 @@ export default function AdminPage() {
         />
       )}
 
-      <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin panel</h1>
+      <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin Panel</h1>
 
-      {/* TAB BUTTONS */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
         <button
           className="btn-ghost"
@@ -218,14 +182,12 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {loading && <p style={{ color: "#9ca3af" }}>Loading…</p>}
+      {loadingData && <p style={{ color: "#9ca3af" }}>Loading…</p>}
 
-      {/* ------------------ CATEGORY TAB ------------------ */}
       {tab === "categories" && (
         <>
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
-            <h2 style={{ fontSize: "1rem" }}>Add category</h2>
-
+            <h2>Add category</h2>
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
               <input
                 className="input"
@@ -233,7 +195,6 @@ export default function AdminPage() {
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
               />
-
               <button className="btn-primary" onClick={addCategory}>
                 Add
               </button>
@@ -249,11 +210,10 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
               >
                 <span>{c.name}</span>
-
                 <button
                   className="btn-danger"
                   onClick={() => deleteCategory(c.id)}
@@ -266,10 +226,8 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ------------------ PRODUCTS TAB ------------------ */}
       {tab === "products" && (
         <>
-          {/* ---------- ADD PRODUCT CARD ---------- */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2 style={{ fontSize: "1rem" }}>Add product</h2>
 
@@ -278,7 +236,7 @@ export default function AdminPage() {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
                 gap: 10,
-                marginTop: 8
+                marginTop: 8,
               }}
             >
               <input
@@ -304,14 +262,10 @@ export default function AdminPage() {
                 className="select"
                 value={newProduct.category_id}
                 onChange={(e) =>
-                  setNewProduct({
-                    ...newProduct,
-                    category_id: e.target.value
-                  })
+                  setNewProduct({ ...newProduct, category_id: e.target.value })
                 }
               >
                 <option value="">Category</option>
-
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -334,7 +288,7 @@ export default function AdminPage() {
                     width: 120,
                     marginTop: 8,
                     borderRadius: 8,
-                    border: "1px solid #333"
+                    border: "1px solid #333",
                   }}
                 />
               )}
@@ -359,7 +313,6 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* ---------- PRODUCT LIST ---------- */}
           <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
             {products.map((p) => (
               <div
@@ -369,7 +322,7 @@ export default function AdminPage() {
                   padding: 10,
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center"
+                  alignItems: "center",
                 }}
               >
                 <div>
@@ -380,7 +333,6 @@ export default function AdminPage() {
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  {/* ACTIVE / INACTIVE BUTTON (GREEN / RED) */}
                   <button
                     className="btn-ghost"
                     style={{
@@ -389,7 +341,7 @@ export default function AdminPage() {
                       border: `1px solid ${p.active ? "#22c55e" : "#f87171"}`,
                       borderRadius: 6,
                       fontWeight: 600,
-                      padding: "4px 10px"
+                      padding: "4px 10px",
                     }}
                     onClick={() => toggleActive(p)}
                   >
