@@ -3,12 +3,25 @@
 import Link from "next/link";
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
-import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthProvider";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Navbar() {
-  const { count, toggleSideCart, cartJustUpdated, isSyncing } = useCart();
+  const {
+    count,
+    toggleSideCart,
+    cartJustUpdated,
+    isSyncing,
+  } = useCart();
   const { items: wishlistItems } = useWishlist();
+  const { user, profile, signOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push("/");
+  };
 
   return (
     <header
@@ -78,7 +91,21 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {/* Wishlist icon */}
+          {/* ADMIN LINK — ONLY FOR ADMINS */}
+          {profile?.role === "admin" && (
+            <Link
+              href="/admin"
+              style={{
+                textDecoration: "none",
+                fontWeight: 600,
+                color: "#22c55e",
+              }}
+            >
+              Admin
+            </Link>
+          )}
+
+          {/* WISHLIST ICON */}
           <Link
             href="/wishlist"
             style={{
@@ -105,78 +132,130 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* ------------------------------- */}
-        {/*     CART BUTTON WITH ANIMATION  */}
-        {/* ------------------------------- */}
-        <button
-          onClick={toggleSideCart}
-          style={{
-            position: "relative",
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "rgba(148,163,184,0.15)",
-            border: "1px solid rgba(148,163,184,0.25)",
-            color: "white",
-            fontSize: "0.9rem",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            transition: "0.25s",
-            cursor: "pointer",
-
-            // 🔥 BOUNCE EFFECT ON CART UPDATE
-            transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
-          }}
-        >
-          🛒 Cart
-
-          {/* COUNT BADGE */}
-          {count > 0 && (
-            <span
+        {/* RIGHT SIDE — AUTH + CART */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* AUTH UI */}
+          {!user ? (
+            <Link
+              href="/auth/login"
               style={{
-                position: "absolute",
-                top: -6,
-                right: -6,
-                background: "linear-gradient(135deg, #dc2626, #ef4444)",
-                color: "white",
-                borderRadius: "50%",
-                padding: "0px 7px",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                boxShadow: "0 0 0 2px rgba(10,15,31,1)",
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: "1px solid rgba(148,163,184,0.25)",
+                color: "#e5e7eb",
+                textDecoration: "none",
+                fontSize: "0.85rem",
+                fontWeight: 600,
               }}
             >
-              {count}
-            </span>
+              Sign in
+            </Link>
+          ) : (
+            <>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#94a3b8",
+                  maxWidth: 140,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={user.email || ""}
+              >
+                {user.email}
+              </span>
+
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  background: "transparent",
+                  border: "1px solid rgba(248,113,113,0.6)",
+                  color: "#f87171",
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                Logout
+              </button>
+            </>
           )}
 
-          {/* 🔄 SYNC DOT (ONLY SHOWS DURING Supabase WRITE) */}
-          {isSyncing && (
-            <span
-              style={{
-                position: "absolute",
-                bottom: -4,
-                right: -4,
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: "#c084fc",
-                animation: "pulse 0.8s infinite",
-              }}
-            />
-          )}
+          {/* ------------------------------- */}
+          {/*     CART BUTTON WITH ANIMATION  */}
+          {/* ------------------------------- */}
+          <button
+            onClick={toggleSideCart}
+            style={{
+              position: "relative",
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "rgba(148,163,184,0.15)",
+              border: "1px solid rgba(148,163,184,0.25)",
+              color: "white",
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "0.25s",
+              cursor: "pointer",
 
-          {/* Keyframes */}
-          <style>
-            {`
-              @keyframes pulse {
-                0% { transform: scale(0.9); opacity: 0.6; }
-                50% { transform: scale(1.1); opacity: 1; }
-                100% { transform: scale(0.9); opacity: 0.6; }
-              }
-            `}
-          </style>
-        </button>
+              // 🔥 BOUNCE EFFECT ON CART UPDATE
+              transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
+            }}
+          >
+            🛒 Cart
+
+            {/* COUNT BADGE */}
+            {count > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  background: "linear-gradient(135deg, #dc2626, #ef4444)",
+                  color: "white",
+                  borderRadius: "50%",
+                  padding: "0px 7px",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  boxShadow: "0 0 0 2px rgba(10,15,31,1)",
+                }}
+              >
+                {count}
+              </span>
+            )}
+
+            {/* 🔄 SYNC DOT */}
+            {isSyncing && (
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: -4,
+                  right: -4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#c084fc",
+                  animation: "pulse 0.8s infinite",
+                }}
+              />
+            )}
+
+            <style>
+              {`
+                @keyframes pulse {
+                  0% { transform: scale(0.9); opacity: 0.6; }
+                  50% { transform: scale(1.1); opacity: 1; }
+                  100% { transform: scale(0.9); opacity: 0.6; }
+                }
+              `}
+            </style>
+          </button>
+        </div>
       </nav>
     </header>
   );
