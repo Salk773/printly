@@ -7,10 +7,16 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { createClient, type User } from "@supabase/supabase-js";
+import { createClient, User } from "@supabase/supabase-js";
+
+type Profile = {
+  id: string;
+  role: "admin" | "user";
+};
 
 type AuthContextType = {
   user: User | null;
+  profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string) => Promise<{ error?: string }>;
@@ -26,34 +32,47 @@ const supabase = createClient(
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load current user on mount
   useEffect(() => {
     let mounted = true;
 
     async function loadUser() {
-      try {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-        if (error) {
-          console.warn("Auth getUser error:", error.message);
+      setUser(user ?? null);
+
+      if (user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id, role")
+          .eq("id", user.id)
+          .single();
+
+        if (mounted) {
+          setProfile(
+            profileData ?? {
+              id: user.id,
+              role: "user",
+            }
+          );
         }
-        if (mounted) setUser(user ?? null);
-      } finally {
-        if (mounted) setLoading(false);
+      } else {
+        if (mounted) setProfile(null);
       }
+
+      if (mounted) setLoading(false);
     }
 
     loadUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(() => {
+      loadUser();
     });
 
     return () => {
@@ -62,38 +81,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn: AuthContextType["signIn"] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return { error: error.message };
-    }
-    return {};
-  };
-
-  const signUp: AuthContextType["signUp"] = async (email, password) => {
-    const { error } = await supabase.auth.signUp({
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    if (error) {
-      return { error: error.message };
-    }
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) return { error: error.message };
     return {};
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   };
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{ user, profile, loading, signIn, signUp, signOut }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
