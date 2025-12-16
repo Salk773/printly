@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SideCart from "@/components/SideCart";
 
+import { AuthProvider } from "@/context/AuthProvider";
 import { CartProvider } from "@/context/CartProvider";
 import { WishlistProvider } from "@/context/WishlistProvider";
 
@@ -25,34 +26,38 @@ export default function RootLayout({ children }) {
           overflowX: "hidden",
         }}
       >
-        {/* GLOBAL PROVIDERS */}
-        <WishlistProvider>
-          <CartProvider>
-            {/* GLOBAL TOAST SYSTEM */}
-            <Toaster position="top-right" />
+        {/* 🔐 AUTH FIRST (global) */}
+        <AuthProvider>
+          {/* ❤️ WISHLIST */}
+          <WishlistProvider>
+            {/* 🛒 CART */}
+            <CartProvider>
+              {/* 🔔 GLOBAL TOAST SYSTEM */}
+              <Toaster position="top-right" />
 
-            {/* ALWAYS AVAILABLE SIDECART */}
-            <SideCart />
+              {/* 🛒 ALWAYS AVAILABLE SIDE CART */}
+              <SideCart />
 
-            {/* NAVIGATION BAR */}
-            <Navbar />
+              {/* 🌐 NAVIGATION BAR */}
+              <Navbar />
 
-            {/* PAGE CONTENT */}
-            <main
-              style={{
-                maxWidth: "1200px",
-                margin: "0 auto",
-                padding: "40px 20px",
-                minHeight: "80vh",
-              }}
-            >
-              {children}
-            </main>
+              {/* 📄 PAGE CONTENT */}
+              <main
+                style={{
+                  maxWidth: "1200px",
+                  margin: "0 auto",
+                  padding: "40px 20px",
+                  minHeight: "80vh",
+                }}
+              >
+                {children}
+              </main>
 
-            {/* FOOTER */}
-            <Footer />
-          </CartProvider>
-        </WishlistProvider>
+              {/* ⚓ FOOTER */}
+              <Footer />
+            </CartProvider>
+          </WishlistProvider>
+        </AuthProvider>
       </body>
     </html>
   );
