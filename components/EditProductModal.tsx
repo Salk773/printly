@@ -34,9 +34,8 @@ export default function EditProductModal({
 
   const [saving, setSaving] = useState(false);
 
-  // ---------------------------
-  // GALLERY HELPERS
-  // ---------------------------
+  /* ---------------- GALLERY HELPERS ---------------- */
+
   const addGalleryImage = (url: string) => {
     setForm((prev) => {
       if (prev.images.length >= MAX_GALLERY) {
@@ -44,15 +43,28 @@ export default function EditProductModal({
         return prev;
       }
       if (prev.images.includes(url)) return prev;
+
       return { ...prev, images: [...prev.images, url] };
+    });
+  };
+
+  const setAsMain = (url: string) => {
+    setForm((prev) => {
+      const images = prev.images.includes(url)
+        ? prev.images
+        : [url, ...prev.images].slice(0, MAX_GALLERY);
+
+      return {
+        ...prev,
+        image_main: url,
+        images,
+      };
     });
   };
 
   const removeGalleryImage = (url: string) => {
     if (url === form.image_main) {
-      alert(
-        "You cannot remove the main image.\nSet another image as main first."
-      );
+      alert("You must set another image as main first.");
       return;
     }
 
@@ -62,31 +74,26 @@ export default function EditProductModal({
     }));
   };
 
-  const setAsMain = (url: string) => {
-    setForm((prev) => ({ ...prev, image_main: url }));
-  };
-
-  // ---------------------------
-  // REORDER
-  // ---------------------------
-  const moveImage = (index: number, direction: "up" | "down") => {
+  const moveImage = (index: number, dir: "up" | "down") => {
     setForm((prev) => {
       const imgs = [...prev.images];
-      const target =
-        direction === "up" ? index - 1 : index + 1;
-
+      const target = dir === "up" ? index - 1 : index + 1;
       if (target < 0 || target >= imgs.length) return prev;
-
       [imgs[index], imgs[target]] = [imgs[target], imgs[index]];
       return { ...prev, images: imgs };
     });
   };
 
-  // ---------------------------
-  // SAVE
-  // ---------------------------
+  /* ---------------- SAVE ---------------- */
+
   const saveChanges = async () => {
     setSaving(true);
+
+    if (form.active && !form.image_main) {
+      alert("Active products must have a main image.");
+      setSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from("products")
@@ -113,37 +120,18 @@ export default function EditProductModal({
     onClose();
   };
 
+  /* ---------------- UI ---------------- */
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 200,
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          background: "#1f1f25",
-          padding: 20,
-          borderRadius: 12,
-          width: 560,
-          maxWidth: "100%",
-        }}
-      >
-        <h2 style={{ marginBottom: 12 }}>Edit product</h2>
+    <div style={overlay}>
+      <div style={modal}>
+        <h2>Edit product</h2>
 
         <input
           className="input"
           placeholder="Name"
           value={form.name}
-          onChange={(e) =>
-            setForm({ ...form, name: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
 
         <input
@@ -183,36 +171,21 @@ export default function EditProductModal({
           style={{ marginTop: 8 }}
         />
 
-        {/* ACTIVE */}
-        <div style={{ marginTop: 10 }}>
-          <button
-            className="btn-ghost"
-            onClick={() =>
-              setForm({ ...form, active: !form.active })
-            }
-          >
-            {form.active ? "Active" : "Inactive"}
-          </button>
-        </div>
+        <button
+          className="btn-ghost"
+          style={{ marginTop: 10 }}
+          onClick={() => setForm({ ...form, active: !form.active })}
+        >
+          {form.active ? "Active" : "Inactive"}
+        </button>
 
         {/* MAIN IMAGE */}
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: 16 }}>
           <strong>Main image</strong>
-          <AdminImageUpload
-            onUploaded={(url) =>
-              setForm({ ...form, image_main: url })
-            }
-          />
+          <AdminImageUpload onUploaded={setAsMain} />
 
           {form.image_main && (
-            <img
-              src={form.image_main}
-              style={{
-                width: 150,
-                marginTop: 8,
-                borderRadius: 8,
-              }}
-            />
+            <img src={form.image_main} style={mainImage} />
           )}
         </div>
 
@@ -224,104 +197,52 @@ export default function EditProductModal({
 
           <AdminImageUpload onUploaded={addGalleryImage} />
 
-          {form.images.length > 0 && (
-            <div
-              style={{
-                marginTop: 10,
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: 10,
-              }}
-            >
-              {form.images.map((url, index) => (
-                <div
-                  key={url}
-                  style={{
-                    border: "1px solid #334155",
-                    borderRadius: 8,
-                    padding: 6,
-                  }}
-                >
-                  <img
-                    src={url}
-                    style={{
-                      width: "100%",
-                      height: 80,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                    }}
-                  />
+          <div style={gallery}>
+            {form.images.map((url, i) => (
+              <div key={url} style={imgCard}>
+                {url === form.image_main && (
+                  <span style={mainBadge}>MAIN</span>
+                )}
 
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      marginTop: 6,
-                    }}
+                <img src={url} style={thumb} />
+
+                <button className="btn-ghost" onClick={() => setAsMain(url)}>
+                  Set main
+                </button>
+
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => moveImage(i, "up")}
+                    disabled={i === 0}
                   >
-                    <button
-                      className="btn-ghost"
-                      onClick={() => setAsMain(url)}
-                    >
-                      Set main
-                    </button>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 4,
-                      }}
-                    >
-                      <button
-                        className="btn-ghost"
-                        onClick={() => moveImage(index, "up")}
-                        disabled={index === 0}
-                      >
-                        ↑
-                      </button>
-
-                      <button
-                        className="btn-ghost"
-                        onClick={() =>
-                          moveImage(index, "down")
-                        }
-                        disabled={index === form.images.length - 1}
-                      >
-                        ↓
-                      </button>
-                    </div>
-
-                    <button
-                      className="btn-danger"
-                      onClick={() => removeGalleryImage(url)}
-                    >
-                      Remove
-                    </button>
-                  </div>
+                    ↑
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => moveImage(i, "down")}
+                    disabled={i === form.images.length - 1}
+                  >
+                    ↓
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+
+                <button
+                  className="btn-danger"
+                  onClick={() => removeGalleryImage(url)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* ACTIONS */}
-        <div
-          style={{
-            marginTop: 20,
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
+        <div style={actions}>
           <button className="btn-ghost" onClick={onClose}>
             Cancel
           </button>
-
-          <button
-            className="btn-primary"
-            onClick={saveChanges}
-            disabled={saving}
-          >
+          <button className="btn-primary" onClick={saveChanges} disabled={saving}>
             {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
@@ -329,3 +250,68 @@ export default function EditProductModal({
     </div>
   );
 }
+
+/* ---------------- STYLES ---------------- */
+
+const overlay: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 200,
+};
+
+const modal: React.CSSProperties = {
+  background: "#1f1f25",
+  padding: 20,
+  borderRadius: 12,
+  width: 560,
+  maxWidth: "95%",
+};
+
+const mainImage: React.CSSProperties = {
+  width: 160,
+  marginTop: 8,
+  borderRadius: 8,
+};
+
+const gallery: React.CSSProperties = {
+  marginTop: 10,
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: 10,
+};
+
+const imgCard: React.CSSProperties = {
+  position: "relative",
+  border: "1px solid #334155",
+  borderRadius: 8,
+  padding: 6,
+};
+
+const thumb: React.CSSProperties = {
+  width: "100%",
+  height: 80,
+  objectFit: "cover",
+  borderRadius: 6,
+};
+
+const mainBadge: React.CSSProperties = {
+  position: "absolute",
+  top: 4,
+  right: 4,
+  background: "#c084fc",
+  color: "#020617",
+  fontSize: "0.7rem",
+  padding: "2px 6px",
+  borderRadius: 6,
+  fontWeight: 700,
+};
+
+const actions: React.CSSProperties = {
+  marginTop: 20,
+  display: "flex",
+  justifyContent: "space-between",
+};
