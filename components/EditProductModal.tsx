@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import AdminImageUpload from "@/components/AdminImageUpload";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+const MAX_GALLERY = 8;
 
 export default function EditProductModal({
   product,
@@ -20,62 +23,65 @@ export default function EditProductModal({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: product.name,
-    price: product.price,
-    description: product.description,
-    category_id: product.category_id,
-    image_main: product.image_main,
-    active: product.active,
+    name: product.name ?? "",
+    price: product.price ?? 0,
+    description: product.description ?? "",
+    category_id: product.category_id ?? "",
+    image_main: product.image_main ?? "",
+    images: Array.isArray(product.images) ? product.images : [],
+    active: !!product.active,
   });
 
-  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // ---------------------------
-  // IMAGE UPLOAD
+  // GALLERY HELPERS
   // ---------------------------
-  const uploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const addGalleryImage = (url: string) => {
+    setForm((prev) => {
+      if (prev.images.length >= MAX_GALLERY) {
+        alert(`Maximum ${MAX_GALLERY} images allowed`);
+        return prev;
+      }
+      if (prev.images.includes(url)) return prev;
+      return { ...prev, images: [...prev.images, url] };
+    });
+  };
 
-    setUploading(true);
+  const removeGalleryImage = (url: string) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((i) => i !== url),
+    }));
+  };
 
-    const ext = file.name.split(".").pop();
-    const filename = `${Date.now()}.${ext}`;
-    const path = `products/${filename}`;
-
-    const { error } = await supabase.storage
-      .from("uploads")
-      .upload(path, file);
-
-    if (error) {
-      alert("Upload failed");
-      setUploading(false);
-      return;
-    }
-
-    const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-
-    setForm({ ...form, image_main: data.publicUrl });
-    setUploading(false);
+  const setAsMain = (url: string) => {
+    setForm((prev) => ({ ...prev, image_main: url }));
   };
 
   // ---------------------------
   // SAVE CHANGES
   // ---------------------------
   const saveChanges = async () => {
+    setSaving(true);
+
     const { error } = await supabase
       .from("products")
       .update({
         name: form.name,
         price: Number(form.price),
         description: form.description,
-        category_id: form.category_id,
+        category_id: form.category_id || null,
         image_main: form.image_main,
+        images: form.images,
         active: form.active,
       })
       .eq("id", product.id);
 
+    setSaving(false);
+
     if (error) {
+      console.error(error);
       alert("Failed to save changes");
       return;
     }
@@ -94,6 +100,7 @@ export default function EditProductModal({
         justifyContent: "center",
         alignItems: "center",
         zIndex: 200,
+        padding: 16,
       }}
     >
       <div
@@ -101,7 +108,8 @@ export default function EditProductModal({
           background: "#1f1f25",
           padding: 20,
           borderRadius: 12,
-          width: 420,
+          width: 520,
+          maxWidth: "100%",
         }}
       >
         <h2 style={{ marginTop: 0, marginBottom: 12 }}>Edit product</h2>
@@ -129,7 +137,6 @@ export default function EditProductModal({
           style={{ marginTop: 8 }}
         >
           <option value="">Category</option>
-
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -141,55 +148,90 @@ export default function EditProductModal({
           className="textarea"
           placeholder="Description"
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, description: e.target.value })
+          }
           style={{ marginTop: 8 }}
         />
 
-        {/* ACTIVE TOGGLE */}
-        <div
-          style={{
-            marginTop: 10,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <label style={{ fontSize: "0.9rem" }}>Active:</label>
+        {/* ACTIVE */}
+        <div style={{ marginTop: 10 }}>
           <button
             className="btn-ghost"
-            style={{
-              color: form.active ? "#22c55e" : "#ef4444",
-              border: "1px solid #475569",
-              padding: "6px 10px",
-              borderRadius: 8,
-            }}
             onClick={() => setForm({ ...form, active: !form.active })}
           >
             {form.active ? "Active" : "Inactive"}
           </button>
         </div>
 
-        {/* IMAGE UPLOAD */}
-        <div style={{ marginTop: 12 }}>
-          <label>Replace image:</label>
-          <input type="file" onChange={uploadImage} />
-
-          {uploading && <p>Uploading…</p>}
+        {/* MAIN IMAGE */}
+        <div style={{ marginTop: 14 }}>
+          <strong>Main image</strong>
+          <AdminImageUpload
+            onUploaded={(url) => setForm({ ...form, image_main: url })}
+          />
 
           {form.image_main && (
             <img
               src={form.image_main}
               style={{
-                width: 120,
+                width: 140,
                 marginTop: 8,
                 borderRadius: 8,
-                border: "1px solid #333",
               }}
             />
           )}
         </div>
 
-        {/* BUTTONS */}
+        {/* GALLERY */}
+        <div style={{ marginTop: 16 }}>
+          <strong>
+            Gallery images ({form.images.length}/{MAX_GALLERY})
+          </strong>
+
+          <AdminImageUpload onUploaded={addGalleryImage} />
+
+          {form.images.length > 0 && (
+            <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: 10,
+              }}
+            >
+              {form.images.map((url) => (
+                <div key={url}>
+                  <img
+                    src={url}
+                    style={{
+                      width: "100%",
+                      height: 80,
+                      objectFit: "cover",
+                      borderRadius: 8,
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                    <button
+                      className="btn-ghost"
+                      onClick={() => setAsMain(url)}
+                    >
+                      Set main
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={() => removeGalleryImage(url)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ACTIONS */}
         <div
           style={{
             marginTop: 20,
@@ -200,9 +242,12 @@ export default function EditProductModal({
           <button className="btn-ghost" onClick={onClose}>
             Cancel
           </button>
-
-          <button className="btn-primary" onClick={saveChanges}>
-            Save changes
+          <button
+            className="btn-primary"
+            onClick={saveChanges}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </div>
