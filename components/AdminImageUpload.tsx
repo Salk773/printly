@@ -1,59 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { useAuth } from "@/context/AuthProvider";
 
 export default function AdminImageUpload({
   onUploaded,
 }: {
   onUploaded: (url: string) => void;
 }) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Only image files are allowed");
-      return;
-    }
+    if (!file || !user) return;
 
     setUploading(true);
 
-    try {
-      const ext = file.name.split(".").pop();
-      const safeName = `${crypto.randomUUID()}.${ext}`;
-      const path = `products/${safeName}`;
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const { error } = await supabase.storage
-        .from("uploads")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+    const res = await fetch("/api/admin/upload-image", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${(await user.getSession()).access_token}`,
+      },
+      body: formData,
+    });
 
-      if (error) {
-        console.error(error);
-        alert("Upload failed");
-        setUploading(false);
-        return;
-      }
+    setUploading(false);
+    e.target.value = "";
 
-      const { data } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(path);
+    const data = await res.json();
 
-      onUploaded(data.publicUrl);
-    } finally {
-      setUploading(false);
-      e.target.value = ""; // allow re-upload same file
+    if (!res.ok) {
+      alert(data.error || "Upload failed");
+      return;
     }
+
+    onUploaded(data.url);
   };
 
   return (
@@ -64,12 +49,7 @@ export default function AdminImageUpload({
         onChange={upload}
         disabled={uploading}
       />
-
-      {uploading && (
-        <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-          Uploading…
-        </p>
-      )}
+      {uploading && <p style={{ fontSize: "0.8rem" }}>Uploading…</p>}
     </div>
   );
 }
