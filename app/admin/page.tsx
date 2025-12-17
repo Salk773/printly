@@ -34,7 +34,6 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(false);
-
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
@@ -47,26 +46,24 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  // ------------------ AUTH GUARD ------------------
+  /* ---------------- AUTH ---------------- */
   useEffect(() => {
     if (loading) return;
     if (!user) router.push("/auth/login");
     else if (profile?.role !== "admin") router.push("/");
   }, [user, profile, loading, router]);
 
-  // ------------------ LOAD DATA ------------------
+  /* ---------------- LOAD ---------------- */
   const loadData = async () => {
     setLoadingData(true);
 
-    const [{ data: cats }, { data: prods, error }] = await Promise.all([
+    const [{ data: cats }, { data: prods }] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase
         .from("products")
         .select("id,name,description,price,image_main,images,category_id,active")
         .order("name"),
     ]);
-
-    if (error) console.error(error);
 
     setCategories(cats || []);
     setProducts(prods || []);
@@ -77,11 +74,12 @@ export default function AdminPage() {
     if (user && profile?.role === "admin") loadData();
   }, [user, profile]);
 
-  // ------------------ CATEGORY ------------------
+  /* ---------------- CATEGORY ---------------- */
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-    const slug = newCategory.toLowerCase().replace(/\s+/g, "-");
-    await supabase.from("categories").insert([{ name: newCategory, slug }]);
+    await supabase.from("categories").insert([
+      { name: newCategory, slug: newCategory.toLowerCase().replace(/\s+/g, "-") },
+    ]);
     setNewCategory("");
     loadData();
   };
@@ -92,15 +90,10 @@ export default function AdminPage() {
     loadData();
   };
 
-  // ------------------ PRODUCT ------------------
+  /* ---------------- PRODUCT ---------------- */
   const addProduct = async () => {
-    if (
-      !newProduct.name ||
-      !newProduct.price ||
-      !newProduct.image_main ||
-      !newProduct.category_id
-    ) {
-      alert("Fill all required fields");
+    if (!newProduct.name || !newProduct.price || !newProduct.image_main) {
+      alert("Missing required fields");
       return;
     }
 
@@ -128,29 +121,27 @@ export default function AdminPage() {
     loadData();
   };
 
+  const toggleActive = async (p: Product) => {
+    setProducts((prev) =>
+      prev.map((x) => (x.id === p.id ? { ...x, active: !p.active } : x))
+    );
+    await supabase
+      .from("products")
+      .update({ active: !p.active })
+      .eq("id", p.id);
+  };
+
   const deleteProduct = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     await supabase.from("products").delete().eq("id", id);
     loadData();
   };
 
-  const toggleActive = async (p: Product) => {
-    setProducts((prev) =>
-      prev.map((x) => (x.id === p.id ? { ...x, active: !p.active } : x))
-    );
-
-    const { error } = await supabase
-      .from("products")
-      .update({ active: !p.active })
-      .eq("id", p.id);
-
-    if (error) loadData();
-  };
-
   if (!user || profile?.role !== "admin") {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
 
+  /* ---------------- UI ---------------- */
   return (
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
@@ -162,31 +153,21 @@ export default function AdminPage() {
         />
       )}
 
-      <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>Admin Panel</h1>
+      <h1>Admin Panel</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <button
-          className="btn-ghost"
-          style={{ borderColor: tab === "products" ? "#c084fc" : undefined }}
-          onClick={() => setTab("products")}
-        >
+        <button className="btn-ghost" onClick={() => setTab("products")}>
           Products
         </button>
-        <button
-          className="btn-ghost"
-          style={{ borderColor: tab === "categories" ? "#c084fc" : undefined }}
-          onClick={() => setTab("categories")}
-        >
+        <button className="btn-ghost" onClick={() => setTab("categories")}>
           Categories
         </button>
       </div>
 
       {loadingData && <p>Loading…</p>}
 
-      {/* ---------------- PRODUCTS ---------------- */}
       {tab === "products" && (
         <>
-          {/* ADD PRODUCT */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2>Add product</h2>
 
@@ -230,7 +211,6 @@ export default function AdminPage() {
               }
             />
 
-            {/* GALLERY UPLOAD */}
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct({
@@ -254,26 +234,20 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* LIST */}
           {products.map((p) => (
             <div key={p.id} className="card-soft" style={{ padding: 10 }}>
               <strong>{p.name}</strong>
 
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button
-                  className="btn-ghost"
-                  onClick={() => toggleActive(p)}
-                >
+                <button className="btn-ghost" onClick={() => toggleActive(p)}>
                   {p.active ? "Active" : "Inactive"}
                 </button>
-
                 <button
                   className="btn-ghost"
                   onClick={() => setEditingProduct(p)}
                 >
                   Edit
                 </button>
-
                 <button
                   className="btn-danger"
                   onClick={() => deleteProduct(p.id)}
@@ -286,7 +260,6 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ---------------- CATEGORIES ---------------- */}
       {tab === "categories" && (
         <>
           <input
