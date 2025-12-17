@@ -1,44 +1,61 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/context/AuthProvider";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function AdminImageUpload({
   onUploaded,
 }: {
   onUploaded: (url: string) => void;
 }) {
-  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
     setUploading(true);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      // ✅ GET SESSION PROPERLY
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-    const res = await fetch("/api/admin/upload-image", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${(await user.getSession()).access_token}`,
-      },
-      body: formData,
-    });
+      if (sessionError || !session) {
+        alert("You must be logged in as admin");
+        return;
+      }
 
-    setUploading(false);
-    e.target.value = "";
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const data = await res.json();
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
 
-    if (!res.ok) {
-      alert(data.error || "Upload failed");
-      return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Upload failed");
+        return;
+      }
+
+      onUploaded(data.url);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
     }
-
-    onUploaded(data.url);
   };
 
   return (
@@ -49,7 +66,12 @@ export default function AdminImageUpload({
         onChange={upload}
         disabled={uploading}
       />
-      {uploading && <p style={{ fontSize: "0.8rem" }}>Uploading…</p>}
+
+      {uploading && (
+        <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+          Uploading…
+        </p>
+      )}
     </div>
   );
 }
