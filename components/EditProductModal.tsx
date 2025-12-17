@@ -49,6 +49,13 @@ export default function EditProductModal({
   };
 
   const removeGalleryImage = (url: string) => {
+    if (url === form.image_main) {
+      alert(
+        "You cannot remove the main image.\nSet another image as main first."
+      );
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       images: prev.images.filter((i) => i !== url),
@@ -60,7 +67,23 @@ export default function EditProductModal({
   };
 
   // ---------------------------
-  // SAVE CHANGES
+  // REORDER
+  // ---------------------------
+  const moveImage = (index: number, direction: "up" | "down") => {
+    setForm((prev) => {
+      const imgs = [...prev.images];
+      const target =
+        direction === "up" ? index - 1 : index + 1;
+
+      if (target < 0 || target >= imgs.length) return prev;
+
+      [imgs[index], imgs[target]] = [imgs[target], imgs[index]];
+      return { ...prev, images: imgs };
+    });
+  };
+
+  // ---------------------------
+  // SAVE
   // ---------------------------
   const saveChanges = async () => {
     setSaving(true);
@@ -108,32 +131,38 @@ export default function EditProductModal({
           background: "#1f1f25",
           padding: 20,
           borderRadius: 12,
-          width: 520,
+          width: 560,
           maxWidth: "100%",
         }}
       >
-        <h2 style={{ marginTop: 0, marginBottom: 12 }}>Edit product</h2>
+        <h2 style={{ marginBottom: 12 }}>Edit product</h2>
 
         <input
           className="input"
           placeholder="Name"
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
         />
 
         <input
           className="input"
-          placeholder="Price"
           type="number"
+          placeholder="Price"
           value={form.price}
-          onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+          onChange={(e) =>
+            setForm({ ...form, price: Number(e.target.value) })
+          }
           style={{ marginTop: 8 }}
         />
 
         <select
           className="select"
           value={form.category_id || ""}
-          onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, category_id: e.target.value })
+          }
           style={{ marginTop: 8 }}
         >
           <option value="">Category</option>
@@ -158,7 +187,9 @@ export default function EditProductModal({
         <div style={{ marginTop: 10 }}>
           <button
             className="btn-ghost"
-            onClick={() => setForm({ ...form, active: !form.active })}
+            onClick={() =>
+              setForm({ ...form, active: !form.active })
+            }
           >
             {form.active ? "Active" : "Inactive"}
           </button>
@@ -168,14 +199,16 @@ export default function EditProductModal({
         <div style={{ marginTop: 14 }}>
           <strong>Main image</strong>
           <AdminImageUpload
-            onUploaded={(url) => setForm({ ...form, image_main: url })}
+            onUploaded={(url) =>
+              setForm({ ...form, image_main: url })
+            }
           />
 
           {form.image_main && (
             <img
               src={form.image_main}
               style={{
-                width: 140,
+                width: 150,
                 marginTop: 8,
                 borderRadius: 8,
               }}
@@ -186,7 +219,7 @@ export default function EditProductModal({
         {/* GALLERY */}
         <div style={{ marginTop: 16 }}>
           <strong>
-            Gallery images ({form.images.length}/{MAX_GALLERY})
+            Gallery ({form.images.length}/{MAX_GALLERY})
           </strong>
 
           <AdminImageUpload onUploaded={addGalleryImage} />
@@ -200,24 +233,65 @@ export default function EditProductModal({
                 gap: 10,
               }}
             >
-              {form.images.map((url) => (
-                <div key={url}>
+              {form.images.map((url, index) => (
+                <div
+                  key={url}
+                  style={{
+                    border: "1px solid #334155",
+                    borderRadius: 8,
+                    padding: 6,
+                  }}
+                >
                   <img
                     src={url}
                     style={{
                       width: "100%",
                       height: 80,
                       objectFit: "cover",
-                      borderRadius: 8,
+                      borderRadius: 6,
                     }}
                   />
-                  <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      marginTop: 6,
+                    }}
+                  >
                     <button
                       className="btn-ghost"
                       onClick={() => setAsMain(url)}
                     >
                       Set main
                     </button>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 4,
+                      }}
+                    >
+                      <button
+                        className="btn-ghost"
+                        onClick={() => moveImage(index, "up")}
+                        disabled={index === 0}
+                      >
+                        ↑
+                      </button>
+
+                      <button
+                        className="btn-ghost"
+                        onClick={() =>
+                          moveImage(index, "down")
+                        }
+                        disabled={index === form.images.length - 1}
+                      >
+                        ↓
+                      </button>
+                    </div>
+
                     <button
                       className="btn-danger"
                       onClick={() => removeGalleryImage(url)}
@@ -242,6 +316,7 @@ export default function EditProductModal({
           <button className="btn-ghost" onClick={onClose}>
             Cancel
           </button>
+
           <button
             className="btn-primary"
             onClick={saveChanges}
