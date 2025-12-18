@@ -34,19 +34,9 @@ export default function EditProductModal({
 
   const [saving, setSaving] = useState(false);
 
-  /* ---------------- IMAGE HANDLERS ---------------- */
+  /* ---------- HELPERS ---------- */
 
-  const handleMainUpload = (url: string) => {
-    setForm((prev) => ({
-      ...prev,
-      image_main: url,
-      images: prev.images.includes(url)
-        ? prev.images
-        : [url, ...prev.images].slice(0, MAX_GALLERY),
-    }));
-  };
-
-  const handleGalleryUpload = (url: string) => {
+  const addGalleryImage = (url: string) => {
     setForm((prev) => {
       if (prev.images.length >= MAX_GALLERY) return prev;
       if (prev.images.includes(url)) return prev;
@@ -55,7 +45,13 @@ export default function EditProductModal({
   };
 
   const setAsMain = (url: string) => {
-    setForm((prev) => ({ ...prev, image_main: url }));
+    setForm((prev) => ({
+      ...prev,
+      image_main: url,
+      images: prev.images.includes(url)
+        ? prev.images
+        : [url, ...prev.images].slice(0, MAX_GALLERY),
+    }));
   };
 
   const removeGalleryImage = (url: string) => {
@@ -66,17 +62,17 @@ export default function EditProductModal({
     }));
   };
 
-  const moveImage = (index: number, dir: "up" | "down") => {
+  const moveImage = (i: number, dir: "up" | "down") => {
     setForm((prev) => {
       const imgs = [...prev.images];
-      const target = dir === "up" ? index - 1 : index + 1;
-      if (target < 0 || target >= imgs.length) return prev;
-      [imgs[index], imgs[target]] = [imgs[target], imgs[index]];
+      const t = dir === "up" ? i - 1 : i + 1;
+      if (t < 0 || t >= imgs.length) return prev;
+      [imgs[i], imgs[t]] = [imgs[t], imgs[i]];
       return { ...prev, images: imgs };
     });
   };
 
-  /* ---------------- SAVE ---------------- */
+  /* ---------- SAVE ---------- */
 
   const saveChanges = async () => {
     if (form.active && !form.image_main) return;
@@ -97,13 +93,14 @@ export default function EditProductModal({
       .eq("id", product.id);
 
     setSaving(false);
-    if (error) return;
 
-    onSaved();
-    onClose();
+    if (!error) {
+      onSaved();
+      onClose();
+    }
   };
 
-  /* ---------------- UI ---------------- */
+  /* ---------- UI ---------- */
 
   return (
     <div style={overlay}>
@@ -113,9 +110,7 @@ export default function EditProductModal({
         <input
           className="input"
           value={form.name}
-          onChange={(e) =>
-            setForm((p) => ({ ...p, name: e.target.value }))
-          }
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
 
         <input
@@ -123,7 +118,7 @@ export default function EditProductModal({
           type="number"
           value={form.price}
           onChange={(e) =>
-            setForm((p) => ({ ...p, price: Number(e.target.value) }))
+            setForm({ ...form, price: Number(e.target.value) })
           }
         />
 
@@ -131,7 +126,7 @@ export default function EditProductModal({
           className="select"
           value={form.category_id || ""}
           onChange={(e) =>
-            setForm((p) => ({ ...p, category_id: e.target.value }))
+            setForm({ ...form, category_id: e.target.value })
           }
         >
           <option value="">Category</option>
@@ -146,47 +141,43 @@ export default function EditProductModal({
           className="textarea"
           value={form.description}
           onChange={(e) =>
-            setForm((p) => ({ ...p, description: e.target.value }))
+            setForm({ ...form, description: e.target.value })
           }
         />
 
         <button
           className="btn-ghost"
-          onClick={() => setForm((p) => ({ ...p, active: !p.active }))}
+          onClick={() => setForm({ ...form, active: !form.active })}
         >
           {form.active ? "Active" : "Inactive"}
         </button>
 
-        {/* MAIN IMAGE */}
         <strong>Main image</strong>
-        <AdminImageUpload onUploaded={handleMainUpload} />
+        <AdminImageUpload onUploaded={setAsMain} />
         {form.image_main && <img src={form.image_main} style={mainImage} />}
 
-        {/* GALLERY */}
         <strong>
           Gallery ({form.images.length}/{MAX_GALLERY})
         </strong>
-        <AdminImageUpload onUploaded={handleGalleryUpload} />
+        <AdminImageUpload onUploaded={addGalleryImage} />
 
         <div style={gallery}>
           {form.images.map((url, i) => (
             <div key={url} style={imgCard}>
-              {url === form.image_main && <span style={mainBadge}>MAIN</span>}
+              {url === form.image_main && (
+                <span style={mainBadge}>MAIN</span>
+              )}
               <img src={url} style={thumb} />
+
               <button className="btn-ghost" onClick={() => setAsMain(url)}>
                 Set main
               </button>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => moveImage(i, "up")} disabled={i === 0}>
-                  ↑
-                </button>
-                <button
-                  onClick={() => moveImage(i, "down")}
-                  disabled={i === form.images.length - 1}
-                >
-                  ↓
-                </button>
+
+              <div>
+                <button onClick={() => moveImage(i, "up")}>↑</button>
+                <button onClick={() => moveImage(i, "down")}>↓</button>
               </div>
+
               <button
                 className="btn-danger"
                 onClick={() => removeGalleryImage(url)}
@@ -200,7 +191,7 @@ export default function EditProductModal({
         <div style={actions}>
           <button onClick={onClose}>Cancel</button>
           <button onClick={saveChanges} disabled={saving}>
-            Save
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -208,9 +199,9 @@ export default function EditProductModal({
   );
 }
 
-/* ---------------- STYLES ---------------- */
+/* ---------- STYLES ---------- */
 
-const overlay = {
+const overlay: React.CSSProperties = {
   position: "fixed",
   inset: 0,
   background: "rgba(0,0,0,0.6)",
@@ -220,24 +211,49 @@ const overlay = {
   zIndex: 200,
 };
 
-const modal = {
+const modal: React.CSSProperties = {
   background: "#1f1f25",
   padding: 20,
   borderRadius: 12,
   width: 560,
 };
 
-const mainImage = { width: 160, marginTop: 8, borderRadius: 8 };
-const gallery = { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 };
-const imgCard = { border: "1px solid #334155", borderRadius: 8, padding: 6 };
-const thumb = { width: "100%", height: 80, objectFit: "cover" };
-const mainBadge = {
+const mainImage: React.CSSProperties = {
+  width: 160,
+  marginTop: 8,
+  borderRadius: 8,
+};
+
+const gallery: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4,1fr)",
+  gap: 10,
+};
+
+const imgCard: React.CSSProperties = {
+  border: "1px solid #334155",
+  borderRadius: 8,
+  padding: 6,
+  position: "relative",
+};
+
+const thumb: React.CSSProperties = {
+  width: "100%",
+  height: 80,
+  objectFit: "cover",
+};
+
+const mainBadge: React.CSSProperties = {
   position: "absolute",
   top: 4,
   right: 4,
   background: "#c084fc",
-  fontSize: "0.7rem",
   padding: "2px 6px",
-  borderRadius: 6,
+  fontSize: "0.7rem",
 };
-const actions = { marginTop: 20, display: "flex", justifyContent: "space-between" };
+
+const actions: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginTop: 20,
+};
