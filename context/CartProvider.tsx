@@ -8,7 +8,7 @@ import React, {
   useMemo,
   ReactNode,
 } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 
 export type CartItem = {
   id: string;
@@ -50,11 +50,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = "printly_cart_v1";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -79,9 +74,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------
   useEffect(() => {
     try {
-      const raw = typeof window !== "undefined"
-        ? localStorage.getItem(LOCAL_STORAGE_KEY)
-        : null;
+      const raw =
+        typeof window !== "undefined"
+          ? localStorage.getItem(LOCAL_STORAGE_KEY)
+          : null;
 
       if (raw) {
         const parsed = JSON.parse(raw);
@@ -153,7 +149,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hasHydrated]);
 
   // ---------------------------------------------
-  // 🟣 Cart logic (same as old version, preserved)
+  // 🟣 Cart logic (preserved)
   // ---------------------------------------------
   const addItem = (
     item: Omit<CartItem, "quantity"> & { quantity?: number }
@@ -172,7 +168,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...item, quantity: item.quantity || 1 }];
     });
 
-    setSideCartOpen(true); // auto-open
+    setSideCartOpen(true);
   };
 
   const removeItem = (id: string) =>
