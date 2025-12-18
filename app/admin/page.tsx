@@ -234,7 +234,7 @@ export default function AdminPage() {
               placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
-                setNewProduct((p) ({ ...p, price: e.target.value }))
+                setNewProduct((p) => ({ ...p, price: e.target.value }))
               }
             />
 
