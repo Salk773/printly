@@ -40,7 +40,6 @@ export default function AdminImageUpload({
       const res = await fetch("/api/admin/upload-image", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: formData,
       });
