@@ -14,7 +14,7 @@ export default function Navbar() {
     isSyncing,
   } = useCart();
   const { items: wishlistItems } = useWishlist();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -91,8 +91,8 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {/* ADMIN LINK — ONLY FOR ADMINS */}
-          {profile?.role === "admin" && (
+          {/* ✅ ADMIN LINK — WAIT FOR PROFILE */}
+          {!loading && profile?.role === "admin" && (
             <Link
               href="/admin"
               style={{
@@ -132,9 +132,8 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* RIGHT SIDE — AUTH + CART */}
+        {/* RIGHT SIDE */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* AUTH UI */}
           {!user ? (
             <Link
               href="/auth/login"
@@ -184,9 +183,7 @@ export default function Navbar() {
             </>
           )}
 
-          {/* ------------------------------- */}
-          {/*     CART BUTTON WITH ANIMATION  */}
-          {/* ------------------------------- */}
+          {/* CART */}
           <button
             onClick={toggleSideCart}
             style={{
@@ -202,34 +199,30 @@ export default function Navbar() {
               gap: 6,
               transition: "0.25s",
               cursor: "pointer",
-
-              // 🔥 BOUNCE EFFECT ON CART UPDATE
               transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
             }}
           >
             🛒 Cart
 
-            {/* COUNT BADGE */}
             {count > 0 && (
               <span
                 style={{
                   position: "absolute",
                   top: -6,
                   right: -6,
-                  background: "linear-gradient(135deg, #dc2626, #ef4444)",
+                  background:
+                    "linear-gradient(135deg, #dc2626, #ef4444)",
                   color: "white",
                   borderRadius: "50%",
                   padding: "0px 7px",
                   fontSize: "0.75rem",
                   fontWeight: 700,
-                  boxShadow: "0 0 0 2px rgba(10,15,31,1)",
                 }}
               >
                 {count}
               </span>
             )}
 
-            {/* 🔄 SYNC DOT */}
             {isSyncing && (
               <span
                 style={{
@@ -244,16 +237,6 @@ export default function Navbar() {
                 }}
               />
             )}
-
-            <style>
-              {`
-                @keyframes pulse {
-                  0% { transform: scale(0.9); opacity: 0.6; }
-                  50% { transform: scale(1.1); opacity: 1; }
-                  100% { transform: scale(0.9); opacity: 0.6; }
-                }
-              `}
-            </style>
           </button>
         </div>
       </nav>
