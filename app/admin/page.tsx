@@ -35,7 +35,6 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
-  // IMPORTANT: store a stable copy
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
@@ -156,7 +155,7 @@ export default function AdminPage() {
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
         <EditProductModal
-          key={editingProduct.id} // 🔒 prevents remount bugs
+          key={editingProduct.id}
           product={editingProduct}
           categories={categories}
           onClose={() => setEditingProduct(null)}
@@ -166,26 +165,8 @@ export default function AdminPage() {
 
       <h1>Admin Panel</h1>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <button
-          className="btn-ghost"
-          onClick={() => setTab("products")}
-        >
-          Products
-        </button>
-        <button
-          className="btn-ghost"
-          onClick={() => setTab("categories")}
-        >
-          Categories
-        </button>
-      </div>
-
-      {loadingData && <p>Loading…</p>}
-
       {tab === "products" && (
         <>
-          {/* ADD PRODUCT */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2>Add product</h2>
 
@@ -194,7 +175,7 @@ export default function AdminPage() {
               placeholder="Name"
               value={newProduct.name}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, name: e.target.value })
+                setNewProduct((p) => ({ ...p, name: e.target.value }))
               }
             />
 
@@ -204,7 +185,7 @@ export default function AdminPage() {
               placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, price: e.target.value })
+                setNewProduct((p) => ({ ...p, price: e.target.value }))
               }
             />
 
@@ -212,10 +193,10 @@ export default function AdminPage() {
               className="select"
               value={newProduct.category_id}
               onChange={(e) =>
-                setNewProduct({
-                  ...newProduct,
+                setNewProduct((p) => ({
+                  ...p,
                   category_id: e.target.value,
-                })
+                }))
               }
             >
               <option value="">Category</option>
@@ -228,16 +209,16 @@ export default function AdminPage() {
 
             <AdminImageUpload
               onUploaded={(url) =>
-                setNewProduct({ ...newProduct, image_main: url })
+                setNewProduct((p) => ({ ...p, image_main: url }))
               }
             />
 
             <AdminImageUpload
               onUploaded={(url) =>
-                setNewProduct({
-                  ...newProduct,
-                  images: [...newProduct.images, url],
-                })
+                setNewProduct((p) => ({
+                  ...p,
+                  images: [...p.images, url],
+                }))
               }
             />
 
@@ -246,10 +227,10 @@ export default function AdminPage() {
               placeholder="Description"
               value={newProduct.description}
               onChange={(e) =>
-                setNewProduct({
-                  ...newProduct,
+                setNewProduct((p) => ({
+                  ...p,
                   description: e.target.value,
-                })
+                }))
               }
             />
 
@@ -257,62 +238,6 @@ export default function AdminPage() {
               Save product
             </button>
           </div>
-
-          {/* LIST */}
-          {products.map((p) => (
-            <div key={p.id} className="card-soft" style={{ padding: 10 }}>
-              <strong>{p.name}</strong>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button
-                  className="btn-ghost"
-                  onClick={() => toggleActive(p)}
-                >
-                  {p.active ? "Active" : "Inactive"}
-                </button>
-                <button
-                  className="btn-ghost"
-                  onClick={() =>
-                    setEditingProduct({ ...p })
-                  } // 🔒 clone object
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn-danger"
-                  onClick={() => deleteProduct(p.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-
-      {tab === "categories" && (
-        <>
-          <input
-            className="input"
-            placeholder="New category"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-          />
-          <button className="btn-primary" onClick={addCategory}>
-            Add
-          </button>
-
-          {categories.map((c) => (
-            <div key={c.id} className="card-soft" style={{ padding: 10 }}>
-              {c.name}
-              <button
-                className="btn-danger"
-                onClick={() => deleteCategory(c.id)}
-              >
-                Delete
-              </button>
-            </div>
-          ))}
         </>
       )}
     </div>
