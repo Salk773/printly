@@ -9,7 +9,12 @@ import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import EditProductModal from "@/components/EditProductModal";
 
-type Category = { id: string; name: string };
+/* ================= TYPES ================= */
+
+type Category = {
+  id: string;
+  name: string;
+};
 
 type Product = {
   id: string;
@@ -22,12 +27,18 @@ type Product = {
   active: boolean;
 };
 
+/* ============== CONSTANTS ============== */
+
+const ADMIN_CACHE_KEY = "printly_is_admin";
+
+/* ============== PAGE =================== */
+
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  const isAdmin =
-    !!user?.email && ADMIN_EMAILS.includes(user.email);
+  const [adminChecked, setAdminChecked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -49,37 +60,48 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* ---------- AUTH GUARD (REDIRECT ONLY) ---------- */
+  /* ---------- ADMIN CHECK (ONCE PER SESSION) ---------- */
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
+      sessionStorage.removeItem(ADMIN_CACHE_KEY);
       router.replace("/auth/login");
       return;
     }
 
-    if (!isAdmin) {
-      router.replace("/");
+    const cached = sessionStorage.getItem(ADMIN_CACHE_KEY);
+    if (cached === "true") {
+      setIsAdmin(true);
+      setAdminChecked(true);
+      return;
     }
-  }, [loading, user, isAdmin, router]);
+
+    const allowed = ADMIN_EMAILS.includes(user.email ?? "");
+    if (!allowed) {
+      sessionStorage.removeItem(ADMIN_CACHE_KEY);
+      router.replace("/");
+      return;
+    }
+
+    sessionStorage.setItem(ADMIN_CACHE_KEY, "true");
+    setIsAdmin(true);
+    setAdminChecked(true);
+  }, [user, loading, router]);
 
   /* ---------- LOAD DATA ---------- */
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
-    const [{ data: cats, error: catsErr }, { data: prods, error: prodsErr }] =
-      await Promise.all([
-        supabase.from("categories").select("*").order("name"),
-        supabase
-          .from("products")
-          .select(
-            "id,name,description,price,image_main,images,category_id,active"
-          )
-          .order("name"),
-      ]);
-
-    if (catsErr) console.error(catsErr);
-    if (prodsErr) console.error(prodsErr);
+    const [{ data: cats }, { data: prods }] = await Promise.all([
+      supabase.from("categories").select("*").order("name"),
+      supabase
+        .from("products")
+        .select(
+          "id,name,description,price,image_main,images,category_id,active"
+        )
+        .order("name"),
+    ]);
 
     setCategories(cats || []);
     setProducts(prods || []);
@@ -87,8 +109,10 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (user && isAdmin) loadData();
-  }, [user, isAdmin, loadData]);
+    if (isAdmin && adminChecked) {
+      loadData();
+    }
+  }, [isAdmin, adminChecked, loadData]);
 
   /* ---------- CATEGORY ---------- */
   const addCategory = async () => {
@@ -180,13 +204,12 @@ export default function AdminPage() {
     loadData();
   };
 
-  /* ---------- RENDER GATE (FIXED, NO DEADLOCK) ---------- */
-  if (loading || !user) {
+  /* ---------- RENDER GATES ---------- */
+  if (!adminChecked) {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
 
   if (!isAdmin) {
-    router.replace("/");
     return null;
   }
 
@@ -216,7 +239,7 @@ export default function AdminPage() {
 
       {loadingData && <p>Loading…</p>}
 
-      {/* ---------- PRODUCTS ---------- */}
+      {/* PRODUCTS */}
       {tab === "products" && (
         <>
           <div className="card-soft" style={{ padding: 20, maxWidth: 760 }}>
@@ -266,13 +289,6 @@ export default function AdminPage() {
               }
             />
 
-            {newProduct.image_main && (
-              <img
-                src={newProduct.image_main}
-                style={{ width: 160, marginTop: 8, borderRadius: 8 }}
-              />
-            )}
-
             <strong>Gallery images</strong>
             <AdminImageUpload
               onUploaded={(url) =>
@@ -282,23 +298,6 @@ export default function AdminPage() {
                 }))
               }
             />
-
-            {newProduct.images.length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                {newProduct.images.map((url) => (
-                  <img
-                    key={url}
-                    src={url}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
 
             <textarea
               className="textarea"
@@ -330,18 +329,6 @@ export default function AdminPage() {
                 gap: 12,
               }}
             >
-              {p.image_main && (
-                <img
-                  src={p.image_main}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 6,
-                    objectFit: "cover",
-                  }}
-                />
-              )}
-
               <strong style={{ flex: 1 }}>{p.name}</strong>
 
               <button
@@ -359,7 +346,10 @@ export default function AdminPage() {
                 Edit
               </button>
 
-              <button className="btn-danger" onClick={() => deleteProduct(p.id)}>
+              <button
+                className="btn-danger"
+                onClick={() => deleteProduct(p.id)}
+              >
                 Delete
               </button>
             </div>
@@ -367,7 +357,7 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ---------- CATEGORIES ---------- */}
+      {/* CATEGORIES */}
       {tab === "categories" && (
         <div style={{ maxWidth: 520 }}>
           <input
@@ -391,7 +381,9 @@ export default function AdminPage() {
                   <input
                     className="input"
                     value={editingCategoryName}
-                    onChange={(e) => setEditingCategoryName(e.target.value)}
+                    onChange={(e) =>
+                      setEditingCategoryName(e.target.value)
+                    }
                   />
                   <button
                     className="btn-primary"
