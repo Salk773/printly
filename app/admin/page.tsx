@@ -26,7 +26,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
+  const isAdmin =
+    !!user?.email && ADMIN_EMAILS.includes(user.email);
 
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,9 +37,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
-    null
-  );
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
 
   const [newProduct, setNewProduct] = useState({
@@ -50,7 +49,7 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* ---------- AUTH GUARD ---------- */
+  /* ---------- AUTH GUARD (REDIRECT ONLY) ---------- */
   useEffect(() => {
     if (loading) return;
 
@@ -181,9 +180,15 @@ export default function AdminPage() {
     loadData();
   };
 
-  /* ---------- RENDER GATES ---------- */
-  if (loading) return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
-  if (!user || !isAdmin) return null;
+  /* ---------- RENDER GATE (FIXED, NO DEADLOCK) ---------- */
+  if (loading || !user) {
+    return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+  }
+
+  if (!isAdmin) {
+    router.replace("/");
+    return null;
+  }
 
   /* ---------- UI ---------- */
   return (
