@@ -35,11 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔒 Load user ONCE
+  // ✅ Load user + profile ONCE
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
+    const load = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -70,16 +70,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
-    init();
+    load();
 
-    // 🔥 CRITICAL FIX:
-    // Only react to real auth changes, NOT token refreshes
+    // ✅ Only react to SIGN IN / SIGN OUT
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session) => {
-        if (event === "SIGNED_IN") {
-          setUser(session?.user ?? null);
+      async (event: AuthChangeEvent, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          setUser(session.user);
+
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, role")
+            .eq("id", session.user.id)
+            .single();
+
+          setProfile(
+            profileData ?? {
+              id: session.user.id,
+              role: "user",
+            }
+          );
+
           setLoading(false);
         }
 
@@ -89,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         }
 
-        // ❌ ignore TOKEN_REFRESHED, USER_UPDATED, etc
+        // ❌ ignore TOKEN_REFRESHED etc
       }
     );
 
