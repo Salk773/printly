@@ -50,14 +50,19 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* ---------------- AUTH ---------------- */
+  /* ---------- AUTH GUARD (FIXED) ---------- */
   useEffect(() => {
     if (loading) return;
-    if (!user) router.push("/auth/login");
-    else if (profile?.role !== "admin") router.push("/");
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    if (profile?.role !== "admin") {
+      router.push("/");
+    }
   }, [user, profile, loading, router]);
 
-  /* ---------------- LOAD ---------------- */
+  /* ---------- LOAD DATA ---------- */
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
@@ -80,7 +85,7 @@ export default function AdminPage() {
     if (user && profile?.role === "admin") loadData();
   }, [user, profile, loadData]);
 
-  /* ---------------- CATEGORY ---------------- */
+  /* ---------- CATEGORY ---------- */
   const addCategory = async () => {
     if (!newCategory.trim()) return;
 
@@ -117,7 +122,7 @@ export default function AdminPage() {
     loadData();
   };
 
-  /* ---------------- PRODUCT ---------------- */
+  /* ---------- PRODUCT ---------- */
   const addProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.image_main) {
       alert("Fill all required fields");
@@ -167,11 +172,10 @@ export default function AdminPage() {
     loadData();
   };
 
-  if (!user || profile?.role !== "admin") {
-    return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
-  }
+  if (loading) return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+  if (!user || profile?.role !== "admin") return null;
 
-  /* ---------------- UI ---------------- */
+  /* ---------- UI ---------- */
   return (
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
@@ -184,42 +188,23 @@ export default function AdminPage() {
         />
       )}
 
-      <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>
-        Admin Panel
-      </h1>
+      <h1>Admin Panel</h1>
 
-      {/* TABS */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button
-          className="btn-ghost"
-          style={{
-            borderColor: tab === "products" ? "#c084fc" : undefined,
-          }}
-          onClick={() => setTab("products")}
-        >
+        <button className="btn-ghost" onClick={() => setTab("products")}>
           Products
         </button>
-        <button
-          className="btn-ghost"
-          style={{
-            borderColor: tab === "categories" ? "#c084fc" : undefined,
-          }}
-          onClick={() => setTab("categories")}
-        >
+        <button className="btn-ghost" onClick={() => setTab("categories")}>
           Categories
         </button>
       </div>
 
       {loadingData && <p>Loading…</p>}
 
-      {/* ---------------- PRODUCTS ---------------- */}
+      {/* ---------- PRODUCTS ---------- */}
       {tab === "products" && (
         <>
-          {/* ADD PRODUCT */}
-          <div
-            className="card-soft"
-            style={{ padding: 20, marginBottom: 24, maxWidth: 760 }}
-          >
+          <div className="card-soft" style={{ padding: 20, maxWidth: 760 }}>
             <h2>Add product</h2>
 
             <input
@@ -251,7 +236,7 @@ export default function AdminPage() {
                 }))
               }
             >
-              <option value="">Select category</option>
+              <option value="">Category</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -259,6 +244,7 @@ export default function AdminPage() {
               ))}
             </select>
 
+            <strong>Main image</strong>
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct((p) => ({ ...p, image_main: url }))
@@ -268,12 +254,35 @@ export default function AdminPage() {
             {newProduct.image_main && (
               <img
                 src={newProduct.image_main}
-                style={{
-                  width: 140,
-                  marginTop: 8,
-                  borderRadius: 8,
-                }}
+                style={{ width: 160, marginTop: 8, borderRadius: 8 }}
               />
+            )}
+
+            <strong>Gallery images</strong>
+            <AdminImageUpload
+              onUploaded={(url) =>
+                setNewProduct((p) => ({
+                  ...p,
+                  images: [...p.images, url],
+                }))
+              }
+            />
+
+            {newProduct.images.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                {newProduct.images.map((url) => (
+                  <img
+                    key={url}
+                    src={url}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                    }}
+                  />
+                ))}
+              </div>
             )}
 
             <textarea
@@ -288,23 +297,18 @@ export default function AdminPage() {
               }
             />
 
-            <button
-              className="btn-primary"
-              style={{ marginTop: 14 }}
-              onClick={addProduct}
-            >
+            <button className="btn-primary" onClick={addProduct}>
               Save product
             </button>
           </div>
 
-          {/* PRODUCT LIST */}
           {products.map((p) => (
             <div
               key={p.id}
               className="card-soft"
               style={{
                 padding: 14,
-                marginBottom: 10,
+                marginTop: 10,
                 maxWidth: 760,
                 display: "flex",
                 alignItems: "center",
@@ -317,8 +321,8 @@ export default function AdminPage() {
                   style={{
                     width: 48,
                     height: 48,
-                    objectFit: "cover",
                     borderRadius: 6,
+                    objectFit: "cover",
                   }}
                 />
               )}
@@ -328,9 +332,7 @@ export default function AdminPage() {
               <button
                 className="btn-ghost"
                 onClick={() => toggleActive(p)}
-                style={{
-                  color: p.active ? "#22c55e" : "#ef4444",
-                }}
+                style={{ color: p.active ? "#22c55e" : "#ef4444" }}
               >
                 {p.active ? "Active" : "Inactive"}
               </button>
@@ -353,36 +355,24 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ---------------- CATEGORIES ---------------- */}
+      {/* ---------- CATEGORIES ---------- */}
       {tab === "categories" && (
         <div style={{ maxWidth: 520 }}>
-          <h2>Categories</h2>
-
           <input
             className="input"
             placeholder="New category"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
           />
-          <button
-            className="btn-primary"
-            style={{ marginTop: 8 }}
-            onClick={addCategory}
-          >
-            Add category
+          <button className="btn-primary" onClick={addCategory}>
+            Add
           </button>
 
           {categories.map((c) => (
             <div
               key={c.id}
               className="card-soft"
-              style={{
-                padding: 12,
-                marginTop: 10,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
+              style={{ padding: 12, marginTop: 10 }}
             >
               {editingCategoryId === c.id ? (
                 <>
@@ -399,19 +389,10 @@ export default function AdminPage() {
                   >
                     Save
                   </button>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => {
-                      setEditingCategoryId(null);
-                      setEditingCategoryName("");
-                    }}
-                  >
-                    Cancel
-                  </button>
                 </>
               ) : (
                 <>
-                  <strong style={{ flex: 1 }}>{c.name}</strong>
+                  <strong>{c.name}</strong>
                   <button
                     className="btn-ghost"
                     onClick={() => {
