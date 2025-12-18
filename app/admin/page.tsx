@@ -38,6 +38,9 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
+
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
@@ -94,6 +97,22 @@ export default function AdminPage() {
     loadData();
   };
 
+  const saveCategoryRename = async (id: string) => {
+    if (!editingCategoryName.trim()) return;
+
+    await supabase
+      .from("categories")
+      .update({
+        name: editingCategoryName,
+        slug: editingCategoryName.toLowerCase().replace(/\s+/g, "-"),
+      })
+      .eq("id", id);
+
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
+    loadData();
+  };
+
   const deleteCategory = async (id: string) => {
     if (!confirm("Delete this category?")) return;
     await supabase.from("categories").delete().eq("id", id);
@@ -128,25 +147,6 @@ export default function AdminPage() {
       category_id: "",
     });
 
-    loadData();
-  };
-
-  const toggleActive = async (p: Product) => {
-    setProducts((prev) =>
-      prev.map((x) =>
-        x.id === p.id ? { ...x, active: !p.active } : x
-      )
-    );
-
-    await supabase
-      .from("products")
-      .update({ active: !p.active })
-      .eq("id", p.id);
-  };
-
-  const deleteProduct = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
-    await supabase.from("products").delete().eq("id", id);
     loadData();
   };
 
@@ -195,156 +195,6 @@ export default function AdminPage() {
 
       {loadingData && <p>Loading…</p>}
 
-      {/* ---------------- PRODUCTS ---------------- */}
-      {tab === "products" && (
-        <>
-          {/* ADD PRODUCT */}
-          <div
-            className="card-soft"
-            style={{ padding: 20, marginBottom: 24, maxWidth: 760 }}
-          >
-            <h2>Add product</h2>
-
-            <input
-              className="input"
-              placeholder="Name"
-              value={newProduct.name}
-              onChange={(e) =>
-                setNewProduct((p) => ({ ...p, name: e.target.value }))
-              }
-            />
-
-            <input
-              className="input"
-              type="number"
-              placeholder="Price"
-              value={newProduct.price}
-              onChange={(e) =>
-                setNewProduct((p) => ({ ...p, price: e.target.value }))
-              }
-            />
-
-            <select
-              className="select"
-              value={newProduct.category_id}
-              onChange={(e) =>
-                setNewProduct((p) => ({
-                  ...p,
-                  category_id: e.target.value,
-                }))
-              }
-            >
-              <option value="">Select category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-
-            <AdminImageUpload
-              onUploaded={(url) =>
-                setNewProduct((p) => ({ ...p, image_main: url }))
-              }
-            />
-
-            {newProduct.image_main && (
-              <img
-                src={newProduct.image_main}
-                style={{
-                  width: 140,
-                  marginTop: 8,
-                  borderRadius: 8,
-                }}
-              />
-            )}
-
-            <AdminImageUpload
-              onUploaded={(url) =>
-                setNewProduct((p) => ({
-                  ...p,
-                  images: [...p.images, url],
-                }))
-              }
-            />
-
-            <textarea
-              className="textarea"
-              placeholder="Description"
-              value={newProduct.description}
-              onChange={(e) =>
-                setNewProduct((p) => ({
-                  ...p,
-                  description: e.target.value,
-                }))
-              }
-            />
-
-            <button
-              className="btn-primary"
-              style={{ marginTop: 14 }}
-              onClick={addProduct}
-            >
-              Save product
-            </button>
-          </div>
-
-          {/* PRODUCT LIST (INLINE CONTROLS) */}
-          {products.map((p) => (
-            <div
-              key={p.id}
-              className="card-soft"
-              style={{
-                padding: 14,
-                marginBottom: 10,
-                maxWidth: 760,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              {p.image_main && (
-                <img
-                  src={p.image_main}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    objectFit: "cover",
-                    borderRadius: 6,
-                  }}
-                />
-              )}
-
-              <strong style={{ flex: 1 }}>{p.name}</strong>
-
-              <button
-                className="btn-ghost"
-                onClick={() => toggleActive(p)}
-                style={{
-                  color: p.active ? "#22c55e" : "#ef4444",
-                }}
-              >
-                {p.active ? "Active" : "Inactive"}
-              </button>
-
-              <button
-                className="btn-ghost"
-                onClick={() => setEditingProduct({ ...p })}
-              >
-                Edit
-              </button>
-
-              <button
-                className="btn-danger"
-                onClick={() => deleteProduct(p.id)}
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </>
-      )}
-
       {/* ---------------- CATEGORIES ---------------- */}
       {tab === "categories" && (
         <div style={{ maxWidth: 520 }}>
@@ -372,16 +222,63 @@ export default function AdminPage() {
                 padding: 12,
                 marginTop: 10,
                 display: "flex",
-                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {c.name}
-              <button
-                className="btn-danger"
-                onClick={() => deleteCategory(c.id)}
-              >
-                Delete
-              </button>
+              {editingCategoryId === c.id ? (
+                <>
+                  <input
+                    className="input"
+                    autoFocus
+                    value={editingCategoryName}
+                    onChange={(e) =>
+                      setEditingCategoryName(e.target.value)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveCategoryRename(c.id);
+                      if (e.key === "Escape") {
+                        setEditingCategoryId(null);
+                        setEditingCategoryName("");
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn-primary"
+                    onClick={() => saveCategoryRename(c.id)}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => {
+                      setEditingCategoryId(null);
+                      setEditingCategoryName("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{c.name}</strong>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => {
+                      setEditingCategoryId(c.id);
+                      setEditingCategoryName(c.name);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="btn-danger"
+                    onClick={() => deleteCategory(c.id)}
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
