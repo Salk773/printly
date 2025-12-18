@@ -5,6 +5,7 @@ import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { usePathname, useRouter } from "next/navigation";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 export default function Navbar() {
   const {
@@ -15,11 +16,14 @@ export default function Navbar() {
   } = useCart();
 
   const { items: wishlistItems } = useWishlist();
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
-  /* ---------- LOGOUT (FIXED) ---------- */
+  const isAdmin =
+    !!user?.email && ADMIN_EMAILS.includes(user.email);
+
+  /* ---------- LOGOUT ---------- */
   const handleLogout = async () => {
     await signOut();
     router.replace("/");
@@ -106,8 +110,8 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {/* ADMIN LINK — STABLE */}
-          {user && profile?.role === "admin" && (
+          {/* ADMIN LINK — EMAIL BASED */}
+          {isAdmin && (
             <Link
               href="/admin"
               style={{
