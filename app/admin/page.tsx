@@ -54,7 +54,7 @@ export default function AdminPage() {
     else if (profile?.role !== "admin") router.push("/");
   }, [user, profile, loading, router]);
 
-  /* ---------------- LOAD ---------------- */
+  /* ---------------- LOAD (FIXED) ---------------- */
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
@@ -62,7 +62,9 @@ export default function AdminPage() {
       supabase.from("categories").select("*").order("name"),
       supabase
         .from("products")
-        .select("id,name,description,price,image_main,images,category_id,active")
+        .select(
+          "id,name,description,price,image_main,images,category_id,active"
+        )
         .order("name"),
     ]);
 
@@ -71,9 +73,17 @@ export default function AdminPage() {
     setLoadingData(false);
   }, []);
 
+  // ✅ IMPORTANT FIX:
+  // Load data ONLY once on entry, not repeatedly
   useEffect(() => {
-    if (user && profile?.role === "admin") loadData();
-  }, [user, profile, loadData]);
+    if (
+      user &&
+      profile?.role === "admin" &&
+      products.length === 0
+    ) {
+      loadData();
+    }
+  }, [user, profile, products.length, loadData]);
 
   /* ---------------- CATEGORY ---------------- */
   const addCategory = async () => {
@@ -129,10 +139,15 @@ export default function AdminPage() {
 
   const toggleActive = async (p: Product) => {
     setProducts((prev) =>
-      prev.map((x) => (x.id === p.id ? { ...x, active: !p.active } : x))
+      prev.map((x) =>
+        x.id === p.id ? { ...x, active: !p.active } : x
+      )
     );
 
-    await supabase.from("products").update({ active: !p.active }).eq("id", p.id);
+    await supabase
+      .from("products")
+      .update({ active: !p.active })
+      .eq("id", p.id);
   };
 
   const deleteProduct = async (id: string) => {
@@ -161,10 +176,16 @@ export default function AdminPage() {
       <h1>Admin Panel</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <button className="btn-ghost" onClick={() => setTab("products")}>
+        <button
+          className="btn-ghost"
+          onClick={() => setTab("products")}
+        >
           Products
         </button>
-        <button className="btn-ghost" onClick={() => setTab("categories")}>
+        <button
+          className="btn-ghost"
+          onClick={() => setTab("categories")}
+        >
           Categories
         </button>
       </div>
@@ -173,6 +194,7 @@ export default function AdminPage() {
 
       {tab === "products" && (
         <>
+          {/* ADD PRODUCT */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2>Add product</h2>
 
@@ -181,7 +203,10 @@ export default function AdminPage() {
               placeholder="Name"
               value={newProduct.name}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, name: e.target.value })
+                setNewProduct((p) => ({
+                  ...p,
+                  name: e.target.value,
+                }))
               }
             />
 
@@ -191,7 +216,10 @@ export default function AdminPage() {
               placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, price: e.target.value })
+                setNewProduct((p) => ({
+                  ...p,
+                  price: e.target.value,
+                }))
               }
             />
 
@@ -199,7 +227,10 @@ export default function AdminPage() {
               className="select"
               value={newProduct.category_id}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, category_id: e.target.value })
+                setNewProduct((p) => ({
+                  ...p,
+                  category_id: e.target.value,
+                }))
               }
             >
               <option value="">Category</option>
@@ -210,16 +241,21 @@ export default function AdminPage() {
               ))}
             </select>
 
-            {/* FIX: functional updates to avoid stale overwrite after async upload */}
             <AdminImageUpload
               onUploaded={(url) =>
-                setNewProduct((p) => ({ ...p, image_main: url }))
+                setNewProduct((p) => ({
+                  ...p,
+                  image_main: url,
+                }))
               }
             />
 
             <AdminImageUpload
               onUploaded={(url) =>
-                setNewProduct((p) => ({ ...p, images: [...p.images, url] }))
+                setNewProduct((p) => ({
+                  ...p,
+                  images: [...p.images, url],
+                }))
               }
             />
 
@@ -228,7 +264,10 @@ export default function AdminPage() {
               placeholder="Description"
               value={newProduct.description}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, description: e.target.value })
+                setNewProduct((p) => ({
+                  ...p,
+                  description: e.target.value,
+                }))
               }
             />
 
@@ -237,12 +276,16 @@ export default function AdminPage() {
             </button>
           </div>
 
+          {/* LIST */}
           {products.map((p) => (
             <div key={p.id} className="card-soft" style={{ padding: 10 }}>
               <strong>{p.name}</strong>
 
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button className="btn-ghost" onClick={() => toggleActive(p)}>
+                <button
+                  className="btn-ghost"
+                  onClick={() => toggleActive(p)}
+                >
                   {p.active ? "Active" : "Inactive"}
                 </button>
                 <button
@@ -251,7 +294,10 @@ export default function AdminPage() {
                 >
                   Edit
                 </button>
-                <button className="btn-danger" onClick={() => deleteProduct(p.id)}>
+                <button
+                  className="btn-danger"
+                  onClick={() => deleteProduct(p.id)}
+                >
                   Delete
                 </button>
               </div>
@@ -275,7 +321,10 @@ export default function AdminPage() {
           {categories.map((c) => (
             <div key={c.id} className="card-soft" style={{ padding: 10 }}>
               {c.name}
-              <button className="btn-danger" onClick={() => deleteCategory(c.id)}>
+              <button
+                className="btn-danger"
+                onClick={() => deleteCategory(c.id)}
+              >
                 Delete
               </button>
             </div>
