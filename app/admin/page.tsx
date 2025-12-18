@@ -54,7 +54,7 @@ export default function AdminPage() {
     else if (profile?.role !== "admin") router.push("/");
   }, [user, profile, loading, router]);
 
-  /* ---------------- LOAD (RESTORED) ---------------- */
+  /* ---------------- LOAD ---------------- */
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
@@ -73,17 +73,37 @@ export default function AdminPage() {
     setLoadingData(false);
   }, []);
 
-  // ✅ ORIGINAL, CORRECT BEHAVIOR
   useEffect(() => {
     if (user && profile?.role === "admin") {
       loadData();
     }
   }, [user, profile, loadData]);
 
+  /* ---------------- CATEGORY ---------------- */
+  const addCategory = async () => {
+    if (!newCategory.trim()) return;
+
+    await supabase.from("categories").insert([
+      {
+        name: newCategory,
+        slug: newCategory.toLowerCase().replace(/\s+/g, "-"),
+      },
+    ]);
+
+    setNewCategory("");
+    loadData();
+  };
+
+  const deleteCategory = async (id: string) => {
+    if (!confirm("Delete this category?")) return;
+    await supabase.from("categories").delete().eq("id", id);
+    loadData();
+  };
+
   /* ---------------- PRODUCT ---------------- */
   const addProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.image_main) {
-      alert("Missing required fields");
+      alert("Fill all required fields");
       return;
     }
 
@@ -128,34 +148,64 @@ export default function AdminPage() {
         />
       )}
 
-      <h1>Admin Panel</h1>
+      <h1 style={{ fontSize: "1.4rem", marginBottom: 12 }}>
+        Admin Panel
+      </h1>
+
+      {/* TABS */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <button
+          className="btn-ghost"
+          style={{
+            borderColor: tab === "products" ? "#c084fc" : undefined,
+          }}
+          onClick={() => setTab("products")}
+        >
+          Products
+        </button>
+        <button
+          className="btn-ghost"
+          style={{
+            borderColor: tab === "categories" ? "#c084fc" : undefined,
+          }}
+          onClick={() => setTab("categories")}
+        >
+          Categories
+        </button>
+      </div>
 
       {loadingData && <p>Loading…</p>}
 
+      {/* ---------------- PRODUCTS ---------------- */}
       {tab === "products" && (
         <>
-          <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
+          {/* ADD PRODUCT */}
+          <div
+            className="card-soft"
+            style={{ padding: 20, marginBottom: 24, maxWidth: 720 }}
+          >
             <h2>Add product</h2>
 
+            <label>Name</label>
             <input
               className="input"
-              placeholder="Name"
               value={newProduct.name}
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, name: e.target.value }))
               }
             />
 
+            <label>Price</label>
             <input
               className="input"
               type="number"
-              placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, price: e.target.value }))
               }
             />
 
+            <label>Category</label>
             <select
               className="select"
               value={newProduct.category_id}
@@ -166,7 +216,7 @@ export default function AdminPage() {
                 }))
               }
             >
-              <option value="">Category</option>
+              <option value="">Select category</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -174,19 +224,18 @@ export default function AdminPage() {
               ))}
             </select>
 
-            {/* MAIN IMAGE */}
+            <label>Main image</label>
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct((p) => ({ ...p, image_main: url }))
               }
             />
 
-            {/* ✅ PREVIEW (THE REAL FIX) */}
             {newProduct.image_main && (
               <img
                 src={newProduct.image_main}
                 style={{
-                  width: 140,
+                  width: 160,
                   marginTop: 8,
                   borderRadius: 8,
                   border: "1px solid #334155",
@@ -194,7 +243,7 @@ export default function AdminPage() {
               />
             )}
 
-            {/* GALLERY */}
+            <label>Gallery images</label>
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct((p) => ({
@@ -205,14 +254,7 @@ export default function AdminPage() {
             />
 
             {newProduct.images.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 8,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 {newProduct.images.map((url) => (
                   <img
                     key={url}
@@ -222,16 +264,15 @@ export default function AdminPage() {
                       height: 60,
                       objectFit: "cover",
                       borderRadius: 6,
-                      border: "1px solid #334155",
                     }}
                   />
                 ))}
               </div>
             )}
 
+            <label>Description</label>
             <textarea
               className="textarea"
-              placeholder="Description"
               value={newProduct.description}
               onChange={(e) =>
                 setNewProduct((p) => ({
@@ -241,21 +282,75 @@ export default function AdminPage() {
               }
             />
 
-            <button className="btn-primary" onClick={addProduct}>
+            <button
+              className="btn-primary"
+              style={{ marginTop: 16 }}
+              onClick={addProduct}
+            >
               Save product
             </button>
           </div>
 
-          {/* LIST */}
+          {/* PRODUCT LIST */}
           {products.map((p) => (
-            <div key={p.id} className="card-soft" style={{ padding: 10 }}>
+            <div
+              key={p.id}
+              className="card-soft"
+              style={{ padding: 14, marginBottom: 10, maxWidth: 720 }}
+            >
               <strong>{p.name}</strong>
-              <button onClick={() => setEditingProduct({ ...p })}>
+              <button
+                className="btn-ghost"
+                style={{ marginLeft: 10 }}
+                onClick={() => setEditingProduct({ ...p })}
+              >
                 Edit
               </button>
             </div>
           ))}
         </>
+      )}
+
+      {/* ---------------- CATEGORIES ---------------- */}
+      {tab === "categories" && (
+        <div style={{ maxWidth: 520 }}>
+          <h2>Categories</h2>
+
+          <input
+            className="input"
+            placeholder="New category"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+          />
+          <button
+            className="btn-primary"
+            style={{ marginTop: 8 }}
+            onClick={addCategory}
+          >
+            Add category
+          </button>
+
+          {categories.map((c) => (
+            <div
+              key={c.id}
+              className="card-soft"
+              style={{
+                padding: 12,
+                marginTop: 10,
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              {c.name}
+              <button
+                className="btn-danger"
+                onClick={() => deleteCategory(c.id)}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
