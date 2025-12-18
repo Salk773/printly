@@ -131,6 +131,25 @@ export default function AdminPage() {
     loadData();
   };
 
+  const toggleActive = async (p: Product) => {
+    setProducts((prev) =>
+      prev.map((x) =>
+        x.id === p.id ? { ...x, active: !p.active } : x
+      )
+    );
+
+    await supabase
+      .from("products")
+      .update({ active: !p.active })
+      .eq("id", p.id);
+  };
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Delete this product?")) return;
+    await supabase.from("products").delete().eq("id", id);
+    loadData();
+  };
+
   if (!user || profile?.role !== "admin") {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
@@ -182,30 +201,29 @@ export default function AdminPage() {
           {/* ADD PRODUCT */}
           <div
             className="card-soft"
-            style={{ padding: 20, marginBottom: 24, maxWidth: 720 }}
+            style={{ padding: 20, marginBottom: 24, maxWidth: 760 }}
           >
             <h2>Add product</h2>
 
-            <label>Name</label>
             <input
               className="input"
+              placeholder="Name"
               value={newProduct.name}
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, name: e.target.value }))
               }
             />
 
-            <label>Price</label>
             <input
               className="input"
               type="number"
+              placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
                 setNewProduct((p) => ({ ...p, price: e.target.value }))
               }
             />
 
-            <label>Category</label>
             <select
               className="select"
               value={newProduct.category_id}
@@ -224,7 +242,6 @@ export default function AdminPage() {
               ))}
             </select>
 
-            <label>Main image</label>
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct((p) => ({ ...p, image_main: url }))
@@ -235,15 +252,13 @@ export default function AdminPage() {
               <img
                 src={newProduct.image_main}
                 style={{
-                  width: 160,
+                  width: 140,
                   marginTop: 8,
                   borderRadius: 8,
-                  border: "1px solid #334155",
                 }}
               />
             )}
 
-            <label>Gallery images</label>
             <AdminImageUpload
               onUploaded={(url) =>
                 setNewProduct((p) => ({
@@ -253,26 +268,9 @@ export default function AdminPage() {
               }
             />
 
-            {newProduct.images.length > 0 && (
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                {newProduct.images.map((url) => (
-                  <img
-                    key={url}
-                    src={url}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      objectFit: "cover",
-                      borderRadius: 6,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            <label>Description</label>
             <textarea
               className="textarea"
+              placeholder="Description"
               value={newProduct.description}
               onChange={(e) =>
                 setNewProduct((p) => ({
@@ -284,27 +282,63 @@ export default function AdminPage() {
 
             <button
               className="btn-primary"
-              style={{ marginTop: 16 }}
+              style={{ marginTop: 14 }}
               onClick={addProduct}
             >
               Save product
             </button>
           </div>
 
-          {/* PRODUCT LIST */}
+          {/* PRODUCT LIST (INLINE CONTROLS) */}
           {products.map((p) => (
             <div
               key={p.id}
               className="card-soft"
-              style={{ padding: 14, marginBottom: 10, maxWidth: 720 }}
+              style={{
+                padding: 14,
+                marginBottom: 10,
+                maxWidth: 760,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
             >
-              <strong>{p.name}</strong>
+              {p.image_main && (
+                <img
+                  src={p.image_main}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    objectFit: "cover",
+                    borderRadius: 6,
+                  }}
+                />
+              )}
+
+              <strong style={{ flex: 1 }}>{p.name}</strong>
+
               <button
                 className="btn-ghost"
-                style={{ marginLeft: 10 }}
+                onClick={() => toggleActive(p)}
+                style={{
+                  color: p.active ? "#22c55e" : "#ef4444",
+                }}
+              >
+                {p.active ? "Active" : "Inactive"}
+              </button>
+
+              <button
+                className="btn-ghost"
                 onClick={() => setEditingProduct({ ...p })}
               >
                 Edit
+              </button>
+
+              <button
+                className="btn-danger"
+                onClick={() => deleteProduct(p.id)}
+              >
+                Delete
               </button>
             </div>
           ))}
