@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import AdminImageUpload from "@/components/AdminImageUpload";
 
@@ -18,16 +18,29 @@ export default function EditProductModal({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: product.name ?? "",
-    price: product.price ?? 0,
-    description: product.description ?? "",
-    category_id: product.category_id ?? "",
-    image_main: product.image_main ?? "",
-    images: Array.isArray(product.images) ? product.images : [],
-    active: !!product.active,
+    name: "",
+    price: 0,
+    description: "",
+    category_id: "",
+    image_main: "",
+    images: [] as string[],
+    active: false,
   });
 
   const [saving, setSaving] = useState(false);
+
+  /* 🔑 CRITICAL FIX — SYNC STATE WHEN PRODUCT CHANGES */
+  useEffect(() => {
+    setForm({
+      name: product.name ?? "",
+      price: product.price ?? 0,
+      description: product.description ?? "",
+      category_id: product.category_id ?? "",
+      image_main: product.image_main ?? "",
+      images: Array.isArray(product.images) ? product.images : [],
+      active: !!product.active,
+    });
+  }, [product]);
 
   /* ---------- IMAGE HELPERS ---------- */
 
@@ -147,19 +160,16 @@ export default function EditProductModal({
           {form.active ? "Active" : "Inactive"}
         </button>
 
-        {/* ---------- MAIN IMAGE ---------- */}
         <strong>Main image</strong>
         <AdminImageUpload onUploaded={setAsMain} />
 
         {form.image_main && (
           <img
-            key={form.image_main}
-            src={`${form.image_main}?t=${Date.now()}`}
+            src={form.image_main}
             style={mainImage}
           />
         )}
 
-        {/* ---------- GALLERY ---------- */}
         <strong>
           Gallery ({form.images.length}/{MAX_GALLERY})
         </strong>
@@ -172,10 +182,7 @@ export default function EditProductModal({
                 <span style={mainBadge}>MAIN</span>
               )}
 
-              <img
-                src={`${url}?t=${i}`}
-                style={thumb}
-              />
+              <img src={url} style={thumb} />
 
               <button className="btn-ghost" onClick={() => setAsMain(url)}>
                 Set main
