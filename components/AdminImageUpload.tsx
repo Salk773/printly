@@ -1,28 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthProvider";
 
 export default function AdminImageUpload({
   onUploaded,
 }: {
   onUploaded: (url: string) => void;
 }) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Only image files allowed");
-      return;
-    }
+    if (!file || !user) return;
 
     setUploading(true);
 
@@ -32,13 +24,9 @@ export default function AdminImageUpload({
 
       const { error } = await supabase.storage
         .from("uploads")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+        .upload(path, file);
 
       if (error) {
-        console.error(error);
         alert("Upload failed");
         return;
       }
@@ -50,14 +38,19 @@ export default function AdminImageUpload({
       onUploaded(data.publicUrl);
     } finally {
       setUploading(false);
-      e.target.value = ""; // browser security reset
+      e.target.value = "";
     }
   };
 
   return (
     <div style={{ marginTop: 8 }}>
-      <input type="file" accept="image/*" onChange={upload} />
-      {uploading && <p style={{ fontSize: "0.8rem" }}>Uploading…</p>}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={upload}
+        disabled={uploading}
+      />
+      {uploading && <p>Uploading…</p>}
     </div>
   );
 }
