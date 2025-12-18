@@ -3,35 +3,29 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // 🔴 REQUIRED
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // 🔐 REQUIRED
 );
 
 export async function POST(req: Request) {
   try {
-    // ---------------- AUTH ----------------
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      return NextResponse.json(
-        { error: "Missing auth header" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const token = authHeader.replace("Bearer ", "");
 
+    // ✅ Verify user
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // 🔐 OPTIONAL: ADMIN CHECK (RECOMMENDED)
+    // ✅ Check admin role
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -39,21 +33,15 @@ export async function POST(req: Request) {
       .single();
 
     if (profile?.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admins only" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ---------------- FILE ----------------
+    // ✅ Read file
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file" }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop();
@@ -63,16 +51,13 @@ export async function POST(req: Request) {
     const { error: uploadError } = await supabase.storage
       .from("uploads")
       .upload(path, file, {
-        contentType: file.type,
+        cacheControl: "3600",
         upsert: false,
       });
 
     if (uploadError) {
       console.error(uploadError);
-      return NextResponse.json(
-        { error: "Upload failed" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
     const { data } = supabase.storage
@@ -80,11 +65,8 @@ export async function POST(req: Request) {
       .getPublicUrl(path);
 
     return NextResponse.json({ url: data.publicUrl });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
