@@ -34,33 +34,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const loadProfile = async (u: User) => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, role")
+        .eq("id", u.id)
+        .single();
 
       if (!mounted) return;
 
-      if (user) {
-        setUser(user);
-        const { data } = await supabase
-          .from("profiles")
-          .select("id, role")
-          .eq("id", user.id)
-          .single();
+      setProfile(
+        data ?? {
+          id: u.id,
+          role: "user",
+        }
+      );
+    };
 
-        setProfile(
-          data ?? {
-            id: user.id,
-            role: "user",
-          }
-        );
-      } else {
-        setUser(null);
-        setProfile(null);
+    const init = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (session?.user) {
+          setUser(session.user);
+          await loadProfile(session.user);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      } finally {
+        // CRITICAL: loading must ALWAYS end
+        if (mounted) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     init();
@@ -73,19 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (event === "SIGNED_IN" && session?.user) {
           setUser(session.user);
-
-          const { data } = await supabase
-            .from("profiles")
-            .select("id, role")
-            .eq("id", session.user.id)
-            .single();
-
-          setProfile(
-            data ?? {
-              id: session.user.id,
-              role: "user",
-            }
-          );
+          await loadProfile(session.user);
         }
 
         if (event === "SIGNED_OUT") {
