@@ -34,16 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
+    const init = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!mounted) return;
 
-      setUser(user ?? null);
-
       if (user) {
+        setUser(user);
         const { data } = await supabase
           .from("profiles")
           .select("id, role")
@@ -57,13 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         );
       } else {
+        setUser(null);
         setProfile(null);
       }
 
       setLoading(false);
     };
 
-    load();
+    init();
 
     const {
       data: { subscription },
