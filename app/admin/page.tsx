@@ -25,6 +25,8 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
 
+  const isAdminReady = !loading && user && profile?.role === "admin";
+
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,9 +35,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
-    null
-  );
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
 
   const [newProduct, setNewProduct] = useState({
@@ -47,19 +47,19 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* ---------- AUTH GUARD ---------- */
+  /* ---------- AUTH GUARD (REDIRECT ONLY) ---------- */
   useEffect(() => {
     if (loading) return;
 
     if (!user) {
-      router.push("/auth/login");
+      router.replace("/auth/login");
       return;
     }
 
-    if (profile?.role !== "admin") {
-      router.push("/");
+    if (profile && profile.role !== "admin") {
+      router.replace("/");
     }
-  }, [user, profile, loading, router]);
+  }, [loading, user, profile, router]);
 
   /* ---------- LOAD DATA ---------- */
   const loadData = useCallback(async () => {
@@ -70,7 +70,9 @@ export default function AdminPage() {
         supabase.from("categories").select("*").order("name"),
         supabase
           .from("products")
-          .select("id,name,description,price,image_main,images,category_id,active")
+          .select(
+            "id,name,description,price,image_main,images,category_id,active"
+          )
           .order("name"),
       ]);
 
@@ -83,8 +85,8 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (user && profile?.role === "admin") loadData();
-  }, [user, profile, loadData]);
+    if (isAdminReady) loadData();
+  }, [isAdminReady, loadData]);
 
   /* ---------- CATEGORY ---------- */
   const addCategory = async () => {
@@ -176,8 +178,14 @@ export default function AdminPage() {
     loadData();
   };
 
-  if (loading) return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
-  if (!user || profile?.role !== "admin") return null;
+  /* ---------- RENDER GATES ---------- */
+  if (loading || !profile) {
+    return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+  }
+
+  if (!isAdminReady) {
+    return null;
+  }
 
   /* ---------- UI ---------- */
   return (
@@ -226,7 +234,7 @@ export default function AdminPage() {
               placeholder="Price"
               value={newProduct.price}
               onChange={(e) =>
-                setNewProduct((p) => ({ ...p, price: e.target.value }))
+                setNewProduct((p) ({ ...p, price: e.target.value }))
               }
             />
 
