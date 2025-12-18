@@ -10,14 +10,21 @@ import {
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
+/* ================= TYPES ================= */
+
 type AuthContextType = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 };
 
+/* ================= CONTEXT ================= */
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/* ================= PROVIDER ================= */
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -35,9 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
 
         setUser(session?.user ?? null);
-      } catch {
+      } catch (err) {
+        console.error("Auth init failed:", err);
         if (mounted) setUser(null);
       } finally {
+        // 🔑 CRITICAL: loading MUST end
         if (mounted) setLoading(false);
       }
     };
@@ -48,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
+
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -58,11 +68,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  /* ================= ACTIONS ================= */
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    if (error) return { error: error.message };
+    return {};
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
     if (error) return { error: error.message };
     return {};
   };
@@ -72,12 +95,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  /* ================= RENDER ================= */
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signUp, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
+
+/* ================= HOOK ================= */
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
