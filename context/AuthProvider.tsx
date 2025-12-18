@@ -7,7 +7,7 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { createClient, User } from "@supabase/supabase-js";
+import { createClient, User, AuthChangeEvent } from "@supabase/supabase-js";
 
 type Profile = {
   id: string;
@@ -35,13 +35,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 🔒 Load user ONCE
   useEffect(() => {
     let mounted = true;
 
-    async function loadUser() {
+    const init = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      if (!mounted) return;
 
       setUser(user ?? null);
 
@@ -52,28 +55,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq("id", user.id)
           .single();
 
-        if (mounted) {
-          setProfile(
-            profileData ?? {
-              id: user.id,
-              role: "user",
-            }
-          );
-        }
+        if (!mounted) return;
+
+        setProfile(
+          profileData ?? {
+            id: user.id,
+            role: "user",
+          }
+        );
       } else {
-        if (mounted) setProfile(null);
+        setProfile(null);
       }
 
-      if (mounted) setLoading(false);
-    }
+      setLoading(false);
+    };
 
-    loadUser();
+    init();
 
+    // 🔥 CRITICAL FIX:
+    // Only react to real auth changes, NOT token refreshes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadUser();
-    });
+    } = supabase.auth.onAuthStateChange(
+      (event: AuthChangeEvent, session) => {
+        if (event === "SIGNED_IN") {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+
+        // ❌ ignore TOKEN_REFRESHED, USER_UPDATED, etc
+      }
+    );
 
     return () => {
       mounted = false;
