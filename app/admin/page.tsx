@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
 import { supabase } from "@/lib/supabaseClient";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 import AdminImageUpload from "@/components/AdminImageUpload";
 import EditProductModal from "@/components/EditProductModal";
@@ -23,7 +24,9 @@ type Product = {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
+
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
 
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -33,7 +36,9 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null
+  );
   const [editingCategoryName, setEditingCategoryName] = useState("");
 
   const [newProduct, setNewProduct] = useState({
@@ -45,7 +50,7 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* ---------- AUTH GUARD (REDIRECT ONLY) ---------- */
+  /* ---------- AUTH GUARD ---------- */
   useEffect(() => {
     if (loading) return;
 
@@ -54,10 +59,10 @@ export default function AdminPage() {
       return;
     }
 
-    if (profile && profile.role !== "admin") {
+    if (!isAdmin) {
       router.replace("/");
     }
-  }, [loading, user, profile, router]);
+  }, [loading, user, isAdmin, router]);
 
   /* ---------- LOAD DATA ---------- */
   const loadData = useCallback(async () => {
@@ -83,8 +88,8 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (profile?.role === "admin") loadData();
-  }, [profile, loadData]);
+    if (user && isAdmin) loadData();
+  }, [user, isAdmin, loadData]);
 
   /* ---------- CATEGORY ---------- */
   const addCategory = async () => {
@@ -176,14 +181,9 @@ export default function AdminPage() {
     loadData();
   };
 
-  /* ---------- RENDER GATES (FIXED) ---------- */
-  if (loading || profile === null) {
-    return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
-  }
-
-  if (profile.role !== "admin") {
-    return null;
-  }
+  /* ---------- RENDER GATES ---------- */
+  if (loading) return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+  if (!user || !isAdmin) return null;
 
   /* ---------- UI ---------- */
   return (
