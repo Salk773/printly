@@ -13,15 +13,31 @@ export default function Navbar() {
     cartJustUpdated,
     isSyncing,
   } = useCart();
+
   const { items: wishlistItems } = useWishlist();
   const { user, profile, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
+  /* ---------- LOGOUT (FIXED) ---------- */
   const handleLogout = async () => {
     await signOut();
-    router.push("/");
+    router.replace("/");
+    router.refresh();
   };
+
+  /* ---------- WAIT FOR AUTH ---------- */
+  if (loading) {
+    return (
+      <header
+        style={{
+          height: 64,
+          background: "rgba(10, 15, 31, 0.85)",
+          borderBottom: "1px solid rgba(148,163,184,0.15)",
+        }}
+      />
+    );
+  }
 
   return (
     <header
@@ -84,15 +100,14 @@ export default function Navbar() {
                   pathname === item.path
                     ? "#c084fc"
                     : "rgba(229,231,235,0.8)",
-                transition: "0.2s",
               }}
             >
               {item.name}
             </Link>
           ))}
 
-          {/* ✅ ADMIN LINK — WAIT FOR PROFILE */}
-          {!loading && profile?.role === "admin" && (
+          {/* ADMIN LINK — STABLE */}
+          {user && profile?.role === "admin" && (
             <Link
               href="/admin"
               style={{
@@ -197,7 +212,6 @@ export default function Navbar() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              transition: "0.25s",
               cursor: "pointer",
               transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
             }}
