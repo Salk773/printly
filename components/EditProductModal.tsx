@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 import AdminImageUpload from "@/components/AdminImageUpload";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const MAX_GALLERY = 8;
 
@@ -32,228 +27,67 @@ export default function EditProductModal({
     active: !!product.active,
   });
 
-  const [saving, setSaving] = useState(false);
-
-  /* ---------- HELPERS ---------- */
-
   const addGalleryImage = (url: string) => {
-    setForm((prev) => {
-      if (prev.images.length >= MAX_GALLERY) return prev;
-      if (prev.images.includes(url)) return prev;
-      return { ...prev, images: [...prev.images, url] };
-    });
+    setForm((p) =>
+      p.images.length >= MAX_GALLERY || p.images.includes(url)
+        ? p
+        : { ...p, images: [...p.images, url] }
+    );
   };
 
   const setAsMain = (url: string) => {
-    setForm((prev) => ({
-      ...prev,
+    setForm((p) => ({
+      ...p,
       image_main: url,
-      images: prev.images.includes(url)
-        ? prev.images
-        : [url, ...prev.images].slice(0, MAX_GALLERY),
+      images: p.images.includes(url)
+        ? p.images
+        : [url, ...p.images].slice(0, MAX_GALLERY),
     }));
   };
 
   const removeGalleryImage = (url: string) => {
     if (url === form.image_main) return;
-    setForm((prev) => ({
-      ...prev,
-      images: prev.images.filter((i) => i !== url),
+    setForm((p) => ({
+      ...p,
+      images: p.images.filter((i) => i !== url),
     }));
   };
 
-  const moveImage = (i: number, dir: "up" | "down") => {
-    setForm((prev) => {
-      const imgs = [...prev.images];
-      const t = dir === "up" ? i - 1 : i + 1;
-      if (t < 0 || t >= imgs.length) return prev;
-      [imgs[i], imgs[t]] = [imgs[t], imgs[i]];
-      return { ...prev, images: imgs };
-    });
-  };
-
-  /* ---------- SAVE ---------- */
-
-  const saveChanges = async () => {
-    if (form.active && !form.image_main) return;
-
-    setSaving(true);
-
-    const { error } = await supabase
+  const save = async () => {
+    await supabase
       .from("products")
       .update({
-        name: form.name,
+        ...form,
         price: Number(form.price),
-        description: form.description,
         category_id: form.category_id || null,
-        image_main: form.image_main,
-        images: form.images,
-        active: form.active,
       })
       .eq("id", product.id);
 
-    setSaving(false);
-
-    if (!error) {
-      onSaved();
-      onClose();
-    }
+    onSaved();
+    onClose();
   };
 
-  /* ---------- UI ---------- */
-
   return (
-    <div style={overlay}>
-      <div style={modal}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)" }}>
+      <div style={{ background: "#1f1f25", padding: 20, margin: "10% auto", width: 560 }}>
         <h2>Edit product</h2>
 
-        <input
-          className="input"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-
-        <input
-          className="input"
-          type="number"
-          value={form.price}
-          onChange={(e) =>
-            setForm({ ...form, price: Number(e.target.value) })
-          }
-        />
-
-        <select
-          className="select"
-          value={form.category_id || ""}
-          onChange={(e) =>
-            setForm({ ...form, category_id: e.target.value })
-          }
-        >
-          <option value="">Category</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        <textarea
-          className="textarea"
-          value={form.description}
-          onChange={(e) =>
-            setForm({ ...form, description: e.target.value })
-          }
-        />
-
-        <button
-          className="btn-ghost"
-          onClick={() => setForm({ ...form, active: !form.active })}
-        >
-          {form.active ? "Active" : "Inactive"}
-        </button>
-
-        <strong>Main image</strong>
         <AdminImageUpload onUploaded={setAsMain} />
-        {form.image_main && <img src={form.image_main} style={mainImage} />}
+        {form.image_main && <img src={form.image_main} style={{ width: 160 }} />}
 
-        <strong>
-          Gallery ({form.images.length}/{MAX_GALLERY})
-        </strong>
         <AdminImageUpload onUploaded={addGalleryImage} />
 
-        <div style={gallery}>
-          {form.images.map((url, i) => (
-            <div key={url} style={imgCard}>
-              {url === form.image_main && (
-                <span style={mainBadge}>MAIN</span>
-              )}
-              <img src={url} style={thumb} />
+        {form.images.map((url) => (
+          <div key={url}>
+            <img src={url} style={{ width: 80 }} />
+            <button onClick={() => setAsMain(url)}>Set main</button>
+            <button onClick={() => removeGalleryImage(url)}>Remove</button>
+          </div>
+        ))}
 
-              <button className="btn-ghost" onClick={() => setAsMain(url)}>
-                Set main
-              </button>
-
-              <div>
-                <button onClick={() => moveImage(i, "up")}>↑</button>
-                <button onClick={() => moveImage(i, "down")}>↓</button>
-              </div>
-
-              <button
-                className="btn-danger"
-                onClick={() => removeGalleryImage(url)}
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div style={actions}>
-          <button onClick={onClose}>Cancel</button>
-          <button onClick={saveChanges} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </div>
+        <button onClick={save}>Save</button>
+        <button onClick={onClose}>Cancel</button>
       </div>
     </div>
   );
 }
-
-/* ---------- STYLES ---------- */
-
-const overlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.6)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 200,
-};
-
-const modal: React.CSSProperties = {
-  background: "#1f1f25",
-  padding: 20,
-  borderRadius: 12,
-  width: 560,
-};
-
-const mainImage: React.CSSProperties = {
-  width: 160,
-  marginTop: 8,
-  borderRadius: 8,
-};
-
-const gallery: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4,1fr)",
-  gap: 10,
-};
-
-const imgCard: React.CSSProperties = {
-  border: "1px solid #334155",
-  borderRadius: 8,
-  padding: 6,
-  position: "relative",
-};
-
-const thumb: React.CSSProperties = {
-  width: "100%",
-  height: 80,
-  objectFit: "cover",
-};
-
-const mainBadge: React.CSSProperties = {
-  position: "absolute",
-  top: 4,
-  right: 4,
-  background: "#c084fc",
-  padding: "2px 6px",
-  fontSize: "0.7rem",
-};
-
-const actions: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  marginTop: 20,
-};
