@@ -20,14 +20,19 @@ export default function AdminImageUpload({
 
     try {
       const ext = file.name.split(".").pop();
-      const path = `products/${crypto.randomUUID()}.${ext}`;
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const path = `products/${fileName}`;
 
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("uploads")
-        .upload(path, file);
+        .upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
-      if (error) {
-        alert("Upload failed");
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        alert(uploadError.message || "Image upload failed");
         return;
       }
 
@@ -35,7 +40,15 @@ export default function AdminImageUpload({
         .from("uploads")
         .getPublicUrl(path);
 
+      if (!data?.publicUrl) {
+        alert("Failed to get image URL");
+        return;
+      }
+
       onUploaded(data.publicUrl);
+    } catch (err) {
+      console.error("Unexpected upload error:", err);
+      alert("Unexpected upload error");
     } finally {
       setUploading(false);
       e.target.value = "";
