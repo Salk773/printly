@@ -27,6 +27,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log("AuthProvider mounted");
+
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
       } finally {
-        // CRITICAL: loading must ALWAYS end
         if (mounted) setLoading(false);
       }
     };
