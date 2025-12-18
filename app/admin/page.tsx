@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
 import { createClient } from "@supabase/supabase-js";
@@ -34,6 +34,8 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+
+  // IMPORTANT: store a stable copy
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
@@ -54,7 +56,7 @@ export default function AdminPage() {
   }, [user, profile, loading, router]);
 
   /* ---------------- LOAD ---------------- */
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoadingData(true);
 
     const [{ data: cats }, { data: prods }] = await Promise.all([
@@ -68,18 +70,23 @@ export default function AdminPage() {
     setCategories(cats || []);
     setProducts(prods || []);
     setLoadingData(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (user && profile?.role === "admin") loadData();
-  }, [user, profile]);
+  }, [user, profile, loadData]);
 
   /* ---------------- CATEGORY ---------------- */
   const addCategory = async () => {
     if (!newCategory.trim()) return;
+
     await supabase.from("categories").insert([
-      { name: newCategory, slug: newCategory.toLowerCase().replace(/\s+/g, "-") },
+      {
+        name: newCategory,
+        slug: newCategory.toLowerCase().replace(/\s+/g, "-"),
+      },
     ]);
+
     setNewCategory("");
     loadData();
   };
@@ -104,7 +111,7 @@ export default function AdminPage() {
         price: Number(newProduct.price),
         image_main: newProduct.image_main,
         images: newProduct.images,
-        category_id: newProduct.category_id,
+        category_id: newProduct.category_id || null,
         active: true,
       },
     ]);
@@ -123,8 +130,11 @@ export default function AdminPage() {
 
   const toggleActive = async (p: Product) => {
     setProducts((prev) =>
-      prev.map((x) => (x.id === p.id ? { ...x, active: !p.active } : x))
+      prev.map((x) =>
+        x.id === p.id ? { ...x, active: !p.active } : x
+      )
     );
+
     await supabase
       .from("products")
       .update({ active: !p.active })
@@ -146,6 +156,7 @@ export default function AdminPage() {
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
         <EditProductModal
+          key={editingProduct.id} // 🔒 prevents remount bugs
           product={editingProduct}
           categories={categories}
           onClose={() => setEditingProduct(null)}
@@ -156,10 +167,16 @@ export default function AdminPage() {
       <h1>Admin Panel</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <button className="btn-ghost" onClick={() => setTab("products")}>
+        <button
+          className="btn-ghost"
+          onClick={() => setTab("products")}
+        >
           Products
         </button>
-        <button className="btn-ghost" onClick={() => setTab("categories")}>
+        <button
+          className="btn-ghost"
+          onClick={() => setTab("categories")}
+        >
           Categories
         </button>
       </div>
@@ -168,6 +185,7 @@ export default function AdminPage() {
 
       {tab === "products" && (
         <>
+          {/* ADD PRODUCT */}
           <div className="card-soft" style={{ padding: 14, marginBottom: 16 }}>
             <h2>Add product</h2>
 
@@ -194,7 +212,10 @@ export default function AdminPage() {
               className="select"
               value={newProduct.category_id}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, category_id: e.target.value })
+                setNewProduct({
+                  ...newProduct,
+                  category_id: e.target.value,
+                })
               }
             >
               <option value="">Category</option>
@@ -225,7 +246,10 @@ export default function AdminPage() {
               placeholder="Description"
               value={newProduct.description}
               onChange={(e) =>
-                setNewProduct({ ...newProduct, description: e.target.value })
+                setNewProduct({
+                  ...newProduct,
+                  description: e.target.value,
+                })
               }
             />
 
@@ -234,17 +258,23 @@ export default function AdminPage() {
             </button>
           </div>
 
+          {/* LIST */}
           {products.map((p) => (
             <div key={p.id} className="card-soft" style={{ padding: 10 }}>
               <strong>{p.name}</strong>
 
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <button className="btn-ghost" onClick={() => toggleActive(p)}>
+                <button
+                  className="btn-ghost"
+                  onClick={() => toggleActive(p)}
+                >
                   {p.active ? "Active" : "Inactive"}
                 </button>
                 <button
                   className="btn-ghost"
-                  onClick={() => setEditingProduct(p)}
+                  onClick={() =>
+                    setEditingProduct({ ...p })
+                  } // 🔒 clone object
                 >
                   Edit
                 </button>
