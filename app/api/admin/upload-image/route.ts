@@ -23,56 +23,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const { data: profile, error: profileErr } = await client
+    const { data: profile } = await client
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
-
-    if (profileErr) {
-      console.error(profileErr);
-      return NextResponse.json({ error: "Profile lookup failed" }, { status: 500 });
-    }
 
     if (profile?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const file = formData.get("file");
 
-    if (!file) {
-      return NextResponse.json({ error: "No file" }, { status: 400 });
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Invalid file" }, { status: 400 });
     }
 
-    // Convert to bytes explicitly (prevents 0-byte/invalid uploads)
-    const ab = await file.arrayBuffer();
-    if (!ab || ab.byteLength === 0) {
-      return NextResponse.json({ error: "Empty file" }, { status: 400 });
+    // 🔥 CRITICAL PART
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    if (buffer.length < 100) {
+      return NextResponse.json({ error: "File empty" }, { status: 400 });
     }
 
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const ext = file.name.split(".").pop() || "jpg";
     const filename = `${crypto.randomUUID()}.${ext}`;
     const path = `products/${filename}`;
 
-    const { error: upErr } = await client.storage
+    const { error: uploadError } = await client.storage
       .from("uploads")
-      .upload(path, new Uint8Array(ab), {
-        contentType: file.type || "application/octet-stream",
+      .upload(path, buffer, {
+        contentType: file.type,
         cacheControl: "3600",
         upsert: false,
       });
 
-    if (upErr) {
-      console.error(upErr);
+    if (uploadError) {
+      console.error(uploadError);
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
-    const { data } = client.storage.from("uploads").getPublicUrl(path);
+    const { data } = client.storage
+      .from("uploads")
+      .getPublicUrl(path);
 
     return NextResponse.json({ url: data.publicUrl });
-  } catch (e) {
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
