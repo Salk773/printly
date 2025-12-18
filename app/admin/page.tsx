@@ -47,14 +47,14 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  /* AUTH */
+  /* ---------------- AUTH ---------------- */
   useEffect(() => {
     if (loading) return;
     if (!user) router.push("/auth/login");
     else if (profile?.role !== "admin") router.push("/");
   }, [user, profile, loading, router]);
 
-  /* LOAD */
+  /* ---------------- LOAD (RESTORED) ---------------- */
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
@@ -73,13 +73,14 @@ export default function AdminPage() {
     setLoadingData(false);
   }, []);
 
+  // ✅ ORIGINAL, CORRECT BEHAVIOR
   useEffect(() => {
-    if (user && profile?.role === "admin" && products.length === 0) {
+    if (user && profile?.role === "admin") {
       loadData();
     }
-  }, [user, profile, products.length, loadData]);
+  }, [user, profile, loadData]);
 
-  /* PRODUCT */
+  /* ---------------- PRODUCT ---------------- */
   const addProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.image_main) {
       alert("Missing required fields");
@@ -114,7 +115,7 @@ export default function AdminPage() {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
 
-  /* UI */
+  /* ---------------- UI ---------------- */
   return (
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
@@ -128,6 +129,8 @@ export default function AdminPage() {
       )}
 
       <h1>Admin Panel</h1>
+
+      {loadingData && <p>Loading…</p>}
 
       {tab === "products" && (
         <>
@@ -178,7 +181,7 @@ export default function AdminPage() {
               }
             />
 
-            {/* ✅ MAIN IMAGE PREVIEW (FIX) */}
+            {/* ✅ PREVIEW (THE REAL FIX) */}
             {newProduct.image_main && (
               <img
                 src={newProduct.image_main}
@@ -201,7 +204,6 @@ export default function AdminPage() {
               }
             />
 
-            {/* ✅ GALLERY PREVIEW (FIX) */}
             {newProduct.images.length > 0 && (
               <div
                 style={{
@@ -243,6 +245,16 @@ export default function AdminPage() {
               Save product
             </button>
           </div>
+
+          {/* LIST */}
+          {products.map((p) => (
+            <div key={p.id} className="card-soft" style={{ padding: 10 }}>
+              <strong>{p.name}</strong>
+              <button onClick={() => setEditingProduct({ ...p })}>
+                Edit
+              </button>
+            </div>
+          ))}
         </>
       )}
     </div>
