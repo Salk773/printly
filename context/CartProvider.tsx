@@ -23,26 +23,20 @@ type CartContextType = {
   count: number;
   total: number;
 
-  /** Drawer state */
   sideCartOpen: boolean;
   toggleSideCart: () => void;
 
-  /** Old naming preserved for compatibility */
   isCartOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
 
-  /** Cart logic */
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (id: string) => void;
   increaseQuantity: (id: string) => void;
   decreaseQuantity: (id: string) => void;
   clearCart: () => void;
 
-  /** Animation trigger for Navbar */
   cartJustUpdated: boolean;
-
-  /** Background sync (safe even without auth) */
   isSyncing: boolean;
 };
 
@@ -54,24 +48,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hasHydrated, setHasHydrated] = useState(false);
 
-  /** Drawer */
   const [sideCartOpen, setSideCartOpen] = useState(false);
 
-  /** Backwards-compatibility with older code */
   const isCartOpen = sideCartOpen;
   const openCart = () => setSideCartOpen(true);
   const closeCart = () => setSideCartOpen(false);
   const toggleSideCart = () => setSideCartOpen((prev) => !prev);
 
-  /** Animations */
   const [cartJustUpdated, setCartJustUpdated] = useState(false);
-
-  /** Sync state */
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // ---------------------------------------------
-  // 🟣 Load from localStorage
-  // ---------------------------------------------
+  /* ---------- LOAD LOCAL STORAGE ---------- */
   useEffect(() => {
     try {
       const raw =
@@ -90,9 +77,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // ---------------------------------------------
-  // 🟣 Save to localStorage
-  // ---------------------------------------------
+  /* ---------- SAVE LOCAL STORAGE ---------- */
   useEffect(() => {
     if (!hasHydrated) return;
     try {
@@ -100,21 +85,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [items, hasHydrated]);
 
-  // ---------------------------------------------
-  // 🟣 Animate cart icon on updates
-  // ---------------------------------------------
+  /* ---------- CART ICON ANIMATION ---------- */
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (items.length === 0) return;
-
+    if (!hasHydrated || items.length === 0) return;
     setCartJustUpdated(true);
     const t = setTimeout(() => setCartJustUpdated(false), 300);
     return () => clearTimeout(t);
   }, [items, hasHydrated]);
 
-  // ---------------------------------------------
-  // 🟣 Optional Supabase sync (only works if logged in)
-  // ---------------------------------------------
+  /* ---------- OPTIONAL SUPABASE SYNC ---------- */
   useEffect(() => {
     if (!hasHydrated) return;
 
@@ -135,7 +114,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           updated_at: new Date().toISOString(),
         });
       } catch (err) {
-        console.log("Cart sync skipped / unavailable:", err);
+        console.log("Cart sync skipped:", err);
       } finally {
         if (!cancelled) setIsSyncing(false);
       }
@@ -148,15 +127,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [items, hasHydrated]);
 
-  // ---------------------------------------------
-  // 🟣 Cart logic (preserved)
-  // ---------------------------------------------
+  /* ---------- CART LOGIC ---------- */
   const addItem = (
     item: Omit<CartItem, "quantity"> & { quantity?: number }
   ) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === item.id);
-
       if (existing) {
         return prev.map((i) =>
           i.id === item.id
@@ -164,10 +140,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : i
         );
       }
-
       return [...prev, { ...item, quantity: item.quantity || 1 }];
     });
-
     setSideCartOpen(true);
   };
 
@@ -192,8 +166,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setItems([]);
 
-  const count = items.reduce((sum, i) => sum + i.quantity, 0);
-  const total = items.reduce((sum, i) => sum + i.quantity * i.price, 0);
+  const count = items.reduce((s, i) => s + i.quantity, 0);
+  const total = items.reduce((s, i) => s + i.quantity * i.price, 0);
 
   const value = useMemo(
     () => ({
