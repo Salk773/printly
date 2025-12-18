@@ -50,14 +50,14 @@ export default function AdminImageUpload({
       onUploaded(data.publicUrl);
     } finally {
       setUploading(false);
-      e.target.value = "";
+      e.target.value = ""; // browser security reset
     }
   };
 
   return (
     <div style={{ marginTop: 8 }}>
       <input type="file" accept="image/*" onChange={upload} />
-      {uploading && <p>Uploading…</p>}
+      {uploading && <p style={{ fontSize: "0.8rem" }}>Uploading…</p>}
     </div>
   );
 }
