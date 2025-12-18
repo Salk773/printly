@@ -1,4 +1,4 @@
 export const ADMIN_EMAILS = [
-  "your@email.com",
+  "info@printly.ae",
   // add more if needed
 ];
