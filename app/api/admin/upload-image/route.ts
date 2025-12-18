@@ -1,9 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
-    const client = supabaseAdmin(); // ✅ CALL IT
+    const client = supabaseAdmin();
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
@@ -33,6 +35,7 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
+
     if (!file) {
       return NextResponse.json({ error: "No file" }, { status: 400 });
     }
@@ -41,7 +44,7 @@ export async function POST(req: Request) {
     const filename = `${crypto.randomUUID()}.${ext}`;
     const path = `products/${filename}`;
 
-    const { error } = await client.storage // ✅ NOW WORKS
+    const { error } = await client.storage
       .from("uploads")
       .upload(path, file);
 
