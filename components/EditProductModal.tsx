@@ -29,6 +29,8 @@ export default function EditProductModal({
 
   const [saving, setSaving] = useState(false);
 
+  /* ---------- IMAGE HELPERS ---------- */
+
   const addGalleryImage = (url: string) => {
     setForm((prev) => {
       if (prev.images.length >= MAX_GALLERY) return prev;
@@ -65,6 +67,8 @@ export default function EditProductModal({
     });
   };
 
+  /* ---------- SAVE ---------- */
+
   const saveChanges = async () => {
     if (form.active && !form.image_main) return;
 
@@ -90,6 +94,8 @@ export default function EditProductModal({
       onClose();
     }
   };
+
+  /* ---------- UI ---------- */
 
   return (
     <div style={overlay}>
@@ -141,10 +147,19 @@ export default function EditProductModal({
           {form.active ? "Active" : "Inactive"}
         </button>
 
+        {/* ---------- MAIN IMAGE ---------- */}
         <strong>Main image</strong>
         <AdminImageUpload onUploaded={setAsMain} />
-        {form.image_main && <img src={form.image_main} style={mainImage} />}
 
+        {form.image_main && (
+          <img
+            key={form.image_main}
+            src={`${form.image_main}?t=${Date.now()}`}
+            style={mainImage}
+          />
+        )}
+
+        {/* ---------- GALLERY ---------- */}
         <strong>
           Gallery ({form.images.length}/{MAX_GALLERY})
         </strong>
@@ -152,11 +167,15 @@ export default function EditProductModal({
 
         <div style={gallery}>
           {form.images.map((url, i) => (
-            <div key={url} style={imgCard}>
+            <div key={`${url}-${i}`} style={imgCard}>
               {url === form.image_main && (
                 <span style={mainBadge}>MAIN</span>
               )}
-              <img src={url} style={thumb} />
+
+              <img
+                src={`${url}?t=${i}`}
+                style={thumb}
+              />
 
               <button className="btn-ghost" onClick={() => setAsMain(url)}>
                 Set main
