@@ -9,53 +9,51 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-type Props = {
+export default function AdminImageUpload({
+  onUploaded,
+}: {
   onUploaded: (url: string) => void;
-};
-
-export default function AdminImageUpload({ onUploaded }: Props) {
-  const { user, profile } = useAuth();
+}) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
-
-  // 🔒 Admin-only guard
-  if (!user || profile?.role !== "admin") {
-    return null;
-  }
 
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Only image files allowed");
-      return;
-    }
+    if (!file || !user) return;
 
     setUploading(true);
 
     try {
-      const ext = file.name.split(".").pop();
-      const filename = `${crypto.randomUUID()}.${ext}`;
-      const path = `products/${filename}`;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      const { error } = await supabase.storage
-        .from("uploads")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+      if (!session) {
+        alert("Not authenticated");
+        return;
+      }
 
-      if (error) {
-        console.error(error);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error(json);
         alert("Upload failed");
         return;
       }
 
-      const { data } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(path);
-
-      onUploaded(data.publicUrl);
+      // ✅ THIS is what was missing earlier
+      onUploaded(json.url);
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -70,12 +68,7 @@ export default function AdminImageUpload({ onUploaded }: Props) {
         onChange={upload}
         disabled={uploading}
       />
-
-      {uploading && (
-        <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-          Uploading…
-        </p>
-      )}
+      {uploading && <p>Uploading…</p>}
     </div>
   );
 }
