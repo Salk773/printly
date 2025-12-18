@@ -1,9 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // 🔐 REQUIRED
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: Request) {
@@ -15,7 +17,6 @@ export async function POST(req: Request) {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // ✅ Verify user
     const {
       data: { user },
       error: authError,
@@ -25,7 +26,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    // ✅ Check admin role
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -36,7 +36,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ✅ Read file
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
