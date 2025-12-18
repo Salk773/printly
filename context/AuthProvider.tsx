@@ -7,7 +7,8 @@ import {
   useState,
   ReactNode,
 } from "react";
-import { createClient, User, AuthChangeEvent } from "@supabase/supabase-js";
+import { User, AuthChangeEvent } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 
 type Profile = {
   id: string;
@@ -24,11 +25,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -48,16 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user ?? null);
 
       if (user) {
-        const { data: profileData } = await supabase
+        const { data } = await supabase
           .from("profiles")
           .select("id, role")
           .eq("id", user.id)
           .single();
 
-        if (!mounted) return;
-
         setProfile(
-          profileData ?? {
+          data ?? {
             id: user.id,
             role: "user",
           }
@@ -75,30 +69,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session) => {
+        if (!mounted) return;
+
         if (event === "SIGNED_IN" && session?.user) {
           setUser(session.user);
 
-          const { data: profileData } = await supabase
+          const { data } = await supabase
             .from("profiles")
             .select("id, role")
             .eq("id", session.user.id)
             .single();
 
           setProfile(
-            profileData ?? {
+            data ?? {
               id: session.user.id,
               role: "user",
             }
           );
-
-          setLoading(false);
         }
 
         if (event === "SIGNED_OUT") {
           setUser(null);
           setProfile(null);
-          setLoading(false);
         }
+
+        setLoading(false);
       }
     );
 
