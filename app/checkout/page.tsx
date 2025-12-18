@@ -4,13 +4,8 @@ import { useCart } from "@/context/CartProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useAuth } from "@/context/AuthProvider";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "@/lib/supabaseClient";
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart();
@@ -81,13 +76,7 @@ export default function CheckoutPage() {
       }}
     >
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-        <h1
-          style={{
-            fontSize: "2rem",
-            marginBottom: 10,
-            fontWeight: 700,
-          }}
-        >
+        <h1 style={{ fontSize: "2rem", marginBottom: 10, fontWeight: 700 }}>
           Checkout
         </h1>
 
