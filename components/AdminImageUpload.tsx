@@ -52,8 +52,19 @@ export default function AdminImageUpload({
         return;
       }
 
-      // ✅ THIS is what was missing earlier
-      onUploaded(json.url);
+      // 🔧 FIX: accept correct API response shape
+      const url =
+        json.url ||
+        json.publicUrl ||
+        json?.data?.publicUrl;
+
+      if (!url) {
+        console.error("Upload API returned no URL", json);
+        alert("Upload failed (no URL returned)");
+        return;
+      }
+
+      onUploaded(url);
     } finally {
       setUploading(false);
       e.target.value = "";
