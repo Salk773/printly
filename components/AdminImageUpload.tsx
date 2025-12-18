@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { useAuth } from "@/context/AuthProvider";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,23 +14,23 @@ export default function AdminImageUpload({
 }: {
   onUploaded: (url: string) => void;
 }) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     setUploading(true);
 
     try {
-      // ✅ GET SESSION PROPERLY
+      // ✅ Get session token
       const {
         data: { session },
-        error: sessionError,
       } = await supabase.auth.getSession();
 
-      if (sessionError || !session) {
-        alert("You must be logged in as admin");
+      if (!session) {
+        alert("Not authenticated");
         return;
       }
 
@@ -47,7 +48,8 @@ export default function AdminImageUpload({
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Upload failed");
+        console.error(data);
+        alert("Upload failed");
         return;
       }
 
@@ -66,7 +68,6 @@ export default function AdminImageUpload({
         onChange={upload}
         disabled={uploading}
       />
-
       {uploading && (
         <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
           Uploading…
