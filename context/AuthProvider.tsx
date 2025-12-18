@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Load user + profile ONCE
   useEffect(() => {
     let mounted = true;
 
@@ -72,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     load();
 
-    // ✅ Only react to SIGN IN / SIGN OUT
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -101,8 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setLoading(false);
         }
-
-        // ❌ ignore TOKEN_REFRESHED etc
       }
     );
 
