@@ -30,6 +30,7 @@ type Product = {
 /* ============== CONSTANTS ============== */
 
 const ADMIN_CACHE_KEY = "printly_is_admin";
+const MAX_GALLERY = 8;
 
 /* ============== PAGE =================== */
 
@@ -93,15 +94,17 @@ export default function AdminPage() {
   const loadData = useCallback(async () => {
     setLoadingData(true);
 
-    const [{ data: cats }, { data: prods }] = await Promise.all([
-      supabase.from("categories").select("*").order("name"),
-      supabase
-        .from("products")
-        .select(
-          "id,name,description,price,image_main,images,category_id,active"
-        )
-        .order("name"),
-    ]);
+    const [{ data: cats, error: catsErr }, { data: prods, error: prodsErr }] =
+      await Promise.all([
+        supabase.from("categories").select("*").order("name"),
+        supabase
+          .from("products")
+          .select("id,name,description,price,image_main,images,category_id,active")
+          .order("name"),
+      ]);
+
+    if (catsErr) console.error(catsErr);
+    if (prodsErr) console.error(prodsErr);
 
     setCategories(cats || []);
     setProducts(prods || []);
@@ -109,9 +112,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin && adminChecked) {
-      loadData();
-    }
+    if (isAdmin && adminChecked) loadData();
   }, [isAdmin, adminChecked, loadData]);
 
   /* ---------- CATEGORY ---------- */
@@ -164,7 +165,7 @@ export default function AdminPage() {
         description: newProduct.description,
         price: Number(newProduct.price),
         image_main: newProduct.image_main,
-        images: newProduct.images,
+        images: newProduct.images.slice(0, MAX_GALLERY),
         category_id: newProduct.category_id || null,
         active: true,
       },
@@ -202,6 +203,16 @@ export default function AdminPage() {
     if (!confirm("Delete this product?")) return;
     await supabase.from("products").delete().eq("id", id);
     loadData();
+  };
+
+  /* ---------- ADD PRODUCT IMAGE HELPERS ---------- */
+
+  const addNewGalleryImage = (url: string) => {
+    setNewProduct((p) => {
+      if (p.images.length >= MAX_GALLERY) return p;
+      if (p.images.includes(url)) return p;
+      return { ...p, images: [...p.images, url] };
+    });
   };
 
   /* ---------- RENDER GATES ---------- */
@@ -289,15 +300,37 @@ export default function AdminPage() {
               }
             />
 
-            <strong>Gallery images</strong>
-            <AdminImageUpload
-              onUploaded={(url) =>
-                setNewProduct((p) => ({
-                  ...p,
-                  images: [...p.images, url],
-                }))
-              }
-            />
+            {/* ✅ MAIN PREVIEW (RESTORED) */}
+            {newProduct.image_main && (
+              <img
+                key={newProduct.image_main}
+                src={newProduct.image_main}
+                style={{ width: 160, marginTop: 8, borderRadius: 8 }}
+              />
+            )}
+
+            <strong>
+              Gallery images ({newProduct.images.length}/{MAX_GALLERY})
+            </strong>
+            <AdminImageUpload onUploaded={addNewGalleryImage} />
+
+            {/* ✅ GALLERY PREVIEW (RESTORED) */}
+            {newProduct.images.length > 0 && (
+              <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                {newProduct.images.map((url, idx) => (
+                  <img
+                    key={`${url}-${idx}`}
+                    src={url}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             <textarea
               className="textarea"
@@ -329,6 +362,19 @@ export default function AdminPage() {
                 gap: 12,
               }}
             >
+              {/* ✅ PRODUCT THUMBNAIL (RESTORED) */}
+              {p.image_main && (
+                <img
+                  src={p.image_main}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 6,
+                    objectFit: "cover",
+                  }}
+                />
+              )}
+
               <strong style={{ flex: 1 }}>{p.name}</strong>
 
               <button
@@ -381,9 +427,7 @@ export default function AdminPage() {
                   <input
                     className="input"
                     value={editingCategoryName}
-                    onChange={(e) =>
-                      setEditingCategoryName(e.target.value)
-                    }
+                    onChange={(e) => setEditingCategoryName(e.target.value)}
                   />
                   <button
                     className="btn-primary"
