@@ -21,6 +21,12 @@ export default function AdminImageUpload({
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    if (!file.type.startsWith("image/")) {
+      alert("Only image files are allowed");
+      e.target.value = "";
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -44,7 +50,7 @@ export default function AdminImageUpload({
         body: formData,
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         console.error(json);
@@ -52,17 +58,15 @@ export default function AdminImageUpload({
         return;
       }
 
-      // 🔧 FIX: accept correct API response shape
-      const url =
-        json.url ||
-        json.publicUrl ||
-        json?.data?.publicUrl;
-
-      if (!url) {
+      const rawUrl = json?.url || json?.publicUrl || json?.data?.publicUrl;
+      if (!rawUrl) {
         console.error("Upload API returned no URL", json);
         alert("Upload failed (no URL returned)");
         return;
       }
+
+      // Bust cache so you don't see an old 0-byte object / stale CDN response
+      const url = `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
 
       onUploaded(url);
     } finally {
@@ -73,13 +77,8 @@ export default function AdminImageUpload({
 
   return (
     <div style={{ marginTop: 8 }}>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={upload}
-        disabled={uploading}
-      />
-      {uploading && <p>Uploading…</p>}
+      <input type="file" accept="image/*" onChange={upload} disabled={uploading} />
+      {uploading && <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Uploading…</p>}
     </div>
   );
 }
