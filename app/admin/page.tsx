@@ -25,8 +25,6 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, profile, loading } = useAuth();
 
-  const isAdminReady = !loading && user && profile?.role === "admin";
-
   const [tab, setTab] = useState<"products" | "categories">("products");
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -85,8 +83,8 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (isAdminReady) loadData();
-  }, [isAdminReady, loadData]);
+    if (profile?.role === "admin") loadData();
+  }, [profile, loadData]);
 
   /* ---------- CATEGORY ---------- */
   const addCategory = async () => {
@@ -178,12 +176,12 @@ export default function AdminPage() {
     loadData();
   };
 
-  /* ---------- RENDER GATES ---------- */
-  if (loading || !profile) {
+  /* ---------- RENDER GATES (FIXED) ---------- */
+  if (loading || profile === null) {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
 
-  if (!isAdminReady) {
+  if (profile.role !== "admin") {
     return null;
   }
 
