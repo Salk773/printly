@@ -7,11 +7,27 @@ export const revalidate = 60; // ISR
 
 export default async function HomePage() {
   const supabase = supabaseServer();
+
   const { data: products } = await supabase
     .from("products")
     .select("id, name, description, price, image_main")
-    .eq("active", true)   // 👈 BOOLEAN FILTER (correct now)
+    .eq("active", true)
     .limit(4);
+
+  const { data: galleryFiles } = await supabase.storage
+    .from("uploads")
+    .list("home-gallery", {
+      limit: 20,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+  const galleryImages =
+    galleryFiles?.map(
+      (f) =>
+        supabase.storage
+          .from("uploads")
+          .getPublicUrl(`home-gallery/${f.name}`).data.publicUrl
+    ) ?? [];
 
   return (
     <>
@@ -92,8 +108,45 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Homepage gallery */}
+      {galleryImages.length > 0 && (
+        <section style={{ marginTop: 48, overflow: "hidden" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              width: "max-content",
+              animation: "scrollGallery 30s linear infinite",
+            }}
+          >
+            {[...galleryImages, ...galleryImages].map((src, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "relative",
+                  width: 260,
+                  height: 180,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                <Image src={src} alt="Printly gallery" fill style={{ objectFit: "cover" }} />
+              </div>
+            ))}
+          </div>
+
+          <style>{`
+            @keyframes scrollGallery {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+          `}</style>
+        </section>
+      )}
+
       {/* Featured products */}
-      <section style={{ marginTop: 48 }}>
+      <section style={{ marginTop: 56 }}>
         <div
           style={{
             display: "flex",
