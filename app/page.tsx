@@ -5,6 +5,138 @@ import AddToCartButton from "@/components/AddToCartButton";
 
 export const revalidate = 60; // ISR
 
+/* ================= CAROUSEL ================= */
+
+function HomepageCarousel({ images }: { images: string[] }) {
+  "use client";
+
+  const [index, setIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    if (images.length <= 1) return;
+
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % images.length);
+    }, 5000);
+
+    return () => clearInterval(id);
+  }, [images.length]);
+
+  const prev = () =>
+    setIndex((i) => (i - 1 + images.length) % images.length);
+  const next = () => setIndex((i) => (i + 1) % images.length);
+
+  return (
+    <section
+      style={{
+        marginTop: 48,
+        position: "relative",
+        height: 420,
+        borderRadius: 20,
+        overflow: "hidden",
+      }}
+    >
+      {images.map((src, i) => (
+        <div
+          key={src}
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: i === index ? 1 : 0,
+            transition: "opacity 0.6s ease",
+          }}
+        >
+          <Image
+            src={src}
+            alt="Announcement"
+            fill
+            style={{ objectFit: "cover" }}
+            priority={i === 0}
+          />
+
+          {/* Overlay (optional text later) */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0))",
+              display: "flex",
+              alignItems: "flex-end",
+              padding: 32,
+              color: "white",
+              fontSize: "1.4rem",
+              fontWeight: 600,
+            }}
+          >
+            {/* Reserved for announcement text */}
+          </div>
+        </div>
+      ))}
+
+      {/* Arrows */}
+      <button
+        onClick={prev}
+        style={arrowStyle("left")}
+        aria-label="Previous slide"
+      >
+        ‹
+      </button>
+      <button
+        onClick={next}
+        style={arrowStyle("right")}
+        aria-label="Next slide"
+      >
+        ›
+      </button>
+
+      {/* Dots */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 16,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        {images.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIndex(i)}
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: i === index ? "white" : "rgba(255,255,255,0.4)",
+              border: "none",
+              cursor: "pointer",
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const arrowStyle = (side: "left" | "right") => ({
+  position: "absolute" as const,
+  top: "50%",
+  [side]: 16,
+  transform: "translateY(-50%)",
+  background: "rgba(0,0,0,0.4)",
+  color: "white",
+  border: "none",
+  fontSize: 28,
+  width: 42,
+  height: 42,
+  borderRadius: "50%",
+  cursor: "pointer",
+});
+
+/* ================= PAGE ================= */
+
 export default async function HomePage() {
   const supabase = supabaseServer();
 
@@ -16,10 +148,7 @@ export default async function HomePage() {
 
   const { data: galleryFiles } = await supabase.storage
     .from("uploads")
-    .list("home-gallery", {
-      limit: 20,
-      sortBy: { column: "name", order: "asc" },
-    });
+    .list("home-gallery", { sortBy: { column: "name", order: "asc" } });
 
   const galleryImages =
     galleryFiles?.map(
@@ -58,7 +187,6 @@ export default async function HomePage() {
             style={{
               fontSize: "2.8rem",
               lineHeight: 1.1,
-              margin: 0,
               marginBottom: 12,
             }}
           >
@@ -74,75 +202,28 @@ export default async function HomePage() {
             }}
           >
             Browse ready-made 3D printed parts, decor, and useful tools from
-            creators across the UAE. Custom prints coming soon.
+            creators across the UAE.
           </p>
 
           <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
             <Link href="/products" className="btn-primary">
               Browse Products
             </Link>
-            <button className="btn-ghost" style={{ fontSize: "0.85rem" }}>
-              List your prints
-            </button>
+            <button className="btn-ghost">List your prints</button>
           </div>
         </div>
 
         <div className="card-soft" style={{ padding: 20 }}>
-          <h3 style={{ marginTop: 4, marginBottom: 10, fontSize: "1rem" }}>
-            How Printly works
-          </h3>
-          <p
-            style={{
-              fontSize: "0.9rem",
-              color: "#cbd5f5",
-              marginBottom: 8,
-            }}
-          >
-            We start with curated, ready-to-print designs in PLA+ and PETG.
-          </p>
-          <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
-            Later, you&apos;ll be able to upload your own models and choose
-            colours, materials, and print settings — all printed locally for
-            faster turnaround across the UAE.
+          <h3>How Printly works</h3>
+          <p style={{ color: "#cbd5f5" }}>
+            Curated ready-to-print designs in PLA+ and PETG.
           </p>
         </div>
       </section>
 
-      {/* Homepage gallery */}
+      {/* Announcement Carousel */}
       {galleryImages.length > 0 && (
-        <section style={{ marginTop: 48, overflow: "hidden" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: 16,
-              width: "max-content",
-              animation: "scrollGallery 30s linear infinite",
-            }}
-          >
-            {[...galleryImages, ...galleryImages].map((src, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "relative",
-                  width: 260,
-                  height: 180,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  flexShrink: 0,
-                }}
-              >
-                <Image src={src} alt="Printly gallery" fill style={{ objectFit: "cover" }} />
-              </div>
-            ))}
-          </div>
-
-          <style>{`
-            @keyframes scrollGallery {
-              from { transform: translateX(0); }
-              to { transform: translateX(-50%); }
-            }
-          `}</style>
-        </section>
+        <HomepageCarousel images={galleryImages} />
       )}
 
       {/* Featured products */}
@@ -151,75 +232,43 @@ export default async function HomePage() {
           style={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "baseline",
             marginBottom: 16,
           }}
         >
-          <h2 style={{ fontSize: "1.2rem" }}>Featured products</h2>
-          <Link
-            href="/products"
-            style={{ fontSize: "0.85rem", color: "#9ca3af" }}
-          >
+          <h2>Featured products</h2>
+          <Link href="/products" style={{ color: "#9ca3af" }}>
             View all →
           </Link>
         </div>
 
         <div className="grid grid-4">
           {products?.map((p) => (
-            <div key={p.id} className="card" style={{ overflow: "hidden" }}>
+            <div key={p.id} className="card">
               <Link href={`/products/${p.id}`}>
                 <div style={{ position: "relative", height: 230 }}>
-                  {p.image_main && (
-                    <Image
-                      src={p.image_main}
-                      alt={p.name}
-                      fill
-                      style={{ objectFit: "cover" }}
-                    />
-                  )}
+                  <Image
+                    src={p.image_main}
+                    alt={p.name}
+                    fill
+                    style={{ objectFit: "cover" }}
+                  />
                 </div>
               </Link>
 
               <div style={{ padding: 14 }}>
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    fontWeight: 600,
-                    marginBottom: 4,
-                  }}
-                >
-                  {p.name}
-                </div>
-
-                <p
-                  style={{
-                    color: "#9ca3af",
-                    fontSize: "0.8rem",
-                    minHeight: 32,
-                  }}
-                >
+                <strong>{p.name}</strong>
+                <p style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
                   {p.description}
                 </p>
+                <div>{p.price.toFixed(2)} AED</div>
 
-                <div
-                  style={{
-                    marginTop: 6,
-                    fontSize: "0.85rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {p.price.toFixed(2)} AED
-                </div>
-
-                <div style={{ marginTop: 12 }}>
-                  <AddToCartButton
-                    id={p.id}
-                    name={p.name}
-                    price={p.price}
-                    image={p.image_main}
-                    small
-                  />
-                </div>
+                <AddToCartButton
+                  id={p.id}
+                  name={p.name}
+                  price={p.price}
+                  image={p.image_main}
+                  small
+                />
               </div>
             </div>
           ))}
