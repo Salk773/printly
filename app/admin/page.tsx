@@ -50,6 +50,8 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -108,6 +110,7 @@ export default function AdminPage() {
       { data: cats, error: catsErr },
       { data: prods, error: prodsErr },
       { data: gallery, error: galleryErr },
+      { data: ordersData, error: ordersErr },
     ] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase
@@ -115,6 +118,7 @@ export default function AdminPage() {
         .select("id,name,description,price,image_main,images,category_id,active")
         .order("name"),
       supabase.storage.from("uploads").list("home-gallery"),
+      supabase.from("orders").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (catsErr) console.error(catsErr);
@@ -123,6 +127,8 @@ export default function AdminPage() {
 
     setCategories(cats || []);
     setProducts(prods || []);
+    setOrders((ordersData as Order[]) || []);
+
 
     const urls =
       gallery?.map(
@@ -285,6 +291,9 @@ export default function AdminPage() {
         <button className="btn-ghost" onClick={() => setTab("homepage")}>
           Homepage
         </button>
+        <button className="btn-ghost" onClick={() => setTab("orders")}>
+    Orders
+  </button>
       </div>
 
       {loadingData && <p>Loading…</p>}
@@ -544,6 +553,59 @@ export default function AdminPage() {
           ))}
         </div>
       )}
+            {/* ORDERS */}
+      {tab === "orders" && (
+        <div style={{ maxWidth: 900 }}>
+          {orders.length === 0 && (
+            <p style={{ opacity: 0.6 }}>No orders found.</p>
+          )}
+
+          {orders.map((o) => (
+            <div
+              key={o.id}
+              className="card-soft"
+              style={{
+                padding: 14,
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <strong>{o.guest_name || "Guest"}</strong>
+                <div style={{ fontSize: 12 }}>{o.guest_email}</div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{o.id}</div>
+              </div>
+
+              <div>{o.items.length} items</div>
+
+              <div>${o.total.toFixed(2)}</div>
+
+              <div>{new Date(o.created_at).toLocaleString()}</div>
+
+              <select
+                className="select"
+                value={o.status}
+                onChange={(e) =>
+                  supabase
+                    .from("orders")
+                    .update({ status: e.target.value })
+                    .eq("id", o.id)
+                }
+              >
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+
     </div>
   );
 }
