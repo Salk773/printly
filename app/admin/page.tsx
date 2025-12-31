@@ -60,9 +60,10 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // ✅ added "homepage"
-  const [tab, setTab] = useState<"products" | "categories" | "homepage">(
-    "products"
-  );
+ const [tab, setTab] = useState<
+  "products" | "categories" | "homepage" | "orders"
+>("products");
+
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
