@@ -28,6 +28,15 @@ type Product = {
   active: boolean;
 };
 
+type Order = {
+  id: string;
+  user_email: string | null;
+  total: number | null;
+  status: string | null;
+  created_at: string | null;
+  items: any[] | null;
+};
+
 /* ============== CONSTANTS ============== */
 
 const ADMIN_CACHE_KEY = "printly_is_admin";
@@ -42,12 +51,14 @@ export default function AdminPage() {
   const [adminChecked, setAdminChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const [tab, setTab] = useState<"products" | "categories" | "homepage">(
-    "products"
-  );
+  const [tab, setTab] = useState<
+    "products" | "categories" | "homepage" | "orders"
+  >("products");
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [homepageImages, setHomepageImages] = useState<string[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -65,9 +76,7 @@ export default function AdminPage() {
     category_id: "",
   });
 
-  const [homepageImages, setHomepageImages] = useState<string[]>([]);
-
-  /* ---------- ADMIN CHECK (ONCE PER SESSION) ---------- */
+  /* ---------- ADMIN CHECK ---------- */
   useEffect(() => {
     if (loading) return;
 
@@ -84,9 +93,7 @@ export default function AdminPage() {
       return;
     }
 
-    const allowed = ADMIN_EMAILS.includes(user.email ?? "");
-    if (!allowed) {
-      sessionStorage.removeItem(ADMIN_CACHE_KEY);
+    if (!ADMIN_EMAILS.includes(user.email ?? "")) {
       router.replace("/");
       return;
     }
@@ -101,9 +108,10 @@ export default function AdminPage() {
     setLoadingData(true);
 
     const [
-      { data: cats, error: catsErr },
-      { data: prods, error: prodsErr },
-      { data: gallery, error: galleryErr },
+      { data: cats },
+      { data: prods },
+      { data: gallery },
+      { data: ords },
     ] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase
@@ -113,14 +121,14 @@ export default function AdminPage() {
         )
         .order("name"),
       supabase.storage.from("uploads").list("home-gallery"),
+      supabase.from("orders").select("*").order("created_at", {
+        ascending: false,
+      }),
     ]);
-
-    if (catsErr) console.error(catsErr);
-    if (prodsErr) console.error(prodsErr);
-    if (galleryErr) console.error(galleryErr);
 
     setCategories(cats || []);
     setProducts(prods || []);
+    setOrders(ords || []);
 
     const urls =
       gallery?.map(
@@ -138,121 +146,33 @@ export default function AdminPage() {
     if (isAdmin && adminChecked) loadData();
   }, [isAdmin, adminChecked, loadData]);
 
-  /* ---------- CATEGORY ---------- */
-  const addCategory = async () => {
-    if (!newCategory.trim()) return;
-
-    await supabase.from("categories").insert([
-      {
-        name: newCategory,
-        slug: newCategory.toLowerCase().replace(/\s+/g, "-"),
-      },
-    ]);
-
-    setNewCategory("");
-    loadData();
-  };
-
-  const saveCategoryRename = async (id: string) => {
-    if (!editingCategoryName.trim()) return;
-
-    await supabase
-      .from("categories")
-      .update({
-        name: editingCategoryName,
-        slug: editingCategoryName.toLowerCase().replace(/\s+/g, "-"),
-      })
-      .eq("id", id);
-
-    setEditingCategoryId(null);
-    setEditingCategoryName("");
-    loadData();
-  };
-
-  const deleteCategory = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
-    await supabase.from("categories").delete().eq("id", id);
-    loadData();
-  };
-
-  /* ---------- PRODUCT ---------- */
-  const addProduct = async () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.image_main) {
-      alert("Fill all required fields");
-      return;
-    }
-
-    await supabase.from("products").insert([
-      {
-        name: newProduct.name,
-        description: newProduct.description,
-        price: Number(newProduct.price),
-        image_main: newProduct.image_main,
-        images: newProduct.images.slice(0, MAX_GALLERY),
-        category_id: newProduct.category_id || null,
-        active: true,
-      },
-    ]);
-
-    setNewProduct({
-      name: "",
-      description: "",
-      price: "",
-      image_main: "",
-      images: [],
-      category_id: "",
-    });
-
-    loadData();
-  };
+  /* ---------- HELPERS ---------- */
 
   const toggleActive = async (p: Product) => {
     setProducts((prev) =>
       prev.map((x) => (x.id === p.id ? { ...x, active: !p.active } : x))
     );
-
-    const { error } = await supabase
+    await supabase
       .from("products")
       .update({ active: !p.active })
       .eq("id", p.id);
-
-    if (error) {
-      console.error(error);
-      loadData();
-    }
   };
 
-  const deleteProduct = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
-    await supabase.from("products").delete().eq("id", id);
-    loadData();
-  };
-
-  const addNewGalleryImage = (url: string) => {
-    setNewProduct((p) => {
-      if (p.images.length >= MAX_GALLERY) return p;
-      if (p.images.includes(url)) return p;
-      return { ...p, images: [...p.images, url] };
-    });
-  };
-
-  const deleteHomepageImage = async (url: string) => {
-    if (!confirm("Delete this homepage image?")) return;
-    const path = url.split("/uploads/")[1];
-    if (!path) return;
-    await supabase.storage.from("uploads").remove([path]);
-    loadData();
+  const updateOrderStatus = async (id: string, status: string) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status } : o))
+    );
+    await supabase.from("orders").update({ status }).eq("id", id);
   };
 
   /* ---------- RENDER ---------- */
-  if (!adminChecked) return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+  if (!adminChecked) return <p>Checking admin access…</p>;
   if (!isAdmin) return null;
 
   return (
     <div style={{ marginTop: 24 }}>
       {editingProduct && (
         <EditProductModal
-          key={editingProduct.id}
           product={editingProduct}
           categories={categories}
           onClose={() => setEditingProduct(null)}
@@ -263,63 +183,60 @@ export default function AdminPage() {
       <h1>Admin Panel</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button className="btn-ghost" onClick={() => setTab("products")}>
-          Products
-        </button>
-        <button className="btn-ghost" onClick={() => setTab("categories")}>
-          Categories
-        </button>
-        <button className="btn-ghost" onClick={() => setTab("homepage")}>
-          Homepage
-        </button>
+        <button onClick={() => setTab("products")}>Products</button>
+        <button onClick={() => setTab("categories")}>Categories</button>
+        <button onClick={() => setTab("homepage")}>Homepage</button>
+        <button onClick={() => setTab("orders")}>Orders</button>
       </div>
 
-      {loadingData && <p>Loading…</p>}
+      {/* PRODUCTS */}
+      {tab === "products" &&
+        products.map((p) => (
+          <div key={p.id}>
+            <strong>{p.name}</strong>
+            <button onClick={() => toggleActive(p)}>
+              {p.active ? "Active" : "Inactive"}
+            </button>
+            <button onClick={() => setEditingProduct(p)}>Edit</button>
+          </div>
+        ))}
+
+      {/* CATEGORIES */}
+      {tab === "categories" &&
+        categories.map((c) => (
+          <div key={c.id}>
+            <strong>{c.name}</strong>
+          </div>
+        ))}
 
       {/* HOMEPAGE */}
       {tab === "homepage" && (
-        <div className="card-soft" style={{ padding: 20, maxWidth: 760 }}>
-          <h2>Homepage Gallery</h2>
+        <>
           <AdminHomepageImageUpload onUploaded={loadData} />
+          {homepageImages.map((u) => (
+            <img key={u} src={u} width={120} />
+          ))}
+        </>
+      )}
 
-          <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-            {homepageImages.map((url) => (
-              <div key={url} style={{ position: "relative" }}>
-                <img
-                  src={url}
-                  style={{
-                    width: 120,
-                    height: 80,
-                    objectFit: "cover",
-                    borderRadius: 8,
-                  }}
-                />
-                <button
-                  className="btn-danger"
-                  style={{ position: "absolute", top: 4, right: 4 }}
-                  onClick={() => deleteHomepageImage(url)}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+      {/* ORDERS */}
+      {tab === "orders" &&
+        orders.map((o) => (
+          <div key={o.id}>
+            <strong>{o.user_email || "Guest"}</strong>
+            <select
+              value={o.status || "pending"}
+              onChange={(e) =>
+                updateOrderStatus(o.id, e.target.value)
+              }
+            >
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
           </div>
-        </div>
-      )}
-
-      {/* PRODUCTS */}
-      {tab === "products" && (
-        <>
-          {/* product UI unchanged */}
-        </>
-      )}
-
-      {/* CATEGORIES */}
-      {tab === "categories" && (
-        <>
-          {/* category UI unchanged */}
-        </>
-      )}
+        ))}
     </div>
   );
 }
