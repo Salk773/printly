@@ -27,6 +27,23 @@ type Product = {
   category_id: string | null;
   active: boolean;
 };
+type OrderItem = {
+  name: string;
+  price: number;
+  quantity: number;
+};
+
+type Order = {
+  id: string;
+  guest_email: string | null;
+  guest_name: string | null;
+  items: OrderItem[];
+  total: number;
+  status: string;
+  created_at: string;
+  notes: string | null;
+};
+
 
 /* ============== CONSTANTS ============== */
 
