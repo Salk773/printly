@@ -593,19 +593,69 @@ export default function AdminPage() {
           <p style={{ opacity: 0.6 }}>No orders found.</p>
         )}
 
-        {orders.map((o) => (
-          <div
-            key={o.id}
-            className="card-soft"
-            style={{
-              padding: 14,
-              marginTop: 10,
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
-              gap: 12,
-              alignItems: "center",
-            }}
-          >
+      {orders.map((o) => (
+  <div
+    key={o.id}
+    className="card-soft"
+    style={{
+      padding: 16,
+      marginTop: 12,
+      display: "grid",
+      gridTemplateColumns: "2.2fr 2fr 1fr 1fr auto",
+      gap: 14,
+      alignItems: "center",
+    }}
+  >
+    {/* CUSTOMER + ORDER */}
+    <div>
+      <strong>{o.order_number || "—"}</strong>
+      <div style={{ fontSize: 13 }}>{o.guest_name || "Guest"}</div>
+      <div style={{ fontSize: 12, opacity: 0.7 }}>{o.guest_email}</div>
+      <div style={{ fontSize: 11, opacity: 0.4 }}>
+        {new Date(o.created_at).toLocaleString()}
+      </div>
+    </div>
+
+    {/* DELIVERY */}
+    <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+      <div>{o.phone}</div>
+      <div>{o.address_line_1}</div>
+      {o.address_line_2 && <div>{o.address_line_2}</div>}
+      <div>
+        {o.city}, {o.state} {o.postal_code}
+      </div>
+    </div>
+
+    {/* ITEMS */}
+    <div style={{ fontSize: 13 }}>
+      {o.items.length} items
+    </div>
+
+    {/* TOTAL */}
+    <div style={{ fontWeight: 700 }}>
+      {o.total.toFixed(2)} AED
+    </div>
+
+    {/* STATUS */}
+    <select
+      className="select"
+      value={o.status}
+      onChange={(e) =>
+        supabase
+          .from("orders")
+          .update({ status: e.target.value })
+          .eq("id", o.id)
+      }
+    >
+      <option value="pending">Pending</option>
+      <option value="paid">Paid</option>
+      <option value="processing">Processing</option>
+      <option value="completed">Completed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+))}
+
             <div>
               <strong>{o.guest_name || "Guest"}</strong>
               <div style={{ fontSize: 12 }}>{o.guest_email}</div>
