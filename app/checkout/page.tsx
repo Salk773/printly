@@ -39,16 +39,13 @@ export default function CheckoutPage() {
   // SINGLE order submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!hasItems) return;
 
-    // Guest validation
     if (!user && !email) {
       alert("Email is required");
       return;
     }
 
-    // Delivery validation (required for ALL)
     if (!phone || !address1 || !city || !state) {
       alert("Please complete all delivery details.");
       return;
@@ -56,7 +53,14 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
+    // ✅ Generate human-friendly order number
+    const orderNumber = `PR-${new Date().getFullYear()}-${Math.floor(
+      100000 + Math.random() * 900000
+    )}`;
+
     const orderPayload = {
+      order_number: orderNumber,
+
       user_id: user?.id ?? null,
       guest_name: user ? null : name || null,
       guest_email: user ? null : email,
@@ -93,7 +97,9 @@ export default function CheckoutPage() {
     }
 
     clearCart();
-    router.push(`/checkout/success?order=${data.id}`);
+    router.push(
+      `/checkout/success?order=${data.id}&number=${orderNumber}`
+    );
   };
 
   return (
@@ -122,34 +128,35 @@ export default function CheckoutPage() {
           }}
         >
           {/* FORM */}
-          <form
-            onSubmit={handleSubmit}
-            style={{
-              borderRadius: 20,
-              background: "#0f172a",
-              border: "1px solid rgba(148,163,184,0.2)",
-              padding: 20,
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-              boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
-            }}
-          >
+          <form onSubmit={handleSubmit} style={formStyle}>
             <h2 style={{ fontSize: "1.1rem" }}>Contact & delivery</h2>
 
             {!user && (
               <>
                 <Input label="Name" value={name} onChange={setName} />
-                <Input label="Email" value={email} onChange={setEmail} type="email" />
+                <Input
+                  label="Email"
+                  value={email}
+                  onChange={setEmail}
+                  type="email"
+                />
               </>
             )}
 
             <Input label="Phone" value={phone} onChange={setPhone} />
             <Input label="Address line 1" value={address1} onChange={setAddress1} />
-            <Input label="Address line 2 (optional)" value={address2} onChange={setAddress2} />
+            <Input
+              label="Address line 2 (optional)"
+              value={address2}
+              onChange={setAddress2}
+            />
             <Input label="City" value={city} onChange={setCity} />
             <Input label="State / Emirate" value={state} onChange={setState} />
-            <Input label="Postal code (optional)" value={postalCode} onChange={setPostalCode} />
+            <Input
+              label="Postal code (optional)"
+              value={postalCode}
+              onChange={setPostalCode}
+            />
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
               Notes / requirements
@@ -174,13 +181,26 @@ export default function CheckoutPage() {
             <h2 style={{ fontSize: "1.1rem" }}>Order summary</h2>
 
             {items.map((item) => (
-              <div key={item.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{item.name} x {item.quantity}</span>
-                <span>{(item.price * item.quantity).toFixed(2)} AED</span>
+              <div
+                key={item.id}
+                style={{ display: "flex", justifyContent: "space-between" }}
+              >
+                <span>
+                  {item.name} x {item.quantity}
+                </span>
+                <span>
+                  {(item.price * item.quantity).toFixed(2)} AED
+                </span>
               </div>
             ))}
 
-            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontWeight: 700,
+              }}
+            >
               <span>Total</span>
               <span>{total.toFixed(2)} AED</span>
             </div>
@@ -217,6 +237,17 @@ function Input({
     </label>
   );
 }
+
+const formStyle = {
+  borderRadius: 20,
+  background: "#0f172a",
+  border: "1px solid rgba(148,163,184,0.2)",
+  padding: 20,
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 14,
+  boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+};
 
 const inputStyle = {
   marginTop: 4,
