@@ -35,14 +35,25 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  order_number: string | null;
+
   guest_email: string | null;
   guest_name: string | null;
+
+  phone: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+
   items: OrderItem[];
   total: number;
   status: string;
   created_at: string;
   notes: string | null;
 };
+
 
 
 /* ============== CONSTANTS ============== */
