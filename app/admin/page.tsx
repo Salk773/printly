@@ -72,6 +72,7 @@ export default function AdminPage() {
 
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
 
   const [newCategory, setNewCategory] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
@@ -533,97 +534,162 @@ export default function AdminPage() {
               className="card-soft"
               style={{ padding: 12, marginTop: 10 }}
             >
-              {editingCategoryId === c.id ? (
-                <>
-                  <input
-                    className="input"
-                    value={editingCategoryName}
-                    onChange={(e) => setEditingCategoryName(e.target.value)}
-                  />
-                  <button
-                    className="btn-primary"
-                    onClick={() => saveCategoryRename(c.id)}
-                  >
-                    Save
-                  </button>
-                </>
-              ) : (
-                <>
-                  <strong>{c.name}</strong>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => {
-                      setEditingCategoryId(c.id);
-                      setEditingCategoryName(c.name);
-                    }}
-                  >
-                    Rename
-                  </button>
-                  <button
-                    className="btn-danger"
-                    onClick={() => deleteCategory(c.id)}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
+            {editingCategoryId === c.id ? (
+              <>
+                <input
+                  className="input"
+                  value={editingCategoryName}
+                  onChange={(e) => setEditingCategoryName(e.target.value)}
+                />
+                <button
+                  className="btn-primary"
+                  onClick={() => saveCategoryRename(c.id)}
+                >
+                  Save
+                </button>
+              </>
+            ) : (
+              <>
+                <strong>{c.name}</strong>
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    setEditingCategoryId(c.id);
+                    setEditingCategoryName(c.name);
+                  }}
+                >
+                  Rename
+                </button>
+                <button
+                  className="btn-danger"
+                  onClick={() => deleteCategory(c.id)}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* ORDERS */}
+    {tab === "orders" && (
+      <div style={{ maxWidth: 900 }}>
+        {orders.length === 0 && (
+          <p style={{ opacity: 0.6 }}>No orders found.</p>
+        )}
+
+        {orders.map((o) => (
+          <div
+            key={o.id}
+            className="card-soft"
+            style={{
+              padding: 14,
+              marginTop: 10,
+              display: "grid",
+              gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <strong>{o.guest_name || "Guest"}</strong>
+              <div style={{ fontSize: 12 }}>{o.guest_email}</div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>{o.id}</div>
             </div>
-          ))}
-        </div>
-      )}
-            {/* ORDERS */}
-      {tab === "orders" && (
-        <div style={{ maxWidth: 900 }}>
-          {orders.length === 0 && (
-            <p style={{ opacity: 0.6 }}>No orders found.</p>
+
+            <div>{o.items.length} items</div>
+
+            <div>${o.total.toFixed(2)}</div>
+
+            <div>{new Date(o.created_at).toLocaleString()}</div>
+
+            <select
+              className="select"
+              value={o.status}
+              onChange={(e) =>
+                supabase
+                  .from("orders")
+                  .update({ status: e.target.value })
+                  .eq("id", o.id)
+              }
+            >
+              <option value="pending">Pending</option>
+              <option value="paid">Paid</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+
+            <button
+              className="btn-ghost"
+              onClick={() => setViewingOrder(o)}
+            >
+              View
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* ORDER DETAILS MODAL */}
+    {viewingOrder && (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 50,
+        }}
+      >
+        <div
+          className="card-soft"
+          style={{ maxWidth: 500, width: "100%", padding: 20 }}
+        >
+          <h3>Order Details</h3>
+
+          <p>
+            <strong>Customer:</strong>{" "}
+            {viewingOrder.guest_name} ({viewingOrder.guest_email})
+          </p>
+
+          <p>
+            <strong>Status:</strong> {viewingOrder.status}
+          </p>
+
+          <ul>
+            {viewingOrder.items.map((i, idx) => (
+              <li key={idx}>
+                {i.name} × {i.quantity} — $
+                {(i.price * i.quantity).toFixed(2)}
+              </li>
+            ))}
+          </ul>
+
+          <p>
+            <strong>Total:</strong> ${viewingOrder.total.toFixed(2)}
+          </p>
+
+          {viewingOrder.notes && (
+            <p>
+              <strong>Notes:</strong> {viewingOrder.notes}
+            </p>
           )}
 
-          {orders.map((o) => (
-            <div
-              key={o.id}
-              className="card-soft"
-              style={{
-                padding: 14,
-                marginTop: 10,
-                display: "grid",
-                gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <strong>{o.guest_name || "Guest"}</strong>
-                <div style={{ fontSize: 12 }}>{o.guest_email}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>{o.id}</div>
-              </div>
-
-              <div>{o.items.length} items</div>
-
-              <div>${o.total.toFixed(2)}</div>
-
-              <div>{new Date(o.created_at).toLocaleString()}</div>
-
-              <select
-                className="select"
-                value={o.status}
-                onChange={(e) =>
-                  supabase
-                    .from("orders")
-                    .update({ status: e.target.value })
-                    .eq("id", o.id)
-                }
-              >
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          ))}
+          <button
+            className="btn-primary"
+            onClick={() => setViewingOrder(null)}
+          >
+            Close
+          </button>
         </div>
-      )}
+      </div>
+    )}
 
-    </div>
-  );
+  </div>
+);
 }
