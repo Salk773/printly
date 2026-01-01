@@ -120,44 +120,47 @@ const [postalCode, setPostalCode] = useState("");
               Contact details
             </h2>
 
-            {!user && (
-              <>
-                <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-                  Name
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{
-                      marginTop: 4,
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(148,163,184,0.3)",
-                      background: "#020617",
-                      color: "white",
-                    }}
-                  />
-                </label>
+    {!user && (
+  <>
+    <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+      Name
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        style={{
+          marginTop: 4,
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid rgba(148,163,184,0.3)",
+          background: "#020617",
+          color: "white",
+        }}
+      />
+    </label>
 
-                <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-                  Email
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    style={{
-                      marginTop: 4,
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(148,163,184,0.3)",
-                      background: "#020617",
-                      color: "white",
-                    }}
-                  />
-                </label>
-              </>
+    <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+      Email
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        style={{
+          marginTop: 4,
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: "1px solid rgba(148,163,184,0.3)",
+          background: "#020617",
+          color: "white",
+        }}
+      />
+    </label>
+  </>
+)}
+
             )}
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
