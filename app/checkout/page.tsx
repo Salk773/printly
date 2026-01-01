@@ -18,6 +18,43 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
 
   const hasItems = items.length > 0;
+  const placeOrder = async () => {
+  if (!email) {
+    alert("Email is required");
+    return;
+  }
+
+  setLoading(true);
+
+  const orderItems = items.map((i) => ({
+    name: i.name,
+    price: i.price,
+    quantity: i.quantity,
+  }));
+
+  const { error } = await supabase.from("orders").insert([
+    {
+      guest_name: name || null,
+      guest_email: email,
+      items: orderItems,
+      total,
+      status: "pending",
+      notes,
+    },
+  ]);
+
+  setLoading(false);
+
+  if (error) {
+    console.error(error);
+    alert("Failed to place order");
+    return;
+  }
+
+  clearCart();
+  router.push("/order-success");
+};
+
 
   // Redirect if cart empty
   useEffect(() => {
@@ -171,23 +208,27 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{
-                marginTop: 12,
-                padding: "12px 18px",
-                borderRadius: 999,
-                border: "none",
-                background:
-                  "linear-gradient(135deg, #c084fc, #a855f7)",
-                color: "#020617",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontSize: "0.95rem",
-                boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? "Placing order…" : "Place order"}
-            </button>
+          <button
+  onClick={placeOrder}
+  disabled={loading}
+  style={{
+    marginTop: 12,
+    padding: "12px 18px",
+    borderRadius: 999,
+    border: "none",
+    background:
+      "linear-gradient(135deg, #c084fc, #a855f7)",
+    color: "#020617",
+    fontWeight: 700,
+    cursor: "pointer",
+    fontSize: "0.95rem",
+    boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
+    opacity: loading ? 0.7 : 1,
+  }}
+>
+  {loading ? "Placing order..." : "Place order"}
+</button>
+
 
             <Link
               href="/cart"
