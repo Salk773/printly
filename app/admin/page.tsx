@@ -607,29 +607,57 @@ export default function AdminPage() {
 
             <div>{new Date(o.created_at).toLocaleString()}</div>
 
-            <select
-              className="select"
-              value={o.status}
-              onChange={(e) =>
-                supabase
-                  .from("orders")
-                  .update({ status: e.target.value })
-                  .eq("id", o.id)
-              }
-            >
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+           <select
+  className="select"
+  value={o.status}
+  style={{
+    fontWeight: 600,
+    color:
+      o.status === "completed"
+        ? "#22c55e"
+        : o.status === "paid"
+        ? "#3b82f6"
+        : o.status === "cancelled"
+        ? "#ef4444"
+        : "#f59e0b",
+  }}
+  onChange={async (e) => {
+    const newStatus = e.target.value;
 
-            <button
-              className="btn-ghost"
-              onClick={() => setViewingOrder(o)}
-            >
-              View
-            </button>
+    // optimistic UI update
+    setOrders((prev) =>
+      prev.map((ord) =>
+        ord.id === o.id ? { ...ord, status: newStatus } : ord
+      )
+    );
+
+    // persist to DB
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: newStatus })
+      .eq("id", o.id);
+
+    // rollback if DB fails
+    if (error) {
+      console.error(error);
+      loadData();
+    }
+  }}
+>
+  <option value="pending">Pending</option>
+  <option value="paid">Paid</option>
+  <option value="processing">Processing</option>
+  <option value="completed">Completed</option>
+  <option value="cancelled">Cancelled</option>
+</select>
+
+<button
+  className="btn-ghost"
+  onClick={() => setViewingOrder(o)}
+>
+  View
+</button>
+
           </div>
         ))}
       </div>
