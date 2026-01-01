@@ -12,17 +12,20 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const router = useRouter();
 
+  // Contact
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Address
+  const [address1, setAddress1] = useState("");
+  const [address2, setAddress2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [phone, setPhone] = useState("");
-const [address1, setAddress1] = useState("");
-const [address2, setAddress2] = useState("");
-const [city, setCity] = useState("");
-const [state, setState] = useState("");
-const [postalCode, setPostalCode] = useState("");
-
 
   const hasItems = items.length > 0;
 
@@ -33,14 +36,21 @@ const [postalCode, setPostalCode] = useState("");
     }
   }, [hasItems, router]);
 
-  // SINGLE order submit handler (correct)
+  // SINGLE order submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!hasItems) return;
 
+    // Guest validation
     if (!user && !email) {
       alert("Email is required");
+      return;
+    }
+
+    // Delivery validation (required for ALL)
+    if (!phone || !address1 || !city || !state) {
+      alert("Please complete all delivery details.");
       return;
     }
 
@@ -50,6 +60,14 @@ const [postalCode, setPostalCode] = useState("");
       user_id: user?.id ?? null,
       guest_name: user ? null : name || null,
       guest_email: user ? null : email,
+
+      phone,
+      address_line_1: address1,
+      address_line_2: address2 || null,
+      city,
+      state,
+      postal_code: postalCode || null,
+
       items: items.map((i) => ({
         name: i.name,
         price: i.price,
@@ -66,10 +84,11 @@ const [postalCode, setPostalCode] = useState("");
       .select("id")
       .single();
 
+    setLoading(false);
+
     if (error) {
       console.error(error);
       alert("Failed to place order. Please try again.");
-      setLoading(false);
       return;
     }
 
@@ -116,150 +135,52 @@ const [postalCode, setPostalCode] = useState("");
               boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
             }}
           >
-            <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-              Contact details
-            </h2>
+            <h2 style={{ fontSize: "1.1rem" }}>Contact & delivery</h2>
 
-    {!user && (
-  <>
-    <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-      Name
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        style={{
-          marginTop: 4,
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: "1px solid rgba(148,163,184,0.3)",
-          background: "#020617",
-          color: "white",
-        }}
-      />
-    </label>
+            {!user && (
+              <>
+                <Input label="Name" value={name} onChange={setName} />
+                <Input label="Email" value={email} onChange={setEmail} type="email" />
+              </>
+            )}
 
-    <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
-      Email
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        style={{
-          marginTop: 4,
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 10,
-          border: "1px solid rgba(148,163,184,0.3)",
-          background: "#020617",
-          color: "white",
-        }}
-      />
-    </label>
-  </>
-)}
-
+            <Input label="Phone" value={phone} onChange={setPhone} />
+            <Input label="Address line 1" value={address1} onChange={setAddress1} />
+            <Input label="Address line 2 (optional)" value={address2} onChange={setAddress2} />
+            <Input label="City" value={city} onChange={setCity} />
+            <Input label="State / Emirate" value={state} onChange={setState} />
+            <Input label="Postal code (optional)" value={postalCode} onChange={setPostalCode} />
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
               Notes / requirements
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                style={{
-                  marginTop: 4,
-                  width: "100%",
-                  minHeight: 90,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(148,163,184,0.3)",
-                  background: "#020617",
-                  color: "white",
-                }}
+                style={textareaStyle}
               />
             </label>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: 12,
-                padding: "12px 18px",
-                borderRadius: 999,
-                border: "none",
-                background:
-                  "linear-gradient(135deg, #c084fc, #a855f7)",
-                color: "#020617",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontSize: "0.95rem",
-                boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
+            <button type="submit" disabled={loading} style={buttonStyle}>
               {loading ? "Placing order..." : "Place order"}
             </button>
 
-            <Link
-              href="/cart"
-              style={{
-                marginTop: 6,
-                fontSize: "0.85rem",
-                color: "#93c5fd",
-                textDecoration: "none",
-              }}
-            >
+            <Link href="/cart" style={{ fontSize: "0.85rem", color: "#93c5fd" }}>
               ← Back to cart
             </Link>
           </form>
 
           {/* SUMMARY */}
-          <aside
-            style={{
-              borderRadius: 20,
-              background: "#0f172a",
-              border: "1px solid rgba(148,163,184,0.2)",
-              padding: 18,
-              boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-            }}
-          >
-            <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-              Order summary
-            </h2>
+          <aside style={summaryStyle}>
+            <h2 style={{ fontSize: "1.1rem" }}>Order summary</h2>
 
-            <div style={{ maxHeight: 220, overflowY: "auto" }}>
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.9rem",
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>
-                    {item.name} x {item.quantity}
-                  </span>
-                  <span>
-                    {(item.price * item.quantity).toFixed(2)} AED
-                  </span>
-                </div>
-              ))}
-            </div>
+            {items.map((item) => (
+              <div key={item.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{item.name} x {item.quantity}</span>
+                <span>{(item.price * item.quantity).toFixed(2)} AED</span>
+              </div>
+            ))}
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 10,
-                fontWeight: 700,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
               <span>Total</span>
               <span>{total.toFixed(2)} AED</span>
             </div>
@@ -269,3 +190,72 @@ const [postalCode, setPostalCode] = useState("");
     </main>
   );
 }
+
+/* ---------- helpers ---------- */
+
+function Input({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+}) {
+  return (
+    <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+      {label}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={!label.includes("optional")}
+        style={inputStyle}
+      />
+    </label>
+  );
+}
+
+const inputStyle = {
+  marginTop: 4,
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(148,163,184,0.3)",
+  background: "#020617",
+  color: "white",
+};
+
+const textareaStyle = {
+  marginTop: 4,
+  width: "100%",
+  minHeight: 90,
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "1px solid rgba(148,163,184,0.3)",
+  background: "#020617",
+  color: "white",
+};
+
+const buttonStyle = {
+  marginTop: 12,
+  padding: "12px 18px",
+  borderRadius: 999,
+  border: "none",
+  background: "linear-gradient(135deg, #c084fc, #a855f7)",
+  color: "#020617",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const summaryStyle = {
+  borderRadius: 20,
+  background: "#0f172a",
+  border: "1px solid rgba(148,163,184,0.2)",
+  padding: 18,
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: 12,
+};
