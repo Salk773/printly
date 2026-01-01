@@ -72,6 +72,8 @@ export default function AdminPage() {
 
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+
   
 
   const [newCategory, setNewCategory] = useState("");
