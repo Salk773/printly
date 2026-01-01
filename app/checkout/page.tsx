@@ -18,43 +18,6 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
 
   const hasItems = items.length > 0;
-  const placeOrder = async () => {
-  if (!email) {
-    alert("Email is required");
-    return;
-  }
-
-  setLoading(true);
-
-  const orderItems = items.map((i) => ({
-    name: i.name,
-    price: i.price,
-    quantity: i.quantity,
-  }));
-
-  const { error } = await supabase.from("orders").insert([
-    {
-      guest_name: name || null,
-      guest_email: email,
-      items: orderItems,
-      total,
-      status: "pending",
-      notes,
-    },
-  ]);
-
-  setLoading(false);
-
-  if (error) {
-    console.error(error);
-    alert("Failed to place order");
-    return;
-  }
-
-  clearCart();
-  router.push("/order-success");
-};
-
 
   // Redirect if cart empty
   useEffect(() => {
@@ -63,14 +26,14 @@ export default function CheckoutPage() {
     }
   }, [hasItems, router]);
 
+  // SINGLE order submit handler (correct)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!hasItems) return;
 
-    // Guests must provide name & email
-    if (!user && (!name || !email)) {
-      alert("Please fill in name and email.");
+    if (!user && !email) {
+      alert("Email is required");
       return;
     }
 
@@ -78,9 +41,13 @@ export default function CheckoutPage() {
 
     const orderPayload = {
       user_id: user?.id ?? null,
-      guest_name: user ? null : name,
+      guest_name: user ? null : name || null,
       guest_email: user ? null : email,
-      items,
+      items: items.map((i) => ({
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+      })),
       total,
       status: "pending",
       notes,
@@ -153,7 +120,6 @@ export default function CheckoutPage() {
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    required
                     style={{
                       marginTop: 4,
                       width: "100%",
@@ -208,27 +174,23 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={loading}
-          <button
-  onClick={placeOrder}
-  disabled={loading}
-  style={{
-    marginTop: 12,
-    padding: "12px 18px",
-    borderRadius: 999,
-    border: "none",
-    background:
-      "linear-gradient(135deg, #c084fc, #a855f7)",
-    color: "#020617",
-    fontWeight: 700,
-    cursor: "pointer",
-    fontSize: "0.95rem",
-    boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
-    opacity: loading ? 0.7 : 1,
-  }}
->
-  {loading ? "Placing order..." : "Place order"}
-</button>
-
+              style={{
+                marginTop: 12,
+                padding: "12px 18px",
+                borderRadius: 999,
+                border: "none",
+                background:
+                  "linear-gradient(135deg, #c084fc, #a855f7)",
+                color: "#020617",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: "0.95rem",
+                boxShadow: "0 10px 28px rgba(192,132,252,0.35)",
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? "Placing order..." : "Place order"}
+            </button>
 
             <Link
               href="/cart"
@@ -260,13 +222,7 @@ export default function CheckoutPage() {
               Order summary
             </h2>
 
-            <div
-              style={{
-                maxHeight: 220,
-                overflowY: "auto",
-                paddingRight: 4,
-              }}
-            >
+            <div style={{ maxHeight: 220, overflowY: "auto" }}>
               {items.map((item) => (
                 <div
                   key={item.id}
