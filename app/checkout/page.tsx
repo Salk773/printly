@@ -161,7 +161,6 @@ const [postalCode, setPostalCode] = useState("");
   </>
 )}
 
-            )}
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
               Notes / requirements
