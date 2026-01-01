@@ -16,6 +16,13 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [phone, setPhone] = useState("");
+const [address1, setAddress1] = useState("");
+const [address2, setAddress2] = useState("");
+const [city, setCity] = useState("");
+const [state, setState] = useState("");
+const [postalCode, setPostalCode] = useState("");
+
 
   const hasItems = items.length > 0;
 
