@@ -5,7 +5,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 export default function CheckoutSuccessClient() {
   const params = useSearchParams();
   const router = useRouter();
-  const orderId = params.get("order");
+
+  const orderId = params.get("order");   // internal (uuid)
+  const orderNumber = params.get("number"); // user-facing
 
   return (
     <main
@@ -53,20 +55,35 @@ export default function CheckoutSuccessClient() {
           Thank you for your order. We’ll contact you shortly to confirm.
         </p>
 
-        {orderId && (
+        {/* ✅ USER-FACING ORDER NUMBER */}
+        {orderNumber && (
           <div
             style={{
               marginBottom: 20,
-              padding: "10px 14px",
-              borderRadius: 12,
+              padding: "12px 16px",
+              borderRadius: 14,
               background: "rgba(192,132,252,0.12)",
               color: "#c084fc",
-              fontSize: "0.85rem",
-              fontWeight: 600,
+              fontSize: "1rem",
+              fontWeight: 700,
+              letterSpacing: 1,
               display: "inline-block",
             }}
           >
-            Order ID: {orderId}
+            Order number: {orderNumber}
+          </div>
+        )}
+
+        {/* Optional: keep UUID hidden for support/debug */}
+        {orderId && (
+          <div
+            style={{
+              fontSize: "0.7rem",
+              opacity: 0.4,
+              marginTop: 6,
+            }}
+          >
+            Ref: {orderId}
           </div>
         )}
 
@@ -75,7 +92,7 @@ export default function CheckoutSuccessClient() {
             display: "flex",
             gap: 12,
             justifyContent: "center",
-            marginTop: 20,
+            marginTop: 24,
           }}
         >
           <button
