@@ -586,7 +586,6 @@ export default function AdminPage() {
       </div>
     )}
 
-    {/* ORDERS */}
   {/* ORDERS */}
 {tab === "orders" && (
   <div style={{ maxWidth: 1100 }}>
@@ -610,7 +609,9 @@ export default function AdminPage() {
         {/* ORDER + CUSTOMER */}
         <div>
           <strong>{o.order_number || "—"}</strong>
-          <div style={{ fontSize: 13 }}>{o.guest_name || "Guest"}</div>
+          <div style={{ fontSize: 13 }}>
+            {o.guest_name || "Guest"}
+          </div>
           <div style={{ fontSize: 12, opacity: 0.7 }}>
             {o.guest_email}
           </div>
@@ -655,7 +656,10 @@ export default function AdminPage() {
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
-    ))}
+    ))
+  </div>
+)}
+
   </div>
 )}
 
