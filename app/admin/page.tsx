@@ -293,10 +293,13 @@ export default function AdminPage() {
   if (!adminChecked) {
     return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
   }
+if (!adminChecked) {
+  return <p style={{ marginTop: 40 }}>Checking admin access…</p>;
+}
 
-  if (!isAdmin) {
-    return null;
-  }
+if (!isAdmin) {
+  return null;
+}
 
   /* ---------- UI ---------- */
   return (
