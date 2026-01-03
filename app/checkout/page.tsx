@@ -26,15 +26,16 @@ export default function CheckoutPage() {
 
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
 
   const hasItems = items.length > 0;
 
-  // Redirect if cart empty
+  // Redirect if cart empty (but not if order was just placed)
   useEffect(() => {
-    if (!hasItems) {
+    if (!hasItems && !orderPlaced) {
       router.push("/cart");
     }
-  }, [hasItems, router]);
+  }, [hasItems, orderPlaced, router]);
 
   // SINGLE order submit handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,11 +90,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Mark order as placed before clearing cart to prevent redirect
+    setOrderPlaced(true);
     clearCart();
 
     // ✅ Redirect to existing success page
     router.push(
-      `/checkout/success?order=${data.id}&number=${data.order_number}`
+      `/checkout/success?order=${encodeURIComponent(data.id)}&number=${encodeURIComponent(data.order_number)}`
     );
   };
 

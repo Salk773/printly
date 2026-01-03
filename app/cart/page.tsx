@@ -180,15 +180,35 @@ export default function CartPage() {
                 {total.toFixed(2)} AED
               </p>
 
+              <Link
+                href="/checkout"
+                style={{
+                  marginTop: 20,
+                  padding: "12px 18px",
+                  borderRadius: 999,
+                  background: "linear-gradient(135deg, #c084fc, #a855f7)",
+                  color: "#020617",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  display: "block",
+                  textAlign: "center",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Proceed to Checkout
+              </Link>
+
               <button
                 onClick={clearCart}
                 style={{
-                  marginTop: 20,
+                  marginTop: 10,
                   padding: "8px 14px",
                   borderRadius: 999,
                   background: "transparent",
                   border: "1px solid #f87171",
                   color: "#f87171",
+                  width: "100%",
                 }}
               >
                 Clear cart
