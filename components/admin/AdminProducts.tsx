@@ -2,6 +2,8 @@ import AdminImageUpload from "@/components/AdminImageUpload";
 import AdminCard from "@/components/admin/AdminCard";
 import { Category, Product } from "@/app/admin/page";
 
+const MAX_GALLERY = 8;
+
 export default function AdminProducts({
   products,
   categories,
@@ -21,6 +23,14 @@ export default function AdminProducts({
   deleteProduct: (id: string) => void;
   onEdit: (p: Product) => void;
 }) {
+  const addGalleryImage = (url: string) => {
+    setNewProduct((p: any) => {
+      if (p.images.length >= MAX_GALLERY) return p;
+      if (p.images.includes(url)) return p;
+      return { ...p, images: [...p.images, url] };
+    });
+  };
+
   return (
     <>
       {/* ADD PRODUCT */}
@@ -66,6 +76,7 @@ export default function AdminProducts({
           </select>
         </div>
 
+        {/* MAIN IMAGE */}
         <strong>Main image</strong>
         <AdminImageUpload
           onUploaded={(url) =>
@@ -80,9 +91,39 @@ export default function AdminProducts({
               width: 160,
               marginTop: 8,
               borderRadius: 8,
-              display: "block",
             }}
           />
+        )}
+
+        {/* GALLERY */}
+        <strong style={{ marginTop: 12, display: "block" }}>
+          Gallery images ({newProduct.images.length}/{MAX_GALLERY})
+        </strong>
+
+        <AdminImageUpload onUploaded={addGalleryImage} />
+
+        {newProduct.images.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginTop: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            {newProduct.images.map((url: string, idx: number) => (
+              <img
+                key={`${url}-${idx}`}
+                src={url}
+                style={{
+                  width: 60,
+                  height: 60,
+                  objectFit: "cover",
+                  borderRadius: 6,
+                }}
+              />
+            ))}
+          </div>
         )}
 
         <button
@@ -104,7 +145,6 @@ export default function AdminProducts({
               gap: 12,
             }}
           >
-            {/* THUMBNAIL */}
             {p.image_main && (
               <img
                 src={p.image_main}
@@ -117,10 +157,8 @@ export default function AdminProducts({
               />
             )}
 
-            {/* NAME */}
             <strong style={{ flex: 1 }}>{p.name}</strong>
 
-            {/* ACTIVE TOGGLE */}
             <button
               className="btn-ghost"
               onClick={() => toggleActive(p)}
@@ -132,7 +170,6 @@ export default function AdminProducts({
               {p.active ? "Active" : "Inactive"}
             </button>
 
-            {/* ACTIONS */}
             <button className="btn-ghost" onClick={() => onEdit(p)}>
               Edit
             </button>
