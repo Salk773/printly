@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   // SINGLE order submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasItems) return;
+    if (!hasItems || loading) return;
 
     if (!user && !email) {
       alert("Email is required");
@@ -53,14 +53,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
-    // ✅ Generate human-friendly order number
-    const orderNumber = `PR-${new Date().getFullYear()}-${Math.floor(
-      100000 + Math.random() * 900000
-    )}`;
-
     const orderPayload = {
-      order_number: orderNumber,
-
       user_id: user?.id ?? null,
       guest_name: user ? null : name || null,
       guest_email: user ? null : email,
@@ -84,21 +77,23 @@ export default function CheckoutPage() {
 
     const { data, error } = await supabase
       .from("orders")
-      .insert([orderPayload])
-      .select("id")
+      .insert(orderPayload)
+      .select("id, order_number")
       .single();
 
     setLoading(false);
 
-    if (error) {
+    if (error || !data) {
       console.error(error);
       alert("Failed to place order. Please try again.");
       return;
     }
 
     clearCart();
+
+    // ✅ Redirect to existing success page
     router.push(
-      `/checkout/success?order=${data.id}&number=${orderNumber}`
+      `/checkout/success?order=${data.id}&number=${data.order_number}`
     );
   };
 
@@ -186,7 +181,7 @@ export default function CheckoutPage() {
                 style={{ display: "flex", justifyContent: "space-between" }}
               >
                 <span>
-                  {item.name} x {item.quantity}
+                  {item.name} × {item.quantity}
                 </span>
                 <span>
                   {(item.price * item.quantity).toFixed(2)} AED
