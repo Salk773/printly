@@ -1,3 +1,4 @@
+import AdminCard from "@/components/admin/AdminCard";
 import { Category } from "@/app/admin/page";
 
 export default function AdminCategories({
@@ -24,32 +25,68 @@ export default function AdminCategories({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div>
-      <input
-        value={newCategory}
-        onChange={(e) => setNewCategory(e.target.value)}
-      />
-      <button onClick={onAdd}>Add</button>
+    <>
+      {/* ADD CATEGORY */}
+      <AdminCard maxWidth={520}>
+        <h2 style={{ marginBottom: 12 }}>Add category</h2>
 
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            className="input"
+            placeholder="New category"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+          />
+          <button className="btn-primary" onClick={onAdd}>
+            Add
+          </button>
+        </div>
+      </AdminCard>
+
+      {/* CATEGORY LIST */}
       {categories.map((c) => (
-        <div key={c.id}>
+        <AdminCard key={c.id} maxWidth={520}>
           {editingCategoryId === c.id ? (
-            <>
+            <div style={{ display: "flex", gap: 8 }}>
               <input
+                className="input"
                 value={editingCategoryName}
                 onChange={(e) => setEditingCategoryName(e.target.value)}
               />
-              <button onClick={() => onSave(c.id)}>Save</button>
-            </>
+              <button
+                className="btn-primary"
+                onClick={() => onSave(c.id)}
+              >
+                Save
+              </button>
+            </div>
           ) : (
-            <>
-              <strong>{c.name}</strong>
-              <button onClick={() => onEdit(c)}>Rename</button>
-              <button onClick={() => onDelete(c.id)}>Delete</button>
-            </>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <strong style={{ flex: 1 }}>{c.name}</strong>
+
+              <button
+                className="btn-ghost"
+                onClick={() => onEdit(c)}
+              >
+                Rename
+              </button>
+
+              <button
+                className="btn-danger"
+                onClick={() => onDelete(c.id)}
+              >
+                Delete
+              </button>
+            </div>
           )}
-        </div>
+        </AdminCard>
       ))}
-    </div>
+    </>
   );
 }
