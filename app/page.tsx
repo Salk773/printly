@@ -42,6 +42,26 @@ export default async function HomePage() {
           .getPublicUrl(`home-gallery/${f.name}`).data.publicUrl
     ) ?? [];
 
+  // Fetch banner content
+  let bannerTitle = "How Printly works";
+  let bannerDescription = "Curated ready-to-print designs in PLA+ and PETG.";
+  
+  try {
+    const { data: bannerData, error: bannerError } = await supabase.storage
+      .from("uploads")
+      .download("config/homepage-banner-config.json");
+
+    if (!bannerError && bannerData) {
+      const text = await bannerData.text();
+      const config = JSON.parse(text);
+      bannerTitle = config.title || bannerTitle;
+      bannerDescription = config.description || bannerDescription;
+    }
+  } catch (error) {
+    // Use default values if config doesn't exist or error occurs
+    console.error("Error loading banner config:", error);
+  }
+
   return (
     <>
       {/* Hero */}
@@ -86,9 +106,9 @@ export default async function HomePage() {
         </div>
 
         <div className="card-soft" style={{ padding: 20 }}>
-          <h3>How Printly works</h3>
+          <h3>{bannerTitle}</h3>
           <p style={{ color: "#cbd5f5" }}>
-            Curated ready-to-print designs in PLA+ and PETG.
+            {bannerDescription}
           </p>
         </div>
       </section>
