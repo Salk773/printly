@@ -12,6 +12,7 @@ import AdminHomepage from "@/components/admin/AdminHomepage";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminOrders from "@/components/admin/AdminOrders";
+import AdminLogs from "@/components/admin/AdminLogs";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 
 /* ================= TYPES ================= */
@@ -65,7 +66,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [tab, setTab] = useState<
-    "products" | "categories" | "homepage" | "orders"
+    "products" | "categories" | "homepage" | "orders" | "logs"
   >("products");
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -170,11 +171,33 @@ export default function AdminPage() {
     if (isAdmin && adminChecked) loadData();
   }, [isAdmin, adminChecked, loadData]);
 
+  /* ---------- LOGGING HELPER ---------- */
+  const logAdminAction = async (action: string, resource: string, resourceId?: string, metadata?: Record<string, any>) => {
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) return;
+
+      const token = session.data.session.access_token;
+      await fetch("/api/admin/log-action", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, resource, resourceId, metadata }),
+      }).catch(() => {
+        // Silently fail - don't break admin actions if logging fails
+      });
+    } catch {
+      // Silently fail
+    }
+  };
+
   /* ---------- PRODUCT HELPERS ---------- */
   const addProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.image_main) return;
 
-    await supabase.from("products").insert([
+    const { data, error } = await supabase.from("products").insert([
       {
         ...newProduct,
         price: Number(newProduct.price),
@@ -182,7 +205,16 @@ export default function AdminPage() {
         active: true,
         featured: newProduct.featured || false,
       },
-    ]);
+    ]).select().single();
+
+    if (data) {
+      await logAdminAction("create", "product", data.id, {
+        name: newProduct.name,
+        price: newProduct.price,
+        category_id: newProduct.category_id,
+        featured: newProduct.featured,
+      });
+    }
 
     setNewProduct({
       name: "",
@@ -207,6 +239,13 @@ export default function AdminPage() {
       .update({ active: !p.active })
       .eq("id", p.id);
 
+    if (!error) {
+      await logAdminAction("toggle_active", "product", p.id, {
+        name: p.name,
+        newStatus: !p.active ? "active" : "inactive",
+      });
+    }
+
     if (error) loadData();
   };
 
@@ -223,7 +262,12 @@ export default function AdminPage() {
           product={editingProduct}
           categories={categories}
           onClose={() => setEditingProduct(null)}
-          onSaved={loadData}
+          onSaved={async () => {
+            await logAdminAction("update", "product", editingProduct.id, {
+              name: editingProduct.name,
+            });
+            loadData();
+          }}
         />
       )}
 
@@ -234,10 +278,17 @@ export default function AdminPage() {
             const path = url.split("/uploads/")[1];
             if (path) {
               await supabase.storage.from("uploads").remove([path]);
+              await logAdminAction("delete", "homepage_image", undefined, {
+                path,
+                url,
+              });
               loadData();
             }
           }}
-          onUploaded={loadData}
+          onUploaded={async () => {
+            await logAdminAction("upload", "homepage_image", undefined, {});
+            loadData();
+          }}
         />
       )}
 
@@ -250,7 +301,13 @@ export default function AdminPage() {
           addProduct={addProduct}
           toggleActive={toggleActive}
           deleteProduct={async (id) => {
+            const product = products.find((p) => p.id === id);
             await supabase.from("products").delete().eq("id", id);
+            if (product) {
+              await logAdminAction("delete", "product", id, {
+                name: product.name,
+              });
+            }
             loadData();
           }}
           onEdit={setEditingProduct}
@@ -266,12 +323,17 @@ export default function AdminPage() {
           editingCategoryName={editingCategoryName}
           setEditingCategoryName={setEditingCategoryName}
           onAdd={async () => {
-            await supabase.from("categories").insert([
+            const { data, error } = await supabase.from("categories").insert([
               {
                 name: newCategory,
                 slug: newCategory.toLowerCase().replace(/\s+/g, "-"),
               },
-            ]);
+            ]).select().single();
+            if (data) {
+              await logAdminAction("create", "category", data.id, {
+                name: newCategory,
+              });
+            }
             setNewCategory("");
             loadData();
           }}
@@ -280,6 +342,7 @@ export default function AdminPage() {
             setEditingCategoryName(c.name);
           }}
           onSave={async (id) => {
+            const category = categories.find((c) => c.id === id);
             await supabase
               .from("categories")
               .update({
@@ -287,12 +350,24 @@ export default function AdminPage() {
                 slug: editingCategoryName.toLowerCase().replace(/\s+/g, "-"),
               })
               .eq("id", id);
+            if (category) {
+              await logAdminAction("update", "category", id, {
+                oldName: category.name,
+                newName: editingCategoryName,
+              });
+            }
             setEditingCategoryId(null);
             setEditingCategoryName("");
             loadData();
           }}
           onDelete={async (id) => {
+            const category = categories.find((c) => c.id === id);
             await supabase.from("categories").delete().eq("id", id);
+            if (category) {
+              await logAdminAction("delete", "category", id, {
+                name: category.name,
+              });
+            }
             loadData();
           }}
         />
@@ -306,6 +381,8 @@ export default function AdminPage() {
           onView={setViewingOrder}
         />
       )}
+
+      {tab === "logs" && <AdminLogs />}
 
       {viewingOrder && (
         <OrderDetailsModal

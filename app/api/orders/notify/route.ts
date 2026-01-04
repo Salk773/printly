@@ -3,6 +3,7 @@ import "server-only";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { OrderNotifySchema, validateRequest } from "@/lib/validation/schemas";
 import { sanitizeOrderDataForEmail, escapeHtml } from "@/lib/security/sanitize";
+import { logApiCall, logApiError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -255,9 +256,14 @@ async function sendEmail(
 }
 
 export async function POST(req: NextRequest) {
+  const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  
   try {
+    logApiCall("POST", "/api/orders/notify", undefined, { ipAddress }, undefined, ipAddress);
+
     const body = await req.json().catch(() => null);
     if (!body) {
+      logApiCall("POST", "/api/orders/notify", 400, { error: "Invalid request body", ipAddress }, undefined, ipAddress);
       return NextResponse.json(
         { error: "Invalid request body" },
         { status: 400 }
@@ -267,6 +273,10 @@ export async function POST(req: NextRequest) {
     // Validate input
     const validation = validateRequest(OrderNotifySchema, body);
     if (!validation.success) {
+      logApiCall("POST", "/api/orders/notify", 400, { 
+        error: (validation as { success: false; error: string }).error,
+        ipAddress 
+      }, undefined, ipAddress);
       return NextResponse.json(
         { error: (validation as { success: false; error: string }).error },
         { status: 400 }
@@ -333,14 +343,28 @@ export async function POST(req: NextRequest) {
     const result = await sendEmail(recipientEmail, subject, emailBody);
 
     if (!result.success) {
+      logApiError("/api/orders/notify", new Error(result.error || "Failed to send email"), {
+        type,
+        orderId: sanitizedOrderData.orderId,
+        recipientEmail,
+        ipAddress,
+      }, undefined, ipAddress);
       return NextResponse.json(
         { error: result.error || "Failed to send email" },
         { status: 500 }
       );
     }
 
+    logApiCall("POST", "/api/orders/notify", 200, {
+      type,
+      orderId: sanitizedOrderData.orderId,
+      recipientEmail,
+      ipAddress,
+    }, undefined, ipAddress);
+
     return NextResponse.json({ success: true, message: "Email sent successfully" });
   } catch (error: any) {
+    logApiError("/api/orders/notify", error, { ipAddress });
     console.error("Order notification error:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { OrderStatusUpdateSchema, validateRequest } from "@/lib/validation/schemas";
+import { logApiCall, logAdminAction, logApiError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +22,22 @@ const supabase = createClient(
  */
 
 export async function POST(req: NextRequest) {
+  const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  
   try {
     // Require admin authentication
     const authResult = await requireAdmin(req);
     if (!authResult.authorized) {
+      logApiCall("POST", "/api/orders/update-status", 401, { ipAddress });
       return (authResult as { authorized: false; response: NextResponse }).response;
     }
 
+    const user = authResult.user;
+    logApiCall("POST", "/api/orders/update-status", undefined, { ipAddress }, user.id, ipAddress);
+
     const body = await req.json().catch(() => null);
     if (!body) {
+      logApiCall("POST", "/api/orders/update-status", 400, { error: "Invalid request body", ipAddress }, user.id, ipAddress);
       return NextResponse.json(
         { error: "Invalid request body" },
         { status: 400 }
@@ -39,6 +47,10 @@ export async function POST(req: NextRequest) {
     // Validate input
     const validation = validateRequest(OrderStatusUpdateSchema, body);
     if (!validation.success) {
+      logApiCall("POST", "/api/orders/update-status", 400, { 
+        error: (validation as { success: false; error: string }).error,
+        ipAddress 
+      }, user.id, ipAddress);
       return NextResponse.json(
         { error: (validation as { success: false; error: string }).error },
         { status: 400 }
@@ -55,6 +67,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (fetchError || !order) {
+      logApiCall("POST", "/api/orders/update-status", 404, { 
+        orderId,
+        error: "Order not found",
+        ipAddress 
+      }, user.id, ipAddress);
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
@@ -63,6 +80,12 @@ export async function POST(req: NextRequest) {
 
     // Verify current status matches
     if (order.status !== validation.data.currentStatus) {
+      logApiCall("POST", "/api/orders/update-status", 409, { 
+        orderId,
+        expectedStatus: currentStatus,
+        actualStatus: order.status,
+        ipAddress 
+      }, user.id, ipAddress);
       return NextResponse.json(
         { error: "Order status has changed. Please refresh." },
         { status: 409 }
@@ -78,11 +101,32 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (updateError || !updatedOrder) {
+      logApiError("/api/orders/update-status", updateError || new Error("Failed to update order"), {
+        orderId,
+        newStatus,
+        currentStatus,
+        ipAddress,
+      }, user.id, ipAddress);
       return NextResponse.json(
         { error: "Failed to update order status" },
         { status: 500 }
       );
     }
+
+    // Log admin action
+    logAdminAction(
+      "update_order_status",
+      "order",
+      orderId,
+      {
+        fromStatus: currentStatus,
+        toStatus: newStatus,
+        orderNumber: updatedOrder.order_number,
+        ipAddress,
+      },
+      user.id,
+      ipAddress
+    );
 
     // Get customer email (always stored in guest_email field for all orders)
     const customerEmail = updatedOrder.guest_email;
@@ -125,6 +169,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    logApiCall("POST", "/api/orders/update-status", 200, {
+      orderId,
+      statusChange: `${currentStatus} -> ${newStatus}`,
+      ipAddress,
+    }, user.id, ipAddress);
+
     return NextResponse.json({
       success: true,
       order: updatedOrder,
@@ -135,6 +185,8 @@ export async function POST(req: NextRequest) {
       }`,
     });
   } catch (error: any) {
+    const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    logApiError("/api/orders/update-status", error, { ipAddress });
     console.error("Order status update error:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },

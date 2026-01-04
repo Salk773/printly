@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { rateLimitMiddleware, RATE_LIMITS } from "@/lib/auth/rateLimit";
+import { logApiCall, logAdminAction, logApiError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export async function GET() {
  * Update homepage banner content (admin only)
  */
 export async function POST(req: NextRequest) {
+  const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  
   try {
     // Apply rate limiting
     const rateLimitResponse = rateLimitMiddleware(req, RATE_LIMITS.admin);
@@ -59,11 +62,19 @@ export async function POST(req: NextRequest) {
     // Require admin authentication
     const authResult = await requireAdmin(req);
     if (!authResult.authorized) {
+      logApiCall("POST", "/api/homepage/banner", 401, { ipAddress });
       return (authResult as { authorized: false; response: NextResponse }).response;
     }
 
+    const user = authResult.user;
+    logApiCall("POST", "/api/homepage/banner", undefined, { ipAddress }, user.id, ipAddress);
+
     const body = await req.json().catch(() => null);
     if (!body || !body.title || !body.description) {
+      logApiCall("POST", "/api/homepage/banner", 400, { 
+        error: "Title and description are required",
+        ipAddress 
+      }, user.id, ipAddress);
       return NextResponse.json(
         { error: "Title and description are required" },
         { status: 400 }
@@ -92,12 +103,34 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadError) {
+      logApiError("/api/homepage/banner", uploadError, {
+        ipAddress,
+      }, user.id, ipAddress);
       console.error("Error saving banner config:", uploadError);
       return NextResponse.json(
         { error: "Failed to save banner configuration" },
         { status: 500 }
       );
     }
+
+    // Log admin action
+    logAdminAction(
+      "update",
+      "homepage_banner",
+      undefined,
+      {
+        title: config.title,
+        description: config.description,
+        ipAddress,
+      },
+      user.id,
+      ipAddress
+    );
+
+    logApiCall("POST", "/api/homepage/banner", 200, {
+      title: config.title,
+      ipAddress,
+    }, user.id, ipAddress);
 
     return NextResponse.json({
       success: true,
@@ -108,6 +141,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
+    logApiError("/api/homepage/banner", error, { ipAddress });
     console.error("Error updating banner config:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
