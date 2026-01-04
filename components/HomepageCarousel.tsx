@@ -29,7 +29,7 @@ export default function HomepageCarousel({ images }: Props) {
       style={{
         marginTop: 48,
         position: "relative",
-        height: 420,
+        height: 504, // Increased by 20% (420 * 1.2 = 504)
         borderRadius: 20,
         overflow: "hidden",
       }}
