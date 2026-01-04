@@ -277,7 +277,7 @@ export async function POST(req: NextRequest) {
     const isProcessing = type === "processing";
     
     // Sanitize order data before using
-    // Type assertion: schema validation guarantees customerEmail is present
+    // Schema validation guarantees all required fields are present
     const sanitizedOrderData = sanitizeOrderDataForEmail({
       orderId: orderData.orderId,
       orderNumber: orderData.orderNumber ?? null,
@@ -285,7 +285,7 @@ export async function POST(req: NextRequest) {
       customerName: orderData.customerName ?? null,
       phone: orderData.phone,
       address: orderData.address,
-      items: orderData.items,
+      items: orderData.items as Array<{ name: string; price: number; quantity: number }>,
       total: orderData.total,
       notes: orderData.notes ?? null,
     });
