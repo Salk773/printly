@@ -277,7 +277,18 @@ export async function POST(req: NextRequest) {
     const isProcessing = type === "processing";
     
     // Sanitize order data before using
-    const sanitizedOrderData = sanitizeOrderDataForEmail(orderData);
+    // Type assertion: schema validation guarantees customerEmail is present
+    const sanitizedOrderData = sanitizeOrderDataForEmail({
+      orderId: orderData.orderId,
+      orderNumber: orderData.orderNumber ?? null,
+      customerEmail: orderData.customerEmail,
+      customerName: orderData.customerName ?? null,
+      phone: orderData.phone,
+      address: orderData.address,
+      items: orderData.items,
+      total: orderData.total,
+      notes: orderData.notes ?? null,
+    });
     
     const recipientEmail = isAdmin
       ? ADMIN_EMAILS[0] || process.env.ADMIN_EMAIL || "info@printly.ae"
