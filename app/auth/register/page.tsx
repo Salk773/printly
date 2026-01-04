@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
+import toast from "react-hot-toast";
+import { validateAuthForm } from "@/lib/validation";
 
 export default function RegisterPage() {
   const { signUp } = useAuth();
@@ -18,6 +20,13 @@ export default function RegisterPage() {
     e.preventDefault();
     if (loading) return;
 
+    // Validate form
+    const validation = validateAuthForm({ email, password });
+    if (!validation.isValid) {
+      validation.errors.forEach((error) => toast.error(error));
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     setInfoMsg(null);
@@ -26,11 +35,13 @@ export default function RegisterPage() {
 
     if (error) {
       setErrorMsg(error);
+      toast.error(error);
       setLoading(false);
       return;
     }
 
     setInfoMsg("Account created. You can now log in.");
+    toast.success("Account created successfully!");
     setLoading(false);
     router.push("/auth/login");
   };

@@ -1,114 +1,191 @@
 # Deployment Guide
 
-This guide covers deploying Printly to Vercel and configuring production environment.
+This guide covers deploying the Printly application to Vercel.
 
 ## Prerequisites
 
 - Vercel account (sign up at [vercel.com](https://vercel.com))
-- Supabase project set up
-- GitHub repository (optional, but recommended)
+- GitHub/GitLab/Bitbucket account (for connecting repository)
+- Supabase project set up and configured
+- All environment variables ready
 
-## Deployment Steps
+## Step 1: Prepare Your Repository
 
-### 1. Prepare Your Repository
+1. Ensure all code is committed and pushed to your repository
+2. Verify that `package.json` includes all necessary dependencies
+3. Check that `next.config.mjs` is properly configured
 
-Ensure your code is committed and pushed to your Git repository:
+## Step 2: Deploy to Vercel
 
-```bash
-git add .
-git commit -m "Prepare for deployment"
-git push origin main
-```
+### Option A: Deploy via Vercel Dashboard
 
-### 2. Deploy to Vercel
+1. **Import Project**
+   - Go to [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Click "Add New..." → "Project"
+   - Import your Git repository
 
-#### Option A: Deploy via Vercel Dashboard
+2. **Configure Project**
+   - Framework Preset: Next.js (auto-detected)
+   - Root Directory: `./` (default)
+   - Build Command: `npm run build` (default)
+   - Output Directory: `.next` (default)
+   - Install Command: `npm install` (default)
 
-1. Go to [vercel.com](https://vercel.com) and sign in
-2. Click "Add New Project"
-3. Import your Git repository
-4. Vercel will auto-detect Next.js settings
-5. Configure environment variables (see below)
-6. Click "Deploy"
+3. **Set Environment Variables**
+   
+   Add the following environment variables in Vercel dashboard:
+   
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+   NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
+   ADMIN_EMAIL=info@printly.ae
+   ```
+   
+   **Important**: 
+   - Update `NEXT_PUBLIC_SITE_URL` after first deployment with your actual domain
+   - Never commit `.env.local` files to Git
+   - Use Vercel's environment variable interface for production values
 
-#### Option B: Deploy via Vercel CLI
+4. **Deploy**
+   - Click "Deploy"
+   - Wait for build to complete
+   - Your site will be live at `https://your-app.vercel.app`
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+### Option B: Deploy via Vercel CLI
 
-# Login to Vercel
-vercel login
+1. **Install Vercel CLI**
+   ```bash
+   npm i -g vercel
+   ```
 
-# Deploy
-vercel
+2. **Login**
+   ```bash
+   vercel login
+   ```
 
-# For production deployment
-vercel --prod
-```
+3. **Deploy**
+   ```bash
+   vercel
+   ```
 
-### 3. Configure Environment Variables
+4. **Set Environment Variables**
+   ```bash
+   vercel env add NEXT_PUBLIC_SUPABASE_URL
+   vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+   vercel env add SUPABASE_SERVICE_ROLE_KEY
+   # ... add all other variables
+   ```
 
-In your Vercel project settings, add the following environment variables:
+5. **Deploy to Production**
+   ```bash
+   vercel --prod
+   ```
 
-#### Required Variables
+## Step 3: Configure Custom Domain (Optional)
 
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-ADMIN_EMAIL=info@printly.ae
-```
+1. Go to your project settings in Vercel dashboard
+2. Navigate to "Domains"
+3. Add your custom domain (e.g., `printly.ae`)
+4. Follow DNS configuration instructions
+5. Update `NEXT_PUBLIC_SITE_URL` environment variable with your custom domain
 
-#### Optional Variables
+## Step 4: Set Up Email Service
 
-```
-SUPABASE_EDGE_FUNCTION_URL=https://your-project.supabase.co/functions/v1/send-email
-NEXT_PUBLIC_SITE_URL=https://your-domain.com
-```
+### Option A: Supabase Edge Function (Recommended)
 
-**Where to find Supabase credentials:**
-1. Go to your Supabase project dashboard
-2. Navigate to Settings → API
-3. Copy the Project URL and anon/public key
-4. Copy the service_role key (keep this secret!)
+1. **Create Edge Function**
+   - Go to Supabase Dashboard → Edge Functions
+   - Create a new function called `send-email`
+   - Use a service like Resend, SendGrid, or AWS SES for actual email sending
 
-### 4. Configure Custom Domain (Optional)
+2. **Configure Environment Variable**
+   ```
+   SUPABASE_EDGE_FUNCTION_URL=https://your-project.supabase.co/functions/v1/send-email
+   ```
 
-1. In Vercel project settings, go to "Domains"
-2. Add your custom domain
-3. Follow DNS configuration instructions
-4. Update `NEXT_PUBLIC_SITE_URL` environment variable
+3. **Deploy Function**
+   ```bash
+   supabase functions deploy send-email
+   ```
 
-### 5. Set Up Email Service
+### Option B: External Email Service
 
-#### Option A: Supabase Edge Function (Recommended)
+Update `app/api/orders/notify/route.ts` to integrate with your preferred email service (Resend, SendGrid, etc.).
 
-1. Create a Supabase Edge Function for email sending
-2. Configure your email service provider (Resend, SendGrid, etc.)
-3. Set `SUPABASE_EDGE_FUNCTION_URL` environment variable
+## Step 5: Verify Deployment
 
-#### Option B: External Email Service
+1. **Check Health Endpoint**
+   ```
+   https://your-domain.com/api/health
+   ```
+   Should return: `{"status":"ok","message":"Supabase connected ✅"}`
 
-Update `app/api/orders/notify/route.ts` to integrate with your preferred email service.
+2. **Test Order Placement**
+   - Add items to cart
+   - Complete checkout
+   - Verify order is created
+   - Check email notifications are sent
 
-### 6. Verify Deployment
+3. **Test Admin Panel**
+   - Login as admin user
+   - Verify admin panel is accessible
+   - Test product/category management
 
-1. Check health endpoint: `https://your-domain.com/api/health`
-2. Test order placement
-3. Verify email notifications are working
-4. Check admin panel functionality
+## Step 6: Post-Deployment Checklist
 
-## Post-Deployment Checklist
-
-- [ ] All environment variables configured
+- [ ] All environment variables configured correctly
 - [ ] Health check endpoint returns OK status
 - [ ] Order placement works correctly
 - [ ] Email notifications are sent
 - [ ] Admin panel accessible
 - [ ] Custom domain configured (if applicable)
 - [ ] SSL certificate active (automatic with Vercel)
-- [ ] Analytics configured (optional)
+- [ ] Sitemap accessible at `/sitemap.xml`
+- [ ] Robots.txt accessible at `/robots.txt`
+
+## Continuous Deployment
+
+Vercel automatically deploys when you push to your connected Git repository:
+
+- **Production**: Deploys from `main` or `master` branch
+- **Preview**: Creates preview deployments for pull requests
+
+To disable auto-deployment:
+1. Go to Project Settings → Git
+2. Unlink repository or disable auto-deployment
+
+## Environment-Specific Configuration
+
+### Production Environment
+
+Set these in Vercel dashboard:
+- `NODE_ENV=production` (automatically set by Vercel)
+- `NEXT_PUBLIC_SITE_URL=https://your-domain.com`
+- All Supabase credentials
+
+### Preview/Development
+
+Vercel automatically creates preview deployments. You can set different environment variables for:
+- Production
+- Preview
+- Development
+
+## Monitoring & Analytics
+
+### Vercel Analytics
+
+1. Go to Project Settings → Analytics
+2. Enable Vercel Analytics (if available on your plan)
+3. View metrics in Vercel dashboard
+
+### Error Monitoring
+
+Consider integrating:
+- **Sentry** - Error tracking
+- **LogRocket** - Session replay
+- **Vercel Logs** - Built-in logging
 
 ## Troubleshooting
 
@@ -117,6 +194,7 @@ Update `app/api/orders/notify/route.ts` to integrate with your preferred email s
 - Check environment variables are set correctly
 - Verify all dependencies are in `package.json`
 - Review build logs in Vercel dashboard
+- Ensure Node.js version is compatible (18+)
 
 ### Email Not Sending
 
@@ -132,12 +210,12 @@ Update `app/api/orders/notify/route.ts` to integrate with your preferred email s
 - Review Row Level Security (RLS) policies
 - Check network restrictions in Supabase
 
-## Monitoring
+### Environment Variables Not Working
 
-- **Vercel Analytics**: Built-in analytics available in Vercel dashboard
-- **Health Checks**: Monitor `/api/health` endpoint
-- **Error Tracking**: Consider integrating Sentry or similar service
-- **Logs**: View function logs in Vercel dashboard
+- Ensure variables start with `NEXT_PUBLIC_` for client-side access
+- Redeploy after adding new environment variables
+- Check variable names match exactly (case-sensitive)
+- Verify variables are set for correct environment (Production/Preview)
 
 ## Rollback
 
@@ -148,32 +226,28 @@ If you need to rollback a deployment:
 3. Find the previous working deployment
 4. Click "..." → "Promote to Production"
 
-## Continuous Deployment
+## Performance Optimization
 
-Vercel automatically deploys when you push to your main branch. To disable:
+Vercel automatically optimizes Next.js applications:
 
-1. Go to Project Settings → Git
-2. Disable automatic deployments for production branch
+- **Image Optimization** - Automatic via Next.js Image component
+- **Code Splitting** - Automatic route-based splitting
+- **Edge Caching** - Automatic static asset caching
+- **CDN** - Global CDN for all deployments
 
-## Environment-Specific Configurations
+## Security Best Practices
 
-### Production
-
-- Use production Supabase project
-- Set `NODE_ENV=production`
-- Enable error tracking
-- Configure custom domain
-
-### Preview/Staging
-
-- Use staging Supabase project (optional)
-- Test new features before production
-- Use preview URLs for testing
+1. **Never commit `.env` files** - Use Vercel environment variables
+2. **Use RLS in Supabase** - Protect database access
+3. **Validate all inputs** - Server-side validation
+4. **Sanitize user data** - Prevent XSS attacks
+5. **Use HTTPS** - Automatic with Vercel
+6. **Regular updates** - Keep dependencies updated
 
 ## Support
 
 For deployment issues:
 - Check [Vercel Documentation](https://vercel.com/docs)
-- Review [Next.js Deployment Guide](https://nextjs.org/docs/deployment)
-- Check Supabase status: [status.supabase.com](https://status.supabase.com)
+- Review build logs in Vercel dashboard
+- Contact Vercel support if needed
 

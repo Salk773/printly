@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
+import toast from "react-hot-toast";
+import { validateAuthForm } from "@/lib/validation";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -17,6 +19,13 @@ export default function LoginPage() {
     e.preventDefault();
     if (loading) return;
 
+    // Validate form
+    const validation = validateAuthForm({ email, password });
+    if (!validation.isValid) {
+      validation.errors.forEach((error) => toast.error(error));
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
 
@@ -24,10 +33,12 @@ export default function LoginPage() {
 
     if (error) {
       setErrorMsg(error);
+      toast.error(error);
       setLoading(false);
       return;
     }
 
+    toast.success("Signed in successfully!");
     router.push("/");
   };
 

@@ -1,13 +1,8 @@
-/**
- * Email service for sending order notifications
- * Uses Supabase Edge Functions for email delivery
- */
-
 export interface OrderEmailData {
   orderId: string;
   orderNumber: string | null;
-  customerName: string | null;
   customerEmail: string;
+  customerName: string | null;
   phone: string;
   address: {
     line1: string;

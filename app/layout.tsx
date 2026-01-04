@@ -8,9 +8,9 @@ import SideCart from "@/components/SideCart";
 import { AuthProvider } from "@/context/AuthProvider";
 import { CartProvider } from "@/context/CartProvider";
 import { WishlistProvider } from "@/context/WishlistProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { Toaster } from "react-hot-toast";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://printly.ae";
 
@@ -19,23 +19,18 @@ export const metadata: Metadata = {
     default: "Printly - 3D Printing Marketplace",
     template: "%s | Printly",
   },
-  description: "Made layer by layer. Discover unique 3D printed products and custom designs.",
-  keywords: ["3D printing", "custom products", "3D printed items", "UAE", "Dubai"],
+  description: "Made layer by layer. Discover unique 3D printed products and custom designs at Printly.ae",
+  keywords: ["3D printing", "custom products", "UAE", "Dubai", "3D printed items"],
   authors: [{ name: "Printly" }],
   creator: "Printly",
   publisher: "Printly",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
   metadataBase: new URL(siteUrl),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     type: "website",
-    locale: "en_AE",
+    locale: "en_US",
     url: siteUrl,
     siteName: "Printly",
     title: "Printly - 3D Printing Marketplace",

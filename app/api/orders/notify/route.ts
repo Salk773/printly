@@ -1,12 +1,12 @@
-import "server-only";
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabaseServer";
+import "server-only";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 interface OrderEmailData {
   orderId: string;
   orderNumber: string | null;
-  customerName: string | null;
   customerEmail: string;
+  customerName: string | null;
   phone: string;
   address: {
     line1: string;
@@ -24,87 +24,96 @@ interface OrderEmailData {
   notes?: string | null;
 }
 
-/**
- * Format order details for email
- */
 function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
-  const { orderNumber, customerName, customerEmail, phone, address, items, total, notes } = data;
-
-  const orderNum = orderNumber || data.orderId.slice(0, 8).toUpperCase();
-  const customer = customerName || "Guest Customer";
-
+  const orderRef = data.orderNumber || data.orderId.slice(0, 8).toUpperCase();
+  
   let emailBody = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #a855f7;">${isAdmin ? "New Order Received" : "Order Confirmation"}</h2>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${isAdmin ? "New Order" : "Order Confirmation"}</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #c084fc, #a855f7); padding: 20px; border-radius: 10px 10px 0 0; color: white;">
+        <h1 style="margin: 0;">${isAdmin ? "🛒 New Order Received" : "✅ Order Confirmation"}</h1>
+      </div>
       
-      <p><strong>Order Number:</strong> ${orderNum}</p>
-      
-      ${isAdmin ? `
-        <h3 style="color: #c084fc; margin-top: 20px;">Customer Information</h3>
-        <p><strong>Name:</strong> ${customer}</p>
-        <p><strong>Email:</strong> ${customerEmail}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-      ` : `
-        <p>Thank you for your order, ${customer}!</p>
-        <p>We've received your order and will process it shortly.</p>
-      `}
-      
-      <h3 style="color: #c084fc; margin-top: 20px;">Delivery Address</h3>
-      <p>
-        ${address.line1}<br>
-        ${address.line2 ? `${address.line2}<br>` : ""}
-        ${address.city}, ${address.state}${address.postalCode ? ` ${address.postalCode}` : ""}
-      </p>
-      
-      <h3 style="color: #c084fc; margin-top: 20px;">Order Items</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-        <thead>
-          <tr style="background-color: #0f172a; color: white;">
-            <th style="padding: 10px; text-align: left;">Item</th>
-            <th style="padding: 10px; text-align: right;">Quantity</th>
-            <th style="padding: 10px; text-align: right;">Price</th>
-            <th style="padding: 10px; text-align: right;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items
-            .map(
-              (item) => `
-            <tr style="border-bottom: 1px solid #1e293b;">
-              <td style="padding: 10px;">${item.name}</td>
-              <td style="padding: 10px; text-align: right;">${item.quantity}</td>
-              <td style="padding: 10px; text-align: right;">${item.price.toFixed(2)} AED</td>
-              <td style="padding: 10px; text-align: right;">${(item.price * item.quantity).toFixed(2)} AED</td>
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 18px; font-weight: bold; color: #333;">
+          Order Reference: <span style="color: #a855f7;">${orderRef}</span>
+        </p>
+        
+        ${isAdmin ? `
+          <h2 style="color: #333; border-bottom: 2px solid #c084fc; padding-bottom: 10px;">Customer Information</h2>
+          <p><strong>Name:</strong> ${data.customerName || "Guest"}</p>
+          <p><strong>Email:</strong> ${data.customerEmail}</p>
+          <p><strong>Phone:</strong> ${data.phone}</p>
+          <p><strong>Address:</strong><br>
+            ${data.address.line1}<br>
+            ${data.address.line2 ? data.address.line2 + "<br>" : ""}
+            ${data.address.city}, ${data.address.state}<br>
+            ${data.address.postalCode || ""}
+          </p>
+        ` : `
+          <p>Thank you for your order! We've received your order and will contact you shortly to confirm.</p>
+          <p><strong>Contact:</strong> ${data.phone}</p>
+          <p><strong>Delivery Address:</strong><br>
+            ${data.address.line1}<br>
+            ${data.address.line2 ? data.address.line2 + "<br>" : ""}
+            ${data.address.city}, ${data.address.state}<br>
+            ${data.address.postalCode || ""}
+          </p>
+        `}
+        
+        <h2 style="color: #333; border-bottom: 2px solid #c084fc; padding-bottom: 10px; margin-top: 30px;">Order Details</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background: #e9d5ff;">
+              <th style="padding: 10px; text-align: left; border-bottom: 2px solid #c084fc;">Item</th>
+              <th style="padding: 10px; text-align: center; border-bottom: 2px solid #c084fc;">Qty</th>
+              <th style="padding: 10px; text-align: right; border-bottom: 2px solid #c084fc;">Price</th>
             </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="padding: 10px; text-align: right; font-weight: bold;">Total:</td>
-            <td style="padding: 10px; text-align: right; font-weight: bold;">${total.toFixed(2)} AED</td>
-          </tr>
-        </tfoot>
-      </table>
+          </thead>
+          <tbody>
+            ${data.items.map(item => `
+              <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">${(item.price * item.quantity).toFixed(2)} AED</td>
+              </tr>
+            `).join("")}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #c084fc;">Total:</td>
+              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #c084fc; color: #a855f7; font-size: 18px;">${data.total.toFixed(2)} AED</td>
+            </tr>
+          </tfoot>
+        </table>
+        
+        ${data.notes ? `
+          <h3 style="color: #333; margin-top: 20px;">Notes:</h3>
+          <p style="background: #fff; padding: 10px; border-left: 4px solid #c084fc; border-radius: 4px;">${data.notes}</p>
+        ` : ""}
+        
+        ${isAdmin ? `
+          <p style="margin-top: 30px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <strong>Action Required:</strong> Please review this order and contact the customer to confirm.
+          </p>
+        ` : `
+          <p style="margin-top: 30px; padding: 15px; background: #d1ecf1; border-left: 4px solid #0c5460; border-radius: 4px;">
+            <strong>Next Steps:</strong> We'll contact you shortly to confirm your order and arrange delivery.
+          </p>
+        `}
+      </div>
       
-      ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ""}
-      
-      ${isAdmin ? `
-        <p style="margin-top: 30px; color: #64748b; font-size: 0.9em;">
-          Please process this order in the admin panel.
-        </p>
-      ` : `
-        <p style="margin-top: 30px; color: #64748b; font-size: 0.9em;">
-          You will receive updates about your order via email.
-        </p>
-      `}
-      
-      <hr style="border: none; border-top: 1px solid #1e293b; margin: 30px 0;">
-      <p style="color: #64748b; font-size: 0.85em; text-align: center;">
-        Printly - Made layer by layer.
-      </p>
-    </div>
+      <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+        <p>Printly.ae - 3D Printing Marketplace</p>
+      </div>
+    </body>
+    </html>
   `;
 
   return emailBody;
@@ -155,7 +164,7 @@ async function sendEmail(
   console.log("📧 Email would be sent:");
   console.log("To:", to);
   console.log("Subject:", subject);
-  console.log("Body:", htmlBody);
+  console.log("Body:", htmlBody.substring(0, 200) + "...");
 
   // For now, return success in development
   // Replace this with actual email service integration
@@ -176,7 +185,7 @@ export async function POST(req: NextRequest) {
 
     const isAdmin = type === "admin";
     const recipientEmail = isAdmin
-      ? process.env.ADMIN_EMAIL || "info@printly.ae"
+      ? ADMIN_EMAILS[0] || process.env.ADMIN_EMAIL || "info@printly.ae"
       : orderData.customerEmail;
 
     if (!recipientEmail) {
@@ -186,9 +195,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const orderRef = orderData.orderNumber || orderData.orderId.slice(0, 8).toUpperCase();
     const subject = isAdmin
-      ? `New Order: ${orderData.orderNumber || orderData.orderId.slice(0, 8).toUpperCase()}`
-      : `Order Confirmation: ${orderData.orderNumber || orderData.orderId.slice(0, 8).toUpperCase()}`;
+      ? `New Order: ${orderRef}`
+      : `Order Confirmation: ${orderRef}`;
 
     const emailBody = formatOrderEmail(orderData, isAdmin);
 
