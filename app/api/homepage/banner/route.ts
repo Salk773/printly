@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadError) {
-      logApiError("/api/homepage/banner", uploadError, {
+      logApiError("/api/homepage/banner", new Error(uploadError.message || "Failed to save banner configuration"), {
         ipAddress,
       }, user.id, ipAddress);
       console.error("Error saving banner config:", uploadError);

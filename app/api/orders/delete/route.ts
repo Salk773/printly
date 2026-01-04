@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest) {
       .eq("id", validation.data.orderId);
 
     if (deleteError) {
-      logApiError("/api/orders/delete", deleteError, {
+      logApiError("/api/orders/delete", new Error(deleteError.message || "Failed to delete order"), {
         orderId: validation.data.orderId,
         ipAddress,
       }, user.id, ipAddress);
