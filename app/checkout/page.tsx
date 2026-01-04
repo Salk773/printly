@@ -54,15 +54,11 @@ export default function CheckoutPage() {
       city,
       state,
       postalCode,
+      isGuest: !user, // Pass guest status to validation
     });
 
     if (!validation.isValid) {
       validation.errors.forEach((error) => toast.error(error));
-      return;
-    }
-
-    if (!user && !email) {
-      toast.error("Email is required");
       return;
     }
 
