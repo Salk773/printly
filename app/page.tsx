@@ -101,7 +101,9 @@ export default async function HomePage() {
             <Link href="/products" className="btn-primary">
               Browse Products
             </Link>
-            <button className="btn-ghost">List your prints</button>
+            <a href="mailto:info@printly.ae" className="btn-ghost">
+              List your prints
+            </a>
           </div>
         </div>
 
