@@ -26,7 +26,8 @@ export default async function HomePage() {
       .select("id, name, description, price, image_main")
       .eq("active", true)
       .limit(4);
-    products = fallbackQuery.data;
+    // Map fallback data to include featured field (set to false)
+    products = fallbackQuery.data?.map((p) => ({ ...p, featured: false })) || null;
   }
 
   const { data: galleryFiles } = await supabase.storage
