@@ -54,7 +54,6 @@ export default function CheckoutPage() {
       city,
       state,
       postalCode,
-      isGuest: !user, // Pass guest status to validation
     });
 
     if (!validation.isValid) {
