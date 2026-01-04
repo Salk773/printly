@@ -47,6 +47,7 @@ export type Order = {
   status: string;
   created_at: string;
   notes: string | null;
+  archived?: boolean;
 };
 
 /* ============== CONSTANTS ============== */

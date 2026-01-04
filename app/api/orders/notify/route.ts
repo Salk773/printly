@@ -119,6 +119,77 @@ function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
   return emailBody;
 }
 
+function formatProcessingEmail(data: OrderEmailData): string {
+  const orderRef = data.orderNumber || data.orderId.slice(0, 8).toUpperCase();
+  
+  let emailBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Order Processing</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 20px; border-radius: 10px 10px 0 0; color: white;">
+        <h1 style="margin: 0;">🔄 Order Now Processing</h1>
+      </div>
+      
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px;">
+        <p style="font-size: 18px; font-weight: bold; color: #333;">
+          Order Reference: <span style="color: #2563eb;">${orderRef}</span>
+        </p>
+        
+        <p style="font-size: 16px; color: #333; margin-top: 20px;">
+          Great news! Your order is now being processed. Our team has started working on your items.
+        </p>
+        
+        <h2 style="color: #333; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-top: 30px;">Order Details</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr style="background: #dbeafe;">
+              <th style="padding: 10px; text-align: left; border-bottom: 2px solid #3b82f6;">Item</th>
+              <th style="padding: 10px; text-align: center; border-bottom: 2px solid #3b82f6;">Qty</th>
+              <th style="padding: 10px; text-align: right; border-bottom: 2px solid #3b82f6;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.items.map(item => `
+              <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">${(item.price * item.quantity).toFixed(2)} AED</td>
+              </tr>
+            `).join("")}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #3b82f6;">Total:</td>
+              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #3b82f6; color: #2563eb; font-size: 18px;">${data.total.toFixed(2)} AED</td>
+            </tr>
+          </tfoot>
+        </table>
+        
+        <p style="margin-top: 30px; padding: 15px; background: #dbeafe; border-left: 4px solid #2563eb; border-radius: 4px;">
+          <strong>What's Next?</strong><br>
+          We're currently processing your order. You'll receive another email once your order is completed and ready for delivery.
+        </p>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+          If you have any questions, please contact us at info@printly.ae
+        </p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+        <p>Printly.ae - 3D Printing Marketplace</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return emailBody;
+}
+
 /**
  * Send email using Supabase Edge Function or fallback to console
  * In production, you should set up a Supabase Edge Function for email
@@ -184,6 +255,8 @@ export async function POST(req: NextRequest) {
     }
 
     const isAdmin = type === "admin";
+    const isProcessing = type === "processing";
+    
     const recipientEmail = isAdmin
       ? ADMIN_EMAILS[0] || process.env.ADMIN_EMAIL || "info@printly.ae"
       : orderData.customerEmail;
@@ -196,11 +269,18 @@ export async function POST(req: NextRequest) {
     }
 
     const orderRef = orderData.orderNumber || orderData.orderId.slice(0, 8).toUpperCase();
-    const subject = isAdmin
-      ? `New Order: ${orderRef}`
-      : `Order Confirmation: ${orderRef}`;
+    let subject: string;
+    let emailBody: string;
 
-    const emailBody = formatOrderEmail(orderData, isAdmin);
+    if (isProcessing) {
+      subject = `Order Processing: ${orderRef}`;
+      emailBody = formatProcessingEmail(orderData);
+    } else {
+      subject = isAdmin
+        ? `New Order: ${orderRef}`
+        : `Order Confirmation: ${orderRef}`;
+      emailBody = formatOrderEmail(orderData, isAdmin);
+    }
 
     const result = await sendEmail(recipientEmail, subject, emailBody);
 

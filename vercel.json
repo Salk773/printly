@@ -4,6 +4,12 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["dub1"],
+  "crons": [
+    {
+      "path": "/api/orders/auto-transition",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://qctqgifnvhfstvqfnafn.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjdHFnaWZudmhmc3R2cWZuYWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1NTY2MDEsImV4cCI6MjA3NjEzMjYwMX0.lrM3eyi-p5NK5jTD8HLZPWLQvGxCJjitnrpG9UaiNAg",

@@ -64,10 +64,14 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
+    // Always store customer email for notifications (even for logged-in users)
+    const customerEmail = user?.email || email;
+    const customerName = user ? (user.user_metadata?.full_name || user.email?.split("@")[0]) : name;
+
     const orderPayload = {
       user_id: user?.id ?? null,
-      guest_name: user ? null : sanitizeInput(name || ""),
-      guest_email: user ? null : sanitizeInput(email),
+      guest_name: customerName,
+      guest_email: customerEmail, // Always store email for notifications
 
       phone: sanitizeInput(phone),
       address_line_1: sanitizeInput(address1),
