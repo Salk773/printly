@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import toast from "react-hot-toast";
 
 type Props = {
   onUploaded?: () => void;
@@ -28,9 +29,10 @@ export default function AdminHomepageImageUpload({ onUploaded }: Props) {
 
     if (error) {
       console.error(error);
-      alert("Upload failed");
+      toast.error("Upload failed");
     } else {
       onUploaded?.();
+      toast.success("Image uploaded successfully");
     }
 
     setUploading(false);

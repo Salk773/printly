@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/context/AuthProvider";
+import toast from "react-hot-toast";
 
 export default function AdminImageUpload({
   onUploaded,
@@ -32,7 +33,7 @@ export default function AdminImageUpload({
 
       if (uploadError) {
         console.error("Storage upload error:", uploadError);
-        alert(uploadError.message || "Image upload failed");
+        toast.error(uploadError.message || "Image upload failed");
         return;
       }
 
@@ -41,14 +42,15 @@ export default function AdminImageUpload({
         .getPublicUrl(path);
 
       if (!data?.publicUrl) {
-        alert("Failed to get image URL");
+        toast.error("Failed to get image URL");
         return;
       }
 
       onUploaded(data.publicUrl);
+      toast.success("Image uploaded successfully");
     } catch (err) {
       console.error("Unexpected upload error:", err);
-      alert("Unexpected upload error");
+      toast.error("Unexpected upload error");
     } finally {
       setUploading(false);
       e.target.value = "";

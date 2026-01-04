@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { supabase } from "@/lib/supabaseClient";
+import toast from "react-hot-toast";
+import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
+import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
+import { logOrderEvent, logError } from "@/lib/logger";
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart();
@@ -42,62 +46,116 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!hasItems || loading) return;
 
-    if (!user && !email) {
-      alert("Email is required");
-      return;
-    }
+    // Validate form data
+    const validationErrors = validateCheckoutForm(
+      {
+        email: user ? undefined : email,
+        name: user ? undefined : name,
+        phone,
+        address1,
+        address2,
+        city,
+        state,
+        postalCode,
+      },
+      !user
+    );
 
-    if (!phone || !address1 || !city || !state) {
-      alert("Please complete all delivery details.");
+    if (validationErrors.length > 0) {
+      validationErrors.forEach((error) => toast.error(error));
       return;
     }
 
     setLoading(true);
 
-    const orderPayload = {
-      user_id: user?.id ?? null,
-      guest_name: user ? null : name || null,
-      guest_email: user ? null : email,
+    try {
+      // Sanitize inputs
+      const sanitizedPayload = {
+        user_id: user?.id ?? null,
+        guest_name: user ? null : sanitizeInput(name || ""),
+        guest_email: user ? null : sanitizeInput(email),
 
-      phone,
-      address_line_1: address1,
-      address_line_2: address2 || null,
-      city,
-      state,
-      postal_code: postalCode || null,
+        phone: sanitizeInput(phone),
+        address_line_1: sanitizeInput(address1),
+        address_line_2: address2 ? sanitizeInput(address2) : null,
+        city: sanitizeInput(city),
+        state: sanitizeInput(state),
+        postal_code: postalCode ? sanitizeInput(postalCode) : null,
 
-      items: items.map((i) => ({
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity,
-      })),
-      total,
-      status: "pending",
-      notes,
-    };
+        items: items.map((i) => ({
+          name: sanitizeInput(i.name),
+          price: i.price,
+          quantity: i.quantity,
+        })),
+        total,
+        status: "pending",
+        notes: notes ? sanitizeInput(notes) : null,
+      };
 
-    const { data, error } = await supabase
-      .from("orders")
-      .insert(orderPayload)
-      .select("id, order_number")
-      .single();
+      const { data, error } = await supabase
+        .from("orders")
+        .insert(sanitizedPayload)
+        .select("id, order_number")
+        .single();
 
-    setLoading(false);
+      if (error || !data) {
+        logError("Failed to place order", error as Error, { orderPayload: sanitizedPayload });
+        toast.error("Failed to place order. Please try again.");
+        setLoading(false);
+        return;
+      }
 
-    if (error || !data) {
-      console.error(error);
-      alert("Failed to place order. Please try again.");
-      return;
+      // Log order event
+      logOrderEvent("order_placed", data.id, {
+        orderNumber: data.order_number,
+        total,
+        itemCount: items.length,
+      });
+
+      // Prepare email data
+      const emailData = {
+        orderId: data.id,
+        orderNumber: data.order_number,
+        customerName: user ? user.email?.split("@")[0] || "Customer" : sanitizedPayload.guest_name,
+        customerEmail: user ? user.email! : sanitizedPayload.guest_email!,
+        phone: sanitizedPayload.phone,
+        address: {
+          line1: sanitizedPayload.address_line_1,
+          line2: sanitizedPayload.address_line_2,
+          city: sanitizedPayload.city,
+          state: sanitizedPayload.state,
+          postalCode: sanitizedPayload.postal_code,
+        },
+        items: sanitizedPayload.items,
+        total,
+        notes: sanitizedPayload.notes,
+      };
+
+      // Send emails asynchronously (don't block order completion)
+      Promise.all([
+        sendOrderConfirmationEmail(emailData),
+        sendAdminOrderNotification(emailData),
+      ]).catch((error) => {
+        logError("Failed to send order emails", error, { orderId: data.id });
+        // Don't show error to user - order was successful
+      });
+
+      // Mark order as placed before clearing cart to prevent redirect
+      setOrderPlaced(true);
+      clearCart();
+
+      toast.success("Order placed successfully!");
+
+      // ✅ Redirect to existing success page
+      router.push(
+        `/checkout/success?order=${encodeURIComponent(data.id)}&number=${encodeURIComponent(data.order_number)}`
+      );
+    } catch (error) {
+      logError("Unexpected error during checkout", error as Error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    // Mark order as placed before clearing cart to prevent redirect
-    setOrderPlaced(true);
-    clearCart();
-
-    // ✅ Redirect to existing success page
-    router.push(
-      `/checkout/success?order=${encodeURIComponent(data.id)}&number=${encodeURIComponent(data.order_number)}`
-    );
   };
 
   return (
