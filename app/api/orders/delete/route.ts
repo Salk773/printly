@@ -1,19 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdmin } from "@/lib/auth/adminAuth";
+import { OrderDeleteSchema, validateRequest } from "@/lib/validation/schemas";
 
 /**
  * API endpoint to delete an order
- * Uses service role key to bypass RLS policies
+ * Requires admin authentication
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { orderId } = body;
+    // Require admin authentication
+    const authResult = await requireAdmin(req);
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
 
-    if (!orderId) {
+    const body = await req.json().catch(() => null);
+    if (!body) {
       return NextResponse.json(
-        { success: false, error: "Missing orderId" },
+        { success: false, error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
+    // Validate input
+    const validation = validateRequest(OrderDeleteSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error },
         { status: 400 }
       );
     }
@@ -24,7 +39,7 @@ export async function DELETE(req: NextRequest) {
     const { data: order, error: fetchError } = await supabase
       .from("orders")
       .select("id")
-      .eq("id", orderId)
+      .eq("id", validation.data.orderId)
       .single();
 
     if (fetchError || !order) {
@@ -38,7 +53,7 @@ export async function DELETE(req: NextRequest) {
     const { error: deleteError } = await supabase
       .from("orders")
       .delete()
-      .eq("id", orderId);
+      .eq("id", validation.data.orderId);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);

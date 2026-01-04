@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdmin } from "@/lib/auth/adminAuth";
 
 /**
  * API endpoint to verify and execute migration for the 'archived' column
@@ -9,9 +10,17 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
  * 1. Checks if the 'archived' column exists
  * 2. Tries to run the migration via RPC function if available
  * 3. Provides SQL instructions if RPC is not available
+ * 
+ * REQUIRES ADMIN AUTHENTICATION
  */
 export async function POST(req: NextRequest) {
   try {
+    // Require admin authentication
+    const authResult = await requireAdmin(req);
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
+
     const supabase = supabaseAdmin();
 
     // First, try to query the archived column to see if it exists

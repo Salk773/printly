@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { requireAdmin } from "@/lib/auth/adminAuth";
+import { OrderStatusUpdateSchema, validateRequest } from "@/lib/validation/schemas";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,30 +20,36 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { orderId, newStatus, currentStatus } = body;
+    // Require admin authentication
+    const authResult = await requireAdmin(req);
+    if (!authResult.authorized) {
+      return authResult.response;
+    }
 
-    if (!orderId || !newStatus || !currentStatus) {
+    const body = await req.json().catch(() => null);
+    if (!body) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid request body" },
         { status: 400 }
       );
     }
 
-    // Validate status values
-    const validStatuses = ["pending", "paid", "processing", "completed", "cancelled"];
-    if (!validStatuses.includes(newStatus)) {
+    // Validate input
+    const validation = validateRequest(OrderStatusUpdateSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid status value" },
+        { error: validation.error },
         { status: 400 }
       );
     }
+
+    const { orderId, newStatus, currentStatus } = validation.data;
 
     // Get order details
     const { data: order, error: fetchError } = await supabase
       .from("orders")
       .select("*")
-      .eq("id", orderId)
+      .eq("id", validation.data.orderId)
       .single();
 
     if (fetchError || !order) {
@@ -52,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify current status matches
-    if (order.status !== currentStatus) {
+    if (order.status !== validation.data.currentStatus) {
       return NextResponse.json(
         { error: "Order status has changed. Please refresh." },
         { status: 409 }
@@ -62,8 +70,8 @@ export async function POST(req: NextRequest) {
     // Update status
     const { data: updatedOrder, error: updateError } = await supabase
       .from("orders")
-      .update({ status: newStatus })
-      .eq("id", orderId)
+      .update({ status: validation.data.newStatus })
+      .eq("id", validation.data.orderId)
       .select()
       .single();
 
@@ -79,7 +87,11 @@ export async function POST(req: NextRequest) {
     const customerName = updatedOrder.guest_name;
 
     // Only send email notification for paid -> processing transition
-    if (currentStatus === "paid" && newStatus === "processing" && customerEmail) {
+    if (
+      validation.data.currentStatus === "paid" &&
+      validation.data.newStatus === "processing" &&
+      customerEmail
+    ) {
       const emailData = {
         orderId: updatedOrder.id,
         orderNumber: updatedOrder.order_number,
@@ -114,7 +126,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       order: updatedOrder,
-      message: `Order status updated to ${newStatus}.${currentStatus === "paid" && newStatus === "processing" ? " Customer notified." : ""}`,
+      message: `Order status updated to ${validation.data.newStatus}.${
+        validation.data.currentStatus === "paid" && validation.data.newStatus === "processing"
+          ? " Customer notified."
+          : ""
+      }`,
     });
   } catch (error: any) {
     console.error("Order status update error:", error);

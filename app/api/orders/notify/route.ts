@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
+import { OrderNotifySchema, validateRequest } from "@/lib/validation/schemas";
+import { sanitizeOrderDataForEmail, escapeHtml } from "@/lib/security/sanitize";
 
 interface OrderEmailData {
   orderId: string;
@@ -25,7 +27,11 @@ interface OrderEmailData {
 }
 
 function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
-  const orderRef = data.orderNumber || data.orderId.slice(0, 8).toUpperCase();
+  // Sanitize all user inputs
+  const sanitized = sanitizeOrderDataForEmail(data);
+  const orderRef = escapeHtml(
+    sanitized.orderNumber || sanitized.orderId.slice(0, 8).toUpperCase()
+  );
   
   let emailBody = `
     <!DOCTYPE html>
@@ -47,23 +53,23 @@ function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
         
         ${isAdmin ? `
           <h2 style="color: #333; border-bottom: 2px solid #c084fc; padding-bottom: 10px;">Customer Information</h2>
-          <p><strong>Name:</strong> ${data.customerName || "Guest"}</p>
-          <p><strong>Email:</strong> ${data.customerEmail}</p>
-          <p><strong>Phone:</strong> ${data.phone}</p>
+          <p><strong>Name:</strong> ${sanitized.customerName || "Guest"}</p>
+          <p><strong>Email:</strong> ${sanitized.customerEmail}</p>
+          <p><strong>Phone:</strong> ${sanitized.phone}</p>
           <p><strong>Address:</strong><br>
-            ${data.address.line1}<br>
-            ${data.address.line2 ? data.address.line2 + "<br>" : ""}
-            ${data.address.city}, ${data.address.state}<br>
-            ${data.address.postalCode || ""}
+            ${sanitized.address?.line1 || ""}<br>
+            ${sanitized.address?.line2 ? sanitized.address.line2 + "<br>" : ""}
+            ${sanitized.address?.city || ""}, ${sanitized.address?.state || ""}<br>
+            ${sanitized.address?.postalCode || ""}
           </p>
         ` : `
           <p>Thank you for your order! We've received your order and will contact you shortly to confirm.</p>
-          <p><strong>Contact:</strong> ${data.phone}</p>
+          <p><strong>Contact:</strong> ${sanitized.phone}</p>
           <p><strong>Delivery Address:</strong><br>
-            ${data.address.line1}<br>
-            ${data.address.line2 ? data.address.line2 + "<br>" : ""}
-            ${data.address.city}, ${data.address.state}<br>
-            ${data.address.postalCode || ""}
+            ${sanitized.address?.line1 || ""}<br>
+            ${sanitized.address?.line2 ? sanitized.address.line2 + "<br>" : ""}
+            ${sanitized.address?.city || ""}, ${sanitized.address?.state || ""}<br>
+            ${sanitized.address?.postalCode || ""}
           </p>
         `}
         
@@ -77,7 +83,7 @@ function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
             </tr>
           </thead>
           <tbody>
-            ${data.items.map(item => `
+            ${(sanitized.items || []).map(item => `
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
                 <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
@@ -88,14 +94,14 @@ function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
           <tfoot>
             <tr>
               <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #c084fc;">Total:</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #c084fc; color: #a855f7; font-size: 18px;">${data.total.toFixed(2)} AED</td>
+              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #c084fc; color: #a855f7; font-size: 18px;">${sanitized.total.toFixed(2)} AED</td>
             </tr>
           </tfoot>
         </table>
         
-        ${data.notes ? `
+        ${sanitized.notes ? `
           <h3 style="color: #333; margin-top: 20px;">Notes:</h3>
-          <p style="background: #fff; padding: 10px; border-left: 4px solid #c084fc; border-radius: 4px;">${data.notes}</p>
+          <p style="background: #fff; padding: 10px; border-left: 4px solid #c084fc; border-radius: 4px;">${sanitized.notes}</p>
         ` : ""}
         
         ${isAdmin ? `
@@ -120,7 +126,11 @@ function formatOrderEmail(data: OrderEmailData, isAdmin: boolean): string {
 }
 
 function formatProcessingEmail(data: OrderEmailData): string {
-  const orderRef = data.orderNumber || data.orderId.slice(0, 8).toUpperCase();
+  // Sanitize all user inputs
+  const sanitized = sanitizeOrderDataForEmail(data);
+  const orderRef = escapeHtml(
+    sanitized.orderNumber || sanitized.orderId.slice(0, 8).toUpperCase()
+  );
   
   let emailBody = `
     <!DOCTYPE html>
@@ -154,7 +164,7 @@ function formatProcessingEmail(data: OrderEmailData): string {
             </tr>
           </thead>
           <tbody>
-            ${data.items.map(item => `
+            ${(sanitized.items || []).map(item => `
               <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
                 <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
@@ -165,7 +175,7 @@ function formatProcessingEmail(data: OrderEmailData): string {
           <tfoot>
             <tr>
               <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #3b82f6;">Total:</td>
-              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #3b82f6; color: #2563eb; font-size: 18px;">${data.total.toFixed(2)} AED</td>
+              <td style="padding: 10px; text-align: right; font-weight: bold; border-top: 2px solid #3b82f6; color: #2563eb; font-size: 18px;">${sanitized.total.toFixed(2)} AED</td>
             </tr>
           </tfoot>
         </table>
@@ -244,22 +254,34 @@ async function sendEmail(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { type, orderData } = body;
-
-    if (!orderData || !type) {
+    const body = await req.json().catch(() => null);
+    if (!body) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid request body" },
         { status: 400 }
       );
     }
 
+    // Validate input
+    const validation = validateRequest(OrderNotifySchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    const { type, orderData } = validation.data;
+
     const isAdmin = type === "admin";
     const isProcessing = type === "processing";
     
+    // Sanitize order data before using
+    const sanitizedOrderData = sanitizeOrderDataForEmail(orderData);
+    
     const recipientEmail = isAdmin
       ? ADMIN_EMAILS[0] || process.env.ADMIN_EMAIL || "info@printly.ae"
-      : orderData.customerEmail;
+      : sanitizedOrderData.customerEmail;
 
     if (!recipientEmail) {
       return NextResponse.json(
@@ -268,18 +290,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const orderRef = orderData.orderNumber || orderData.orderId.slice(0, 8).toUpperCase();
+    const orderRef = sanitizedOrderData.orderNumber || sanitizedOrderData.orderId.slice(0, 8).toUpperCase();
     let subject: string;
     let emailBody: string;
 
+    // Convert sanitized data to OrderEmailData format
+    const emailData: OrderEmailData = {
+      orderId: sanitizedOrderData.orderId,
+      orderNumber: sanitizedOrderData.orderNumber,
+      customerEmail: sanitizedOrderData.customerEmail,
+      customerName: sanitizedOrderData.customerName,
+      phone: sanitizedOrderData.phone,
+      address: sanitizedOrderData.address,
+      items: sanitizedOrderData.items,
+      total: sanitizedOrderData.total,
+      notes: sanitizedOrderData.notes,
+    };
+
     if (isProcessing) {
-      subject = `Order Processing: ${orderRef}`;
-      emailBody = formatProcessingEmail(orderData);
+      subject = `Order Processing: ${escapeHtml(orderRef)}`;
+      emailBody = formatProcessingEmail(emailData);
     } else {
       subject = isAdmin
-        ? `New Order: ${orderRef}`
-        : `Order Confirmation: ${orderRef}`;
-      emailBody = formatOrderEmail(orderData, isAdmin);
+        ? `New Order: ${escapeHtml(orderRef)}`
+        : `Order Confirmation: ${escapeHtml(orderRef)}`;
+      emailBody = formatOrderEmail(emailData, isAdmin);
     }
 
     const result = await sendEmail(recipientEmail, subject, emailBody);

@@ -1,5 +1,6 @@
-import "server-only";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { validateEnv } from "@/lib/validation/env";
 
 interface HealthCheckResponse {
   status: "ok" | "fail" | "error";
@@ -21,21 +22,21 @@ export async function GET() {
   };
 
   try {
-    // Check environment variables
-    const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (hasSupabaseUrl && hasAnonKey && hasServiceKey) {
+    // Validate environment variables
+    try {
+      validateEnv();
       checks.environment = "ok";
+    } catch (error: any) {
+      console.error("Environment validation failed:", error.message);
+      checks.environment = "fail";
     }
 
     // Check database connectivity
-    if (hasSupabaseUrl && hasAnonKey) {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       const { error } = await supabase.from("products").select("id").limit(1);
 

@@ -53,7 +53,6 @@ export type Order = {
 
 /* ============== CONSTANTS ============== */
 
-const ADMIN_CACHE_KEY = "printly_is_admin";
 const MAX_GALLERY = 8;
 
 /* ============== PAGE =================== */
@@ -97,25 +96,44 @@ export default function AdminPage() {
     if (loading) return;
 
     if (!user) {
-      sessionStorage.removeItem(ADMIN_CACHE_KEY);
       router.replace("/auth/login");
       return;
     }
 
-    if (sessionStorage.getItem(ADMIN_CACHE_KEY) === "true") {
-      setIsAdmin(true);
-      setAdminChecked(true);
-      return;
-    }
+    // Check admin status via API (server-side verification)
+    const checkAdminStatus = async () => {
+      try {
+        const session = await supabase.auth.getSession();
+        if (!session.data.session) {
+          router.replace("/auth/login");
+          return;
+        }
 
-    if (!ADMIN_EMAILS.includes(user.email ?? "")) {
-      router.replace("/");
-      return;
-    }
+        const token = session.data.session.access_token;
+        const response = await fetch("/api/admin/check", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    sessionStorage.setItem(ADMIN_CACHE_KEY, "true");
-    setIsAdmin(true);
-    setAdminChecked(true);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.isAdmin) {
+            setIsAdmin(true);
+            setAdminChecked(true);
+          } else {
+            router.replace("/");
+          }
+        } else {
+          router.replace("/");
+        }
+      } catch (error) {
+        console.error("Admin check failed:", error);
+        router.replace("/");
+      }
+    };
+
+    checkAdminStatus();
   }, [user, loading, router]);
 
   /* ---------- LOAD DATA ---------- */
