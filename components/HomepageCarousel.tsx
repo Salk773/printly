@@ -33,6 +33,7 @@ export default function HomepageCarousel({ images }: Props) {
         borderRadius: 20,
         overflow: "hidden",
       }}
+      className="homepage-carousel"
     >
       {images.map((src, i) => (
         <div

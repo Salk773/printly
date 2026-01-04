@@ -53,6 +53,7 @@ export default async function HomePage() {
           marginTop: 32,
           alignItems: "center",
         }}
+        className="hero-section"
       >
         <div>
           <div
@@ -76,7 +77,7 @@ export default async function HomePage() {
             across the UAE.
           </p>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+          <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
             <Link href="/products" className="btn-primary">
               Browse Products
             </Link>
@@ -98,16 +99,19 @@ export default async function HomePage() {
       )}
 
       {/* Featured products */}
-      <section style={{ marginTop: 56 }}>
+      <section style={{ marginTop: 56 }} className="featured-section">
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             marginBottom: 16,
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
           }}
         >
           <h2>Featured products</h2>
-          <Link href="/products" style={{ color: "#9ca3af" }}>
+          <Link href="/products" style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
             View all →
           </Link>
         </div>

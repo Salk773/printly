@@ -42,6 +42,7 @@ export default function CartPage() {
               gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)",
               gap: 24,
             }}
+            className="cart-grid"
           >
             {/* ITEMS */}
             <div

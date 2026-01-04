@@ -49,6 +49,7 @@ export default function FeaturedProductsGrid({ products }: Props) {
                 overflow: "hidden",
                 borderRadius: "12px 12px 0 0",
               }}
+              className="featured-product-image"
             >
               <Image
                 src={p.image_main}

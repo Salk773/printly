@@ -64,6 +64,8 @@ export default function ProductsClient({
             background: "#0f172a",
             color: "white",
             width: 260,
+            minWidth: 200,
+            flex: "1 1 200px",
           }}
         />
 
@@ -95,6 +97,7 @@ export default function ProductsClient({
           gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           gap: 22,
         }}
+        className="products-grid"
       >
         {filteredProducts.map((p) => (
           <ProductCard key={p.id} product={p} />

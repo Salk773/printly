@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
@@ -8,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 export default function Navbar() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const {
     count,
     toggleSideCart,
@@ -63,6 +65,7 @@ export default function Navbar() {
           alignItems: "center",
           justifyContent: "space-between",
           gap: 16,
+          position: "relative",
         }}
       >
         {/* LOGO */}
@@ -75,10 +78,55 @@ export default function Navbar() {
             letterSpacing: "0.04em",
             color: "#e5e7eb",
             textDecoration: "none",
+            zIndex: 1,
           }}
         >
           <span style={{ color: "#c084fc" }}>Print</span>ly
         </Link>
+
+        {/* MOBILE MENU BUTTON */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          style={{
+            display: "none",
+            flexDirection: "column",
+            gap: 4,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 8,
+            zIndex: 50,
+          }}
+          className="mobile-menu-btn"
+        >
+          <span
+            style={{
+              width: 24,
+              height: 2,
+              background: "#e5e7eb",
+              transition: "all 0.3s",
+              transform: mobileMenuOpen ? "rotate(45deg) translateY(8px)" : "none",
+            }}
+          />
+          <span
+            style={{
+              width: 24,
+              height: 2,
+              background: "#e5e7eb",
+              transition: "all 0.3s",
+              opacity: mobileMenuOpen ? 0 : 1,
+            }}
+          />
+          <span
+            style={{
+              width: 24,
+              height: 2,
+              background: "#e5e7eb",
+              transition: "all 0.3s",
+              transform: mobileMenuOpen ? "rotate(-45deg) translateY(-8px)" : "none",
+            }}
+          />
+        </button>
 
         {/* NAV LINKS */}
         <div
@@ -88,6 +136,7 @@ export default function Navbar() {
             fontSize: "0.95rem",
             alignItems: "center",
           }}
+          className={`nav-links ${mobileMenuOpen ? "mobile-menu-open" : ""}`}
         >
           {[
             { name: "Home", path: "/" },
@@ -220,7 +269,7 @@ export default function Navbar() {
               transform: cartJustUpdated ? "scale(1.12)" : "scale(1)",
             }}
           >
-            🛒 Cart
+            🛒 <span className="mobile-hidden">Cart</span>
 
             {count > 0 && (
               <span

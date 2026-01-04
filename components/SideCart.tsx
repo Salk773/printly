@@ -58,6 +58,7 @@ export default function SideCart() {
             ? "-6px 0 28px rgba(0,0,0,0.55)"
             : "-3px 0 22px rgba(0,0,0,0.25)",
         }}
+        className="side-cart"
       >
         {/* HEADER */}
         <div

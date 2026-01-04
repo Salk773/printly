@@ -175,6 +175,7 @@ export default function CheckoutPage() {
             gridTemplateColumns: "minmax(0, 1.4fr) minmax(260px, 1fr)",
             gap: 30,
           }}
+          className="checkout-grid"
         >
           {/* FORM */}
           <form onSubmit={handleSubmit} style={formStyle}>

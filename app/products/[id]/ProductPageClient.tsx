@@ -49,11 +49,13 @@ export default function ProductPageClient({ product }) {
           gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 1fr)",
           gap: 40,
         }}
+        className="product-page-grid"
       >
         {/* LEFT — GALLERY */}
         <div>
           {/* MAIN IMAGE */}
           <div
+            className="product-main-image"
             style={{
               position: "relative",
               width: "100%",

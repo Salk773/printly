@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   creator: "Printly",
   publisher: "Printly",
   metadataBase: new URL(siteUrl),
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
   alternates: {
     canonical: "/",
   },
@@ -97,6 +102,7 @@ export default function RootLayout({
                     padding: "40px 20px",
                     minHeight: "80vh",
                   }}
+                  className="main-content"
                 >
                   {children}
                 </main>
