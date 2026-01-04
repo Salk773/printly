@@ -13,7 +13,7 @@ export async function DELETE(req: NextRequest) {
     // Require admin authentication
     const authResult = await requireAdmin(req);
     if (!authResult.authorized) {
-      return authResult.response;
+      return (authResult as { authorized: false; response: NextResponse }).response;
     }
 
     const body = await req.json().catch(() => null);

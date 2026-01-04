@@ -94,7 +94,7 @@ export async function requireAdmin(
 
   if (!authResult.authorized) {
     return {
-      authorized: false,
+      authorized: false as const,
       response: NextResponse.json(
         { error: authResult.error || "Unauthorized" },
         { status: authResult.error?.includes("not an admin") ? 403 : 401 }
@@ -103,7 +103,7 @@ export async function requireAdmin(
   }
 
   return {
-    authorized: true,
+    authorized: true as const,
     user: authResult.user!,
   };
 }
