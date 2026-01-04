@@ -117,15 +117,27 @@ export default function AdminOrders({
 
     setDeletingId(orderId);
     try {
-      const { error } = await supabase.from("orders").delete().eq("id", orderId);
+      const response = await fetch("/api/orders/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete order");
+      }
+
+      // Optimistically remove from UI
+      setOrders((prev: Order[]) => prev.filter((x) => x.id !== orderId));
 
       toast.success("Order deleted.");
       reload();
     } catch (error: any) {
       console.error("Delete error:", error);
-      toast.error("Failed to delete order");
+      toast.error(error.message || "Failed to delete order");
+      reload(); // Reload to sync state
     } finally {
       setDeletingId(null);
     }
