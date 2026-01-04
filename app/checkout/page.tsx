@@ -160,7 +160,9 @@ export default function CheckoutPage() {
         </h1>
 
         <p style={{ color: "#9ca3af", marginBottom: 30 }}>
-          Complete your order below. No payment is required yet.
+          {user 
+            ? "Complete your order below. No payment is required yet."
+            : "Complete your order below. No account required - checkout as a guest. No payment is required yet."}
         </p>
 
         <div
