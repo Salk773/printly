@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { validateEnv } from "@/lib/validation/env";
 
+export const dynamic = "force-dynamic";
+
 interface HealthCheckResponse {
   status: "ok" | "fail" | "error";
   message: string;

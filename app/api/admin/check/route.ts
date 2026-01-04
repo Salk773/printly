@@ -7,6 +7,7 @@ import { verifyAdmin } from "@/lib/auth/adminAuth";
  * Used by client-side admin page to verify admin status
  */
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
