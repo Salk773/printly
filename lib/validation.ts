@@ -44,15 +44,33 @@ export function validateCheckoutForm(data: {
   city: string;
   state: string;
   postalCode?: string;
+  isGuest?: boolean;
 }): ValidationResult {
   const errors: string[] = [];
+  const isGuest = data.isGuest ?? false;
 
+  // For guest checkouts, email and name are required
+  if (isGuest) {
+    if (!data.email || !data.email.trim()) {
+      errors.push("Email is required");
+    } else if (!validateEmail(data.email)) {
+      errors.push("Please enter a valid email address");
+    }
+
+    if (!data.name || !data.name.trim()) {
+      errors.push("Name is required");
+    } else if (data.name.trim().length < 2) {
+      errors.push("Name must be at least 2 characters");
+    }
+  } else {
+    // For logged-in users, validate email/name if provided (optional)
   if (data.email && !validateEmail(data.email)) {
     errors.push("Please enter a valid email address");
   }
 
   if (data.name && data.name.trim().length < 2) {
     errors.push("Name must be at least 2 characters");
+    }
   }
 
   if (!validatePhone(data.phone)) {
