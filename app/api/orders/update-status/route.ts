@@ -5,6 +5,8 @@ import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { OrderStatusUpdateSchema, validateRequest } from "@/lib/validation/schemas";
 
+export const dynamic = "force-dynamic";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!

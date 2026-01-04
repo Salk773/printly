@@ -13,6 +13,8 @@ import { requireAdmin } from "@/lib/auth/adminAuth";
  * 
  * REQUIRES ADMIN AUTHENTICATION
  */
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     // Require admin authentication

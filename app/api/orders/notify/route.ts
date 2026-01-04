@@ -4,6 +4,8 @@ import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { OrderNotifySchema, validateRequest } from "@/lib/validation/schemas";
 import { sanitizeOrderDataForEmail, escapeHtml } from "@/lib/security/sanitize";
 
+export const dynamic = "force-dynamic";
+
 interface OrderEmailData {
   orderId: string;
   orderNumber: string | null;

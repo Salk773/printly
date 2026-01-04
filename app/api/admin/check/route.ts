@@ -6,6 +6,8 @@ import { verifyAdmin } from "@/lib/auth/adminAuth";
  * API endpoint to check if current user is an admin
  * Used by client-side admin page to verify admin status
  */
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const authResult = await verifyAdmin(req);

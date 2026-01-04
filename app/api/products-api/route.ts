@@ -11,6 +11,8 @@ import {
   validateRequest,
 } from "@/lib/validation/schemas";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   // Apply rate limiting for public endpoint
   const rateLimitResponse = rateLimitMiddleware(req, RATE_LIMITS.public);

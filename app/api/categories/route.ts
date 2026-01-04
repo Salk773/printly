@@ -9,6 +9,8 @@ import {
   validateRequest,
 } from "@/lib/validation/schemas";
 
+export const dynamic = "force-dynamic";
+
 function slugify(name: string) {
   return name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }

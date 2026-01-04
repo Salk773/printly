@@ -8,6 +8,8 @@ import { OrderDeleteSchema, validateRequest } from "@/lib/validation/schemas";
  * API endpoint to delete an order
  * Requires admin authentication
  */
+export const dynamic = "force-dynamic";
+
 export async function DELETE(req: NextRequest) {
   try {
     // Require admin authentication

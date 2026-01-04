@@ -7,6 +7,7 @@ import { rateLimitMiddleware, RATE_LIMITS } from "@/lib/auth/rateLimit";
  * Server-side file upload validation
  * Validates file type, size, and basic content checks
  */
+export const dynamic = "force-dynamic";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = [
