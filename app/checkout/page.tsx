@@ -109,8 +109,7 @@ export default function CheckoutPage() {
     setLoading(false);
 
     // Send email notifications (non-blocking)
-    const customerEmail = user?.email || email;
-    const customerName = user ? (user.user_metadata?.full_name || user.email?.split("@")[0]) : name;
+    // Note: customerEmail and customerName are already defined above
 
     const emailData = {
       orderId: data.id,
