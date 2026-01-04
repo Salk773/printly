@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const validation = validateRequest(OrderStatusUpdateSchema, body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error },
+        { error: (validation as { success: false; error: string }).error },
         { status: 400 }
       );
     }
