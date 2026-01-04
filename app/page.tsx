@@ -9,11 +9,25 @@ export const revalidate = 60;
 export default async function HomePage() {
   const supabase = supabaseServer();
 
-  const { data: products } = await supabase
+  // Fetch featured products - fallback to regular products if featured column doesn't exist
+  let productsQuery = supabase
     .from("products")
-    .select("id, name, description, price, image_main")
+    .select("id, name, description, price, image_main, featured")
     .eq("active", true)
+    .eq("featured", true)
     .limit(4);
+
+  let { data: products, error } = await productsQuery;
+
+  // If featured column doesn't exist, fallback to regular products
+  if (error && (error.message?.includes("featured") || error.code === "PGRST204")) {
+    const fallbackQuery = await supabase
+      .from("products")
+      .select("id, name, description, price, image_main")
+      .eq("active", true)
+      .limit(4);
+    products = fallbackQuery.data;
+  }
 
   const { data: galleryFiles } = await supabase.storage
     .from("uploads")
@@ -97,38 +111,44 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-4">
-          {products?.map((p) => (
-            <div key={p.id} className="card">
-              <Link href={`/products/${p.id}`}>
-                <div style={{ position: "relative", height: 230 }}>
-                  <Image
-                    src={p.image_main}
-                    alt={p.name}
-                    fill
-                    style={{ objectFit: "cover" }}
+        {products && products.length > 0 ? (
+          <div className="grid grid-4">
+            {products.map((p) => (
+              <div key={p.id} className="card">
+                <Link href={`/products/${p.id}`}>
+                  <div style={{ position: "relative", height: 230 }}>
+                    <Image
+                      src={p.image_main}
+                      alt={p.name}
+                      fill
+                      style={{ objectFit: "cover" }}
+                    />
+                  </div>
+                </Link>
+
+                <div style={{ padding: 14 }}>
+                  <strong>{p.name}</strong>
+                  <p style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
+                    {p.description}
+                  </p>
+                  <div>{p.price.toFixed(2)} AED</div>
+
+                  <AddToCartButton
+                    id={p.id}
+                    name={p.name}
+                    price={p.price}
+                    image={p.image_main}
+                    small
                   />
                 </div>
-              </Link>
-
-              <div style={{ padding: 14 }}>
-                <strong>{p.name}</strong>
-                <p style={{ color: "#9ca3af", fontSize: "0.8rem" }}>
-                  {p.description}
-                </p>
-                <div>{p.price.toFixed(2)} AED</div>
-
-                <AddToCartButton
-                  id={p.id}
-                  name={p.name}
-                  price={p.price}
-                  image={p.image_main}
-                  small
-                />
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: "#9ca3af", textAlign: "center", padding: 40 }}>
+            No featured products available. Mark products as featured in the admin panel to display them here.
+          </p>
+        )}
       </section>
     </>
   );
