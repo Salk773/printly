@@ -89,26 +89,50 @@ export default function EditProductModal({
 
     setSaving(true);
 
-    const { error } = await supabase
+    // Build update payload
+    const updatePayload: any = {
+      name: form.name,
+      price: Number(form.price),
+      description: form.description,
+      category_id: form.category_id || null,
+      image_main: form.image_main,
+      images: form.images,
+      active: form.active,
+    };
+
+    // Try to include featured - if column doesn't exist, we'll retry without it
+    updatePayload.featured = form.featured;
+
+    let { error } = await supabase
       .from("products")
-      .update({
-        name: form.name,
-        price: Number(form.price),
-        description: form.description,
-        category_id: form.category_id || null,
-        image_main: form.image_main,
-        images: form.images,
-        active: form.active,
-        featured: form.featured,
-      })
+      .update(updatePayload)
       .eq("id", product.id);
+
+    // If error is about featured column not existing, retry without it
+    if (error && (error.message?.includes("featured") || error.code === "PGRST204")) {
+      console.warn("Featured column doesn't exist, updating without it");
+      delete updatePayload.featured;
+      const retryResult = await supabase
+        .from("products")
+        .update(updatePayload)
+        .eq("id", product.id);
+      error = retryResult.error;
+      
+      if (!error) {
+        alert("Product updated, but 'featured' column doesn't exist yet. Please run migration: migrations/003_add_featured_column.sql");
+      }
+    }
 
     setSaving(false);
 
-    if (!error) {
-      onSaved();
-      onClose();
+    if (error) {
+      console.error("Update error:", error);
+      alert("Failed to update product: " + error.message);
+      return;
     }
+
+    onSaved();
+    onClose();
   };
 
   /* ---------- UI ---------- */
