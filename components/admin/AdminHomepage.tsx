@@ -228,6 +228,7 @@ export default function AdminHomepage({
           ))}
         </div>
       )}
-    </AdminCard>
+      </AdminCard>
+    </div>
   );
 }
