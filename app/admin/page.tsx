@@ -27,6 +27,7 @@ export type Product = {
   images: string[] | null;
   category_id: string | null;
   active: boolean;
+  featured?: boolean;
 };
 
 export type OrderItem = { name: string; price: number; quantity: number };
@@ -88,6 +89,7 @@ export default function AdminPage() {
     image_main: "",
     images: [] as string[],
     category_id: "",
+    featured: false,
   });
 
   /* ---------- ADMIN CHECK ---------- */
@@ -160,6 +162,7 @@ export default function AdminPage() {
         price: Number(newProduct.price),
         images: newProduct.images.slice(0, MAX_GALLERY),
         active: true,
+        featured: newProduct.featured || false,
       },
     ]);
 
@@ -170,6 +173,7 @@ export default function AdminPage() {
       image_main: "",
       images: [],
       category_id: "",
+      featured: false,
     });
 
     loadData();

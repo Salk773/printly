@@ -76,6 +76,18 @@ export default function AdminProducts({
           </select>
         </div>
 
+        {/* FEATURED CHECKBOX */}
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={newProduct.featured || false}
+            onChange={(e) =>
+              setNewProduct((p: any) => ({ ...p, featured: e.target.checked }))
+            }
+          />
+          <span>Featured product</span>
+        </label>
+
         {/* MAIN IMAGE */}
         <strong>Main image</strong>
         <AdminImageUpload

@@ -25,6 +25,7 @@ export default function EditProductModal({
     image_main: "",
     images: [] as string[],
     active: false,
+    featured: false,
   });
 
   const [saving, setSaving] = useState(false);
@@ -39,6 +40,7 @@ export default function EditProductModal({
       image_main: product.image_main ?? "",
       images: Array.isArray(product.images) ? product.images : [],
       active: !!product.active,
+      featured: !!product.featured,
     });
   }, [product]);
 
@@ -97,6 +99,7 @@ export default function EditProductModal({
         image_main: form.image_main,
         images: form.images,
         active: form.active,
+        featured: form.featured,
       })
       .eq("id", product.id);
 
@@ -153,12 +156,25 @@ export default function EditProductModal({
           }
         />
 
-        <button
-          className="btn-ghost"
-          onClick={() => setForm({ ...form, active: !form.active })}
-        >
-          {form.active ? "Active" : "Inactive"}
-        </button>
+        <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+          <button
+            className="btn-ghost"
+            onClick={() => setForm({ ...form, active: !form.active })}
+          >
+            {form.active ? "Active" : "Inactive"}
+          </button>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={form.featured}
+              onChange={(e) =>
+                setForm({ ...form, featured: e.target.checked })
+              }
+            />
+            <span>Featured product</span>
+          </label>
+        </div>
 
         <strong>Main image</strong>
         <AdminImageUpload onUploaded={setAsMain} />
