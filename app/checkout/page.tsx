@@ -129,6 +129,8 @@ export default function CheckoutPage() {
         name: i.name,
         price: i.price,
         quantity: i.quantity,
+        image: i.image,
+        id: i.id,
       })),
       total,
       status: "pending",
@@ -320,21 +322,61 @@ export default function CheckoutPage() {
 
           {/* SUMMARY */}
           <aside style={summaryStyle}>
-            <h2 style={{ fontSize: "1.1rem" }}>Order summary</h2>
+            <h2 style={{ fontSize: "1.1rem", marginBottom: 16 }}>Order summary</h2>
 
-            {items.map((item) => (
-              <div
-                key={item.id}
-                style={{ display: "flex", justifyContent: "space-between" }}
-              >
-                <span>
-                  {item.name} × {item.quantity}
-                </span>
-                <span>
-                  {(item.price * item.quantity).toFixed(2)} AED
-                </span>
-              </div>
-            ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                    paddingBottom: 12,
+                    borderBottom: "1px solid rgba(148,163,184,0.1)",
+                  }}
+                >
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 10,
+                      objectFit: "cover",
+                      border: "1px solid rgba(148,163,184,0.15)",
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        marginBottom: 4,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                      Qty: {item.quantity}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      color: "#c084fc",
+                      textAlign: "right",
+                    }}
+                  >
+                    {(item.price * item.quantity).toFixed(2)} AED
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div
               style={{

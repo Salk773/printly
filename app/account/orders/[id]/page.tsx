@@ -11,6 +11,8 @@ interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  image?: string;
+  id?: string;
 }
 
 interface Order {
@@ -42,6 +44,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loadingOrder, setLoadingOrder] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [productImages, setProductImages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -74,6 +77,24 @@ export default function OrderDetailsPage() {
         return;
       }
       setOrder(data);
+
+      // Fetch product images for items that don't have images
+      const itemsNeedingImages = data.items.filter((item: OrderItem) => !item.image && item.id);
+      if (itemsNeedingImages.length > 0) {
+        const productIds = itemsNeedingImages.map((item: OrderItem) => item.id).filter(Boolean);
+        const { data: products } = await supabase
+          .from("products")
+          .select("id, image_main")
+          .in("id", productIds);
+
+        if (products) {
+          const imageMap: Record<string, string> = {};
+          products.forEach((p: any) => {
+            if (p.image_main) imageMap[p.id] = p.image_main;
+          });
+          setProductImages(imageMap);
+        }
+      }
     } catch (error: any) {
       console.error("Error loading order:", error);
       toast.error("Failed to load order details");
@@ -262,37 +283,59 @@ export default function OrderDetailsPage() {
         >
           <h2 style={{ fontSize: "1.2rem", marginBottom: 20 }}>Order Items</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {order.items.map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  paddingBottom: 16,
-                  borderBottom:
-                    idx < order.items.length - 1
-                      ? "1px solid rgba(148,163,184,0.1)"
-                      : "none",
-                }}
-              >
-                <div>
-                  <p style={{ fontWeight: 600, marginBottom: 4 }}>
-                    {item.name}
-                  </p>
-                  <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-                    Quantity: {item.quantity}
-                  </p>
+            {order.items.map((item, idx) => {
+              // Try to get image from order item, fetched product image, or placeholder
+              const itemImage = item.image || productImages[item.id || ""] || "/placeholder-product.png";
+              
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    display: "flex",
+                    gap: 16,
+                    alignItems: "center",
+                    paddingBottom: 16,
+                    borderBottom:
+                      idx < order.items.length - 1
+                        ? "1px solid rgba(148,163,184,0.1)"
+                        : "none",
+                  }}
+                >
+                  <img
+                    src={itemImage}
+                    alt={item.name}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 12,
+                      objectFit: "cover",
+                      border: "1px solid rgba(148,163,184,0.15)",
+                      flexShrink: 0,
+                    }}
+                    onError={(e) => {
+                      // Fallback to a placeholder if image fails to load
+                      (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, marginBottom: 4 }}>
+                      {item.name}
+                    </p>
+                    <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
+                      Quantity: {item.quantity}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: "1rem" }}>
+                      {(item.price * item.quantity).toFixed(2)} AED
+                    </p>
+                    <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
+                      {item.price.toFixed(2)} AED each
+                    </p>
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontWeight: 600 }}>
-                    {(item.price * item.quantity).toFixed(2)} AED
-                  </p>
-                  <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-                    {item.price.toFixed(2)} AED each
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
