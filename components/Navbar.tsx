@@ -142,6 +142,8 @@ export default function Navbar() {
             { name: "Home", path: "/" },
             { name: "Products", path: "/products" },
             { name: "Wishlist", path: "/wishlist" },
+            { name: "Compare", path: "/compare" },
+            ...(user ? [{ name: "Account", path: "/account" }] : []),
           ].map((item) => (
             <Link
               key={item.path}

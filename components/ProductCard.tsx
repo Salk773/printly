@@ -5,6 +5,7 @@ import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useState } from "react";
 import { useWishlist } from "@/context/WishlistProvider";
+import { useComparison } from "@/context/ComparisonProvider";
 
 type ProductCardProps = {
   product: {
@@ -19,7 +20,9 @@ type ProductCardProps = {
 export default function ProductCard({ product }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { addProduct: addToComparison, isInComparison, removeProduct: removeFromComparison } = useComparison();
   const inWishlist = isInWishlist(product.id);
+  const inComparison = isInComparison(product.id);
 
   return (
     <div
@@ -130,13 +133,46 @@ export default function ProductCard({ product }: ProductCardProps) {
           </button>
         </div>
 
-        <AddToCartButton
-          id={product.id}
-          name={product.name}
-          price={product.price}
-          image={product.image_main}
-          small
-        />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <AddToCartButton
+            id={product.id}
+            name={product.name}
+            price={product.price}
+            image={product.image_main}
+            small
+          />
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (inComparison) {
+                removeFromComparison(product.id);
+              } else {
+                addToComparison({
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  image: product.image_main,
+                  description: product.description,
+                  category_id: (product as any).category_id,
+                });
+              }
+            }}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 8,
+              border: "1px solid rgba(148,163,184,0.3)",
+              background: inComparison ? "rgba(192,132,252,0.2)" : "transparent",
+              color: inComparison ? "#c084fc" : "#9ca3af",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+            }}
+            title={inComparison ? "Remove from comparison" : "Add to comparison"}
+          >
+            {inComparison ? "✓ Compare" : "Compare"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -108,6 +108,19 @@ export default function LoginPage() {
             />
           </label>
 
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <a
+              href="/auth/forgot-password"
+              style={{
+                fontSize: "0.8rem",
+                color: "#c084fc",
+                textDecoration: "none",
+              }}
+            >
+              Forgot Password?
+            </a>
+          </div>
+
           {errorMsg && (
             <p
               style={{

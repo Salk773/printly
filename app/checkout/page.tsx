@@ -30,6 +30,8 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
   const hasItems = items.length > 0;
 
@@ -39,6 +41,49 @@ export default function CheckoutPage() {
       router.push("/cart");
     }
   }, [hasItems, orderPlaced, router]);
+
+  // Load saved addresses for logged-in users
+  useEffect(() => {
+    if (user) {
+      loadSavedAddresses();
+    }
+  }, [user]);
+
+  const loadSavedAddresses = async () => {
+    if (!user) return;
+    try {
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) return;
+
+      const response = await fetch("/api/account/addresses", {
+        headers: {
+          Authorization: `Bearer ${session.data.session.access_token}`,
+        },
+      });
+
+      const result = await response.json();
+      if (result.success && result.addresses) {
+        setSavedAddresses(result.addresses);
+        // Auto-select default address
+        const defaultAddr = result.addresses.find((a: any) => a.is_default);
+        if (defaultAddr) {
+          useSavedAddress(defaultAddr);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading saved addresses:", error);
+    }
+  };
+
+  const useSavedAddress = (address: any) => {
+    setSelectedAddressId(address.id);
+    setPhone(address.phone || "");
+    setAddress1(address.address_line_1);
+    setAddress2(address.address_line_2 || "");
+    setCity(address.city);
+    setState(address.state);
+    setPostalCode(address.postal_code || "");
+  };
 
   // SINGLE order submit handler
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,6 +236,53 @@ export default function CheckoutPage() {
                   type="email"
                 />
               </>
+            )}
+
+            {user && savedAddresses.length > 0 && (
+              <div>
+                <label style={{ fontSize: "0.85rem", color: "#cbd5f5", display: "block", marginBottom: 6 }}>
+                  Use saved address
+                </label>
+                <select
+                  value={selectedAddressId}
+                  onChange={(e) => {
+                    const addr = savedAddresses.find((a) => a.id === e.target.value);
+                    if (addr) {
+                      useSavedAddress(addr);
+                    } else {
+                      setSelectedAddressId("");
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(148,163,184,0.3)",
+                    background: "#020617",
+                    color: "white",
+                    marginBottom: 12,
+                  }}
+                >
+                  <option value="">Enter new address</option>
+                  {savedAddresses.map((addr) => (
+                    <option key={addr.id} value={addr.id}>
+                      {addr.label} {addr.is_default && "(Default)"}
+                    </option>
+                  ))}
+                </select>
+                {selectedAddressId && (
+                  <Link
+                    href="/account/addresses"
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#93c5fd",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Manage addresses →
+                  </Link>
+                )}
+              </div>
             )}
 
             <Input label="Phone" value={phone} onChange={setPhone} />

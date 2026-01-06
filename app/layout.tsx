@@ -8,6 +8,8 @@ import SideCart from "@/components/SideCart";
 import { AuthProvider } from "@/context/AuthProvider";
 import { CartProvider } from "@/context/CartProvider";
 import { WishlistProvider } from "@/context/WishlistProvider";
+import { RecentlyViewedProvider } from "@/context/RecentlyViewedProvider";
+import { ComparisonProvider } from "@/context/ComparisonProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { Toaster } from "react-hot-toast";
@@ -91,7 +93,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             <WishlistProvider>
-              <CartProvider>
+              <RecentlyViewedProvider>
+                <ComparisonProvider>
+                  <CartProvider>
                 <Toaster position="top-right" />
                 <SideCart />
                 <Navbar />
@@ -107,7 +111,9 @@ export default function RootLayout({
                   {children}
                 </main>
                 <Footer />
-              </CartProvider>
+                  </CartProvider>
+                </ComparisonProvider>
+              </RecentlyViewedProvider>
             </WishlistProvider>
           </AuthProvider>
         </ErrorBoundary>

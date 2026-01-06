@@ -4,10 +4,26 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useWishlist } from "@/context/WishlistProvider";
+import { useRecentlyViewed } from "@/context/RecentlyViewedProvider";
+import ProductReviews from "@/components/ProductReviews";
+import ReviewForm from "@/components/ReviewForm";
+import RelatedProducts from "@/components/RelatedProducts";
+import SocialShare from "@/components/SocialShare";
 
 export default function ProductPageClient({ product }) {
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { addProduct } = useRecentlyViewed();
   const inWishlist = isInWishlist(product.id);
+
+  // Track product view
+  useEffect(() => {
+    addProduct({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_main,
+    });
+  }, [product.id, product.name, product.price, product.image_main, addProduct]);
 
   const extraImages = Array.isArray(product.images) ? product.images : [];
   const images = [product.image_main, ...extraImages].filter(Boolean);
@@ -192,8 +208,26 @@ export default function ProductPageClient({ product }) {
             price={product.price}
             image={product.image_main}
           />
+
+          {/* SOCIAL SHARE */}
+          <SocialShare
+            productName={product.name}
+            productUrl={`/products/${product.id}`}
+            productImage={product.image_main}
+            productDescription={product.description}
+          />
         </div>
       </div>
+
+      {/* REVIEWS */}
+      <ProductReviews productId={product.id} />
+      <ReviewForm productId={product.id} />
+
+      {/* RELATED PRODUCTS */}
+      <RelatedProducts
+        productId={product.id}
+        categoryId={product.category_id}
+      />
     </main>
   );
 }

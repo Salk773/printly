@@ -91,6 +91,8 @@ export default function AdminPage() {
     images: [] as string[],
     category_id: "",
     featured: false,
+    stock_quantity: "",
+    low_stock_threshold: "5",
   });
 
   /* ---------- ADMIN CHECK ---------- */
