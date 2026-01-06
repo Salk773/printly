@@ -30,6 +30,8 @@ export type Product = {
   category_id: string | null;
   active: boolean;
   featured?: boolean;
+  stock_quantity?: number | null;
+  low_stock_threshold?: number | null;
 };
 
 export type OrderItem = { name: string; price: number; quantity: number };
@@ -256,6 +258,32 @@ export default function AdminPage() {
     if (error) loadData();
   };
 
+  const updateStockQuantity = async (productId: string, quantity: number | null) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+
+    // Optimistically update UI
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, stock_quantity: quantity } : p))
+    );
+
+    const { error } = await supabase
+      .from("products")
+      .update({ stock_quantity: quantity })
+      .eq("id", productId);
+
+    if (!error) {
+      await logAdminAction("update_stock", "product", productId, {
+        name: product.name,
+        oldQuantity: product.stock_quantity,
+        newQuantity: quantity,
+      });
+    } else {
+      // Revert on error
+      loadData();
+    }
+  };
+
   /* ---------- RENDER GATES ---------- */
   if (!adminChecked) return <p>Checking admin access…</p>;
   if (!isAdmin) return null;
@@ -307,6 +335,7 @@ export default function AdminPage() {
           setNewProduct={setNewProduct}
           addProduct={addProduct}
           toggleActive={toggleActive}
+          updateStockQuantity={updateStockQuantity}
           deleteProduct={async (id) => {
             const product = products.find((p) => p.id === id);
             await supabase.from("products").delete().eq("id", id);

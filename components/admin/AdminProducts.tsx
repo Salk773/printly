@@ -1,6 +1,7 @@
 import AdminImageUpload from "@/components/AdminImageUpload";
 import AdminCard from "@/components/admin/AdminCard";
 import { Category, Product } from "@/app/admin/page";
+import { useState } from "react";
 
 const MAX_GALLERY = 8;
 
@@ -11,6 +12,7 @@ export default function AdminProducts({
   setNewProduct,
   addProduct,
   toggleActive,
+  updateStockQuantity,
   deleteProduct,
   onEdit,
 }: {
@@ -20,9 +22,12 @@ export default function AdminProducts({
   setNewProduct: any;
   addProduct: () => void;
   toggleActive: (p: Product) => void;
+  updateStockQuantity: (productId: string, quantity: number | null) => void;
   deleteProduct: (id: string) => void;
   onEdit: (p: Product) => void;
 }) {
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [stockInput, setStockInput] = useState<string>("");
   const addGalleryImage = (url: string) => {
     setNewProduct((p: any) => {
       if (p.images.length >= MAX_GALLERY) return p;
@@ -170,53 +175,177 @@ export default function AdminProducts({
       </AdminCard>
 
       {/* PRODUCT LIST */}
-      {products.map((p) => (
-        <AdminCard key={p.id} maxWidth={760}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            {p.image_main && (
-              <img
-                src={p.image_main}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 6,
-                  objectFit: "cover",
-                }}
-              />
-            )}
+      {products.map((p) => {
+        const isEditingStock = editingStockId === p.id;
+        const stockValue = p.stock_quantity ?? null;
+        const stockDisplay = stockValue === null ? "Unlimited" : stockValue.toString();
 
-            <strong style={{ flex: 1 }}>{p.name}</strong>
-
-            <button
-              className="btn-ghost"
-              onClick={() => toggleActive(p)}
+        return (
+          <AdminCard key={p.id} maxWidth={760}>
+            <div
               style={{
-                color: p.active ? "#22c55e" : "#ef4444",
-                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
-              {p.active ? "Active" : "Inactive"}
-            </button>
+              {p.image_main && (
+                <img
+                  src={p.image_main}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 6,
+                    objectFit: "cover",
+                  }}
+                />
+              )}
 
-            <button className="btn-ghost" onClick={() => onEdit(p)}>
-              Edit
-            </button>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <strong style={{ display: "block", marginBottom: 4 }}>{p.name}</strong>
+                <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
+                  {p.price.toFixed(2)} AED
+                </div>
+              </div>
 
-            <button
-              className="btn-danger"
-              onClick={() => deleteProduct(p.id)}
-            >
-              Delete
-            </button>
-          </div>
-        </AdminCard>
-      ))}
+              {/* STOCK QUANTITY */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isEditingStock ? (
+                  <>
+                    <input
+                      type="number"
+                      value={stockInput}
+                      onChange={(e) => setStockInput(e.target.value)}
+                      placeholder="Qty"
+                      style={{
+                        width: 100,
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid rgba(148,163,184,0.3)",
+                        background: "#020617",
+                        color: "white",
+                        fontSize: "0.85rem",
+                      }}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const newQty = stockInput.trim() === "" ? null : parseInt(stockInput);
+                          if (stockInput.trim() === "" || (!isNaN(newQty!) && newQty! >= 0)) {
+                            updateStockQuantity(p.id, newQty);
+                            setEditingStockId(null);
+                            setStockInput("");
+                          }
+                        } else if (e.key === "Escape") {
+                          setEditingStockId(null);
+                          setStockInput("");
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const newQty = stockInput.trim() === "" ? null : parseInt(stockInput);
+                        if (stockInput.trim() === "" || (!isNaN(newQty!) && newQty! >= 0)) {
+                          updateStockQuantity(p.id, newQty);
+                          setEditingStockId(null);
+                          setStockInput("");
+                        }
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#22c55e",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingStockId(null);
+                        setStockInput("");
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#ef4444",
+                        color: "white",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        background: stockValue === null 
+                          ? "rgba(148,163,184,0.1)" 
+                          : stockValue === 0
+                          ? "rgba(239,68,68,0.2)"
+                          : stockValue <= (p.low_stock_threshold || 5)
+                          ? "rgba(245,158,11,0.2)"
+                          : "rgba(34,197,94,0.2)",
+                        color: stockValue === null
+                          ? "#94a3b8"
+                          : stockValue === 0
+                          ? "#ef4444"
+                          : stockValue <= (p.low_stock_threshold || 5)
+                          ? "#f59e0b"
+                          : "#22c55e",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        minWidth: 100,
+                        textAlign: "center",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => {
+                        setEditingStockId(p.id);
+                        setStockInput(stockValue === null ? "" : stockValue.toString());
+                      }}
+                      title="Click to edit stock quantity"
+                    >
+                      Stock: {stockDisplay}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button
+                className="btn-ghost"
+                onClick={() => toggleActive(p)}
+                style={{
+                  color: p.active ? "#22c55e" : "#ef4444",
+                  fontWeight: 600,
+                }}
+              >
+                {p.active ? "Active" : "Inactive"}
+              </button>
+
+              <button className="btn-ghost" onClick={() => onEdit(p)}>
+                Edit
+              </button>
+
+              <button
+                className="btn-danger"
+                onClick={() => deleteProduct(p.id)}
+              >
+                Delete
+              </button>
+            </div>
+          </AdminCard>
+        );
+      })}
     </>
   );
 }
