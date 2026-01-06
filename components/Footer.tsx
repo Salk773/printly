@@ -65,11 +65,24 @@ export default function Footer() {
             Support
           </h4>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <a href="mailto:info@printly.ae" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
+            <Link href="/contact" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
               Contact Us
-            </a>
+            </Link>
             <Link href="/account/orders" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
               Track Order
+            </Link>
+          </div>
+        </div>
+        <div>
+          <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 12, color: "#e5e7eb" }}>
+            Legal
+          </h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Link href="/privacy" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
+              Privacy Policy
+            </Link>
+            <Link href="/refund" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
+              Refund Policy
             </Link>
           </div>
         </div>

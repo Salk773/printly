@@ -298,6 +298,11 @@ main.page {
     gap: 20px !important;
   }
 
+  .contact-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
   nav {
     padding: 12px 16px !important;
   }
