@@ -88,6 +88,28 @@ export default function AdminProducts({
           <span>Featured product</span>
         </label>
 
+        {/* STOCK MANAGEMENT */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <input
+            className="input"
+            type="number"
+            placeholder="Stock quantity (leave empty for unlimited)"
+            value={newProduct.stock_quantity || ""}
+            onChange={(e) =>
+              setNewProduct((p: any) => ({ ...p, stock_quantity: e.target.value }))
+            }
+          />
+          <input
+            className="input"
+            type="number"
+            placeholder="Low stock threshold"
+            value={newProduct.low_stock_threshold || "5"}
+            onChange={(e) =>
+              setNewProduct((p: any) => ({ ...p, low_stock_threshold: e.target.value }))
+            }
+          />
+        </div>
+
         {/* MAIN IMAGE */}
         <strong>Main image</strong>
         <AdminImageUpload

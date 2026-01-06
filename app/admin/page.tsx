@@ -207,6 +207,8 @@ export default function AdminPage() {
         images: newProduct.images.slice(0, MAX_GALLERY),
         active: true,
         featured: newProduct.featured || false,
+        stock_quantity: newProduct.stock_quantity ? Number(newProduct.stock_quantity) : null,
+        low_stock_threshold: newProduct.low_stock_threshold ? Number(newProduct.low_stock_threshold) : 5,
       },
     ]).select().single();
 
@@ -227,6 +229,8 @@ export default function AdminPage() {
       images: [],
       category_id: "",
       featured: false,
+      stock_quantity: "",
+      low_stock_threshold: "5",
     });
 
     loadData();
