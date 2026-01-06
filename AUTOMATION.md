@@ -18,8 +18,8 @@ The application includes comprehensive automation for monitoring, maintenance, b
 - **Configuration**: Modify `processingToCompletedDays` in the endpoint (default: 7 days)
 
 #### Auto-Cancel Pending Orders
-- **Endpoint**: `/api/orders/auto-cancel`
-- **Schedule**: Daily at 3:00 AM UTC (`0 3 * * *`)
+- **Endpoint**: `/api/orders/auto-cancel` (manual) or `/api/admin/maintenance` (scheduled)
+- **Schedule**: Daily at 3:00 AM UTC via combined maintenance endpoint (`0 3 * * *`)
 - **Function**: Automatically cancels orders in "pending" status older than 30 days
 - **Email**: Sends cancellation email to customers
 - **Configuration**: Set `AUTO_CANCEL_DAYS` environment variable (default: 30 days)
@@ -27,25 +27,35 @@ The application includes comprehensive automation for monitoring, maintenance, b
 ### 2. Inventory Management
 
 #### Low Stock Alerts
-- **Endpoint**: `/api/products/low-stock-alert`
-- **Schedule**: Daily at 9:00 AM UTC (`0 9 * * *`)
+- **Endpoint**: `/api/products/low-stock-alert` (manual) or `/api/admin/maintenance` (scheduled)
+- **Schedule**: Daily at 3:00 AM UTC via combined maintenance endpoint (`0 3 * * *`)
 - **Function**: Checks products with stock below threshold and sends email alert to admin
 - **Email**: Sends formatted email with product details and stock levels
 - **Configuration**: Set `LOW_STOCK_THRESHOLD` environment variable (default: 5 units)
 
 ### 3. Maintenance
 
+#### Combined Maintenance Tasks
+- **Endpoint**: `/api/admin/maintenance`
+- **Schedule**: Daily at 3:00 AM UTC (`0 3 * * *`)
+- **Function**: Runs all maintenance tasks in a single cron job:
+  - Auto-cancel old pending orders
+  - Low stock alerts
+  - Log cleanup (deletes logs older than 1 year)
+  - Backup verification (database connectivity check)
+- **Note**: Individual endpoints exist for manual testing but are combined for cron scheduling to stay within Vercel plan limits
+
 #### Log Cleanup
-- **Endpoint**: `/api/admin/cleanup-logs`
-- **Schedule**: Weekly on Sunday at 2:00 AM UTC (`0 2 * * 0`)
+- **Endpoint**: `/api/admin/cleanup-logs` (manual) or `/api/admin/maintenance` (scheduled)
+- **Schedule**: Daily at 3:00 AM UTC via combined maintenance endpoint (`0 3 * * *`)
 - **Function**: 
   - Archives logs older than 90 days (currently logs remain, archiving can be implemented)
   - Deletes logs older than 1 year
 - **Configuration**: Modify cutoff dates in the endpoint if needed
 
 #### Backup Verification
-- **Endpoint**: `/api/admin/verify-backup`
-- **Schedule**: Weekly on Sunday at 4:00 AM UTC (`0 4 * * 0`)
+- **Endpoint**: `/api/admin/verify-backup` (manual) or `/api/admin/maintenance` (scheduled)
+- **Schedule**: Daily at 3:00 AM UTC via combined maintenance endpoint (`0 3 * * *`)
 - **Function**: Verifies database connectivity and table accessibility
 - **Note**: Supabase handles backups automatically; this endpoint verifies connectivity
 
@@ -117,7 +127,7 @@ The application includes comprehensive automation for monitoring, maintenance, b
 
 ## Cron Job Configuration
 
-All cron jobs are configured in `vercel.json`:
+All cron jobs are configured in `vercel.json`. Due to Vercel's plan limits (2 cron jobs on free/hobby plans), maintenance tasks are combined into a single endpoint:
 
 ```json
 {
@@ -127,24 +137,22 @@ All cron jobs are configured in `vercel.json`:
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/orders/auto-cancel",
+      "path": "/api/admin/maintenance",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/products/low-stock-alert",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/admin/cleanup-logs",
-      "schedule": "0 2 * * 0"
-    },
-    {
-      "path": "/api/admin/verify-backup",
-      "schedule": "0 4 * * 0"
     }
   ]
 }
 ```
+
+### Combined Maintenance Endpoint
+
+The `/api/admin/maintenance` endpoint handles multiple tasks:
+- Auto-cancel old pending orders
+- Low stock alerts
+- Log cleanup
+- Backup verification
+
+**Note**: Individual endpoints still exist for manual testing, but they're not scheduled as separate cron jobs to stay within plan limits. If you upgrade to a plan with more cron jobs, you can split these into separate scheduled tasks.
 
 ## Security
 
@@ -189,11 +197,20 @@ curl -X POST https://your-domain.com/api/orders/auto-cancel \
 curl -X POST https://your-domain.com/api/products/low-stock-alert \
   -H "Authorization: Bearer your-cron-secret"
 
-# Test log cleanup
+# Test combined maintenance (runs all tasks)
+curl -X POST https://your-domain.com/api/admin/maintenance \
+  -H "Authorization: Bearer your-cron-secret"
+
+# Test individual endpoints (for manual use)
+curl -X POST https://your-domain.com/api/orders/auto-cancel \
+  -H "Authorization: Bearer your-cron-secret"
+
+curl -X POST https://your-domain.com/api/products/low-stock-alert \
+  -H "Authorization: Bearer your-cron-secret"
+
 curl -X POST https://your-domain.com/api/admin/cleanup-logs \
   -H "Authorization: Bearer your-cron-secret"
 
-# Test backup verification
 curl -X POST https://your-domain.com/api/admin/verify-backup \
   -H "Authorization: Bearer your-cron-secret"
 ```

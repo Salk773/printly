@@ -10,20 +10,8 @@
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/orders/auto-cancel",
+      "path": "/api/admin/maintenance",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/products/low-stock-alert",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/admin/cleanup-logs",
-      "schedule": "0 2 * * 0"
-    },
-    {
-      "path": "/api/admin/verify-backup",
-      "schedule": "0 4 * * 0"
     }
   ],
   "env": {
