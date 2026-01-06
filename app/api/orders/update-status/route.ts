@@ -101,7 +101,10 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (updateError || !updatedOrder) {
-      logApiError("/api/orders/update-status", updateError || new Error("Failed to update order"), {
+      const error = updateError 
+        ? new Error(updateError.message || "Failed to update order")
+        : new Error("Failed to update order");
+      logApiError("/api/orders/update-status", error, {
         orderId,
         newStatus,
         currentStatus,
