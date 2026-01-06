@@ -63,9 +63,21 @@ export default function AdminOrders({
     );
 
     try {
+      // Get auth token for admin API call
+      const session = await supabase.auth.getSession();
+      if (!session.data.session) {
+        toast.error("Please log in to update order status");
+        reload();
+        return;
+      }
+
+      const token = session.data.session.access_token;
       const response = await fetch("/api/orders/update-status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           orderId,
           newStatus,
