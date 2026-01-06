@@ -47,7 +47,7 @@ export function trackApiPerformance(
       import("@sentry/nextjs").then((Sentry) => {
         Sentry.captureMessage(`Slow API: ${method} ${endpoint}`, {
           level: "warning",
-          extra: metric,
+          extra: metric as Record<string, any>,
         });
       }).catch(() => {
         // Fail silently if Sentry is not available
