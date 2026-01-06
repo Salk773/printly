@@ -177,7 +177,8 @@ export default function AdminProducts({
       {/* PRODUCT LIST */}
       {products.map((p) => {
         const isEditingStock = editingStockId === p.id;
-        const stockValue = p.stock_quantity ?? null;
+        // Handle both undefined and null - undefined means column might not exist or wasn't loaded
+        const stockValue = p.stock_quantity !== undefined ? p.stock_quantity : null;
         const stockDisplay = stockValue === null ? "Unlimited" : stockValue.toString();
 
         return (
@@ -230,12 +231,25 @@ export default function AdminProducts({
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          const newQty = stockInput.trim() === "" ? null : parseInt(stockInput);
-                          if (stockInput.trim() === "" || (!isNaN(newQty!) && newQty! >= 0)) {
-                            updateStockQuantity(p.id, newQty);
-                            setEditingStockId(null);
-                            setStockInput("");
+                          e.preventDefault();
+                          const trimmed = stockInput.trim();
+                          let newQty: number | null = null;
+                          
+                          if (trimmed === "") {
+                            newQty = null;
+                          } else {
+                            const parsed = parseInt(trimmed, 10);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                              newQty = parsed;
+                            } else {
+                              alert("Please enter a valid number (0 or greater)");
+                              return;
+                            }
                           }
+                          
+                          updateStockQuantity(p.id, newQty);
+                          setEditingStockId(null);
+                          setStockInput("");
                         } else if (e.key === "Escape") {
                           setEditingStockId(null);
                           setStockInput("");
@@ -244,12 +258,24 @@ export default function AdminProducts({
                     />
                     <button
                       onClick={() => {
-                        const newQty = stockInput.trim() === "" ? null : parseInt(stockInput);
-                        if (stockInput.trim() === "" || (!isNaN(newQty!) && newQty! >= 0)) {
-                          updateStockQuantity(p.id, newQty);
-                          setEditingStockId(null);
-                          setStockInput("");
+                        const trimmed = stockInput.trim();
+                        let newQty: number | null = null;
+                        
+                        if (trimmed === "") {
+                          newQty = null;
+                        } else {
+                          const parsed = parseInt(trimmed, 10);
+                          if (!isNaN(parsed) && parsed >= 0) {
+                            newQty = parsed;
+                          } else {
+                            alert("Please enter a valid number (0 or greater)");
+                            return;
+                          }
                         }
+                        
+                        updateStockQuantity(p.id, newQty);
+                        setEditingStockId(null);
+                        setStockInput("");
                       }}
                       style={{
                         padding: "6px 12px",
@@ -309,7 +335,9 @@ export default function AdminProducts({
                         textAlign: "center",
                         cursor: "pointer",
                       }}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         setEditingStockId(p.id);
                         setStockInput(stockValue === null ? "" : stockValue.toString());
                       }}

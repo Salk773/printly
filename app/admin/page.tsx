@@ -157,7 +157,11 @@ export default function AdminPage() {
       ]);
 
     setCategories(cats || []);
-    setProducts(prods || []);
+    // Ensure stock_quantity is included in products
+    setProducts((prods || []).map((p: any) => ({
+      ...p,
+      stock_quantity: p.stock_quantity !== undefined ? p.stock_quantity : null,
+    })));
     setOrders((ords as Order[]) || []);
 
     const urls =
@@ -260,7 +264,10 @@ export default function AdminPage() {
 
   const updateStockQuantity = async (productId: string, quantity: number | null) => {
     const product = products.find((p) => p.id === productId);
-    if (!product) return;
+    if (!product) {
+      console.error("Product not found:", productId);
+      return;
+    }
 
     // Optimistically update UI
     setProducts((prev) =>
@@ -272,15 +279,17 @@ export default function AdminPage() {
       .update({ stock_quantity: quantity })
       .eq("id", productId);
 
-    if (!error) {
-      await logAdminAction("update_stock", "product", productId, {
-        name: product.name,
-        oldQuantity: product.stock_quantity,
-        newQuantity: quantity,
-      });
-    } else {
+    if (error) {
+      console.error("Error updating stock quantity:", error);
       // Revert on error
       loadData();
+      alert(`Failed to update stock quantity: ${error.message}`);
+    } else {
+      await logAdminAction("update_stock", "product", productId, {
+        name: product.name,
+        oldQuantity: product.stock_quantity ?? null,
+        newQuantity: quantity,
+      });
     }
   };
 
