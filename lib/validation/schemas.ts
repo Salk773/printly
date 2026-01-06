@@ -48,10 +48,10 @@ export const CategoryUpdateSchema = z.object({
 // Order schemas
 export const OrderStatusUpdateSchema = z.object({
   orderId: z.string().uuid("Invalid order ID"),
-  newStatus: z.enum(["pending", "paid", "processing", "completed", "cancelled"], {
+  newStatus: z.enum(["pending", "paid", "processing", "completed", "cancelled", "refunded"], {
     errorMap: () => ({ message: "Invalid status value" }),
   }),
-  currentStatus: z.enum(["pending", "paid", "processing", "completed", "cancelled"]),
+  currentStatus: z.enum(["pending", "paid", "processing", "completed", "cancelled", "refunded"]),
 });
 
 export const OrderDeleteSchema = z.object({
