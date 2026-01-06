@@ -13,6 +13,7 @@ import AdminProducts from "@/components/admin/AdminProducts";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminLogs from "@/components/admin/AdminLogs";
+import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 
 /* ================= TYPES ================= */
@@ -66,7 +67,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [tab, setTab] = useState<
-    "products" | "categories" | "homepage" | "orders" | "logs"
+    "products" | "categories" | "homepage" | "orders" | "logs" | "analytics"
   >("products");
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -381,6 +382,8 @@ export default function AdminPage() {
           onView={setViewingOrder}
         />
       )}
+
+      {tab === "analytics" && <AdminAnalytics />}
 
       {tab === "logs" && <AdminLogs />}
 
