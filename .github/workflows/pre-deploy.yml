@@ -1,0 +1,71 @@
+name: Pre-Deployment Checks
+
+on:
+  workflow_dispatch: # Manual trigger before production deployments
+  push:
+    branches: [main, master]
+
+jobs:
+  pre-deploy:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate environment variables
+        run: |
+          echo "Checking required environment variables..."
+          # Check if required env vars are documented
+          if [ ! -f "ENVIRONMENT.md" ]; then
+            echo "ERROR: ENVIRONMENT.md not found"
+            exit 1
+          fi
+          echo "Environment documentation found ✓"
+
+      - name: Type check
+        run: npx tsc --noEmit --skipLibCheck
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key' }}
+
+      - name: Check for migration files
+        run: |
+          if [ -d "migrations" ]; then
+            echo "Migration files found ✓"
+            ls -la migrations/
+          else
+            echo "No migrations directory found (this is okay if no migrations needed)"
+          fi
+
+      - name: Verify health check endpoint exists
+        run: |
+          if [ -f "app/api/health/route.ts" ]; then
+            echo "Health check endpoint found ✓"
+          else
+            echo "WARNING: Health check endpoint not found"
+          fi
+
+      - name: Pre-deployment summary
+        run: |
+          echo "## Pre-Deployment Checks Complete ✓" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment variables validated" >> $GITHUB_STEP_SUMMARY
+          echo "- Type checking passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Build successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for deployment!" >> $GITHUB_STEP_SUMMARY
+

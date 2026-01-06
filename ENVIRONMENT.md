@@ -48,6 +48,41 @@ This document describes all environment variables used in the Printly applicatio
 - **Note**: If not set, emails will be logged to console only (development mode)
 - **Setup**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for Edge Function setup
 
+### Monitoring & Automation
+
+#### `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
+- **Description**: Sentry DSN for error tracking and monitoring
+- **Example**: `https://xxx@xxx.ingest.sentry.io/xxx`
+- **Required**: No (but recommended for production)
+- **Public**: `NEXT_PUBLIC_SENTRY_DSN` for client-side, `SENTRY_DSN` for server-side
+- **Setup**: Create account at [sentry.io](https://sentry.io) and add DSN to environment variables
+
+#### `CRON_SECRET`
+- **Description**: Secret token for securing cron job endpoints
+- **Example**: `your-secure-random-string-here`
+- **Required**: Yes (for production)
+- **Security**: ⚠️ **Keep this secret** - used to authorize cron job calls
+- **Generate**: Use a secure random string generator
+
+#### `MONITOR_SECRET`
+- **Description**: Secret token for health monitoring endpoint (optional, falls back to CRON_SECRET)
+- **Example**: `your-monitoring-secret`
+- **Required**: No (uses CRON_SECRET if not set)
+
+#### `LOW_STOCK_THRESHOLD`
+- **Description**: Stock quantity threshold for low stock alerts
+- **Example**: `5`
+- **Default**: `5`
+- **Required**: No
+- **Used in**: Low stock alert cron job
+
+#### `AUTO_CANCEL_DAYS`
+- **Description**: Number of days before auto-cancelling pending orders
+- **Example**: `30`
+- **Default**: `30`
+- **Required**: No
+- **Used in**: Auto-cancel orders cron job
+
 ### Site Configuration
 
 #### `NEXT_PUBLIC_SITE_URL`
@@ -79,6 +114,13 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 # Email (Optional)
 ADMIN_EMAIL=info@printly.ae
 SUPABASE_EDGE_FUNCTION_URL=https://your-project.supabase.co/functions/v1/send-email
+
+# Monitoring & Automation (Optional)
+SENTRY_DSN=your-sentry-dsn-here
+NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn-here
+CRON_SECRET=your-secure-random-token-here
+LOW_STOCK_THRESHOLD=5
+AUTO_CANCEL_DAYS=30
 ```
 
 ### Production (Vercel)
