@@ -157,6 +157,8 @@ export default function OrderDetailsPage() {
         return "#3b82f6";
       case "cancelled":
         return "#ef4444";
+      case "refunded":
+        return "#8b5cf6";
       default:
         return "#f59e0b";
     }
@@ -172,6 +174,8 @@ export default function OrderDetailsPage() {
         return "rgba(59, 130, 246, 0.1)";
       case "cancelled":
         return "rgba(239, 68, 68, 0.1)";
+      case "refunded":
+        return "rgba(139, 92, 246, 0.1)";
       default:
         return "rgba(245, 158, 11, 0.1)";
     }
