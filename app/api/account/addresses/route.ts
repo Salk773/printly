@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      logApiError("GET", "/api/account/addresses", error);
+      logApiError("/api/account/addresses", new Error(error.message || "Failed to fetch addresses"));
       return NextResponse.json(
         { success: false, error: "Failed to fetch addresses" },
         { status: 500 }
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, addresses: data || [] });
   } catch (error: any) {
-    logApiError("GET", "/api/account/addresses", error);
+    logApiError("/api/account/addresses", error instanceof Error ? error : new Error(error.message || "Internal server error"));
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
       { status: 500 }
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      logApiError("POST", "/api/account/addresses", error);
+      logApiError("/api/account/addresses", new Error(error.message || "Failed to create address"));
       return NextResponse.json(
         { success: false, error: "Failed to create address" },
         { status: 500 }
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, address: data });
   } catch (error: any) {
-    logApiError("POST", "/api/account/addresses", error);
+    logApiError("/api/account/addresses", error instanceof Error ? error : new Error(error.message || "Internal server error"));
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
       { status: 500 }
@@ -233,7 +233,7 @@ export async function PUT(req: NextRequest) {
       .single();
 
     if (error) {
-      logApiError("PUT", "/api/account/addresses", error);
+      logApiError("/api/account/addresses", new Error(error.message || "Failed to update address"));
       return NextResponse.json(
         { success: false, error: "Failed to update address" },
         { status: 500 }
@@ -242,7 +242,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, address: data });
   } catch (error: any) {
-    logApiError("PUT", "/api/account/addresses", error);
+    logApiError("/api/account/addresses", error instanceof Error ? error : new Error(error.message || "Internal server error"));
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
       { status: 500 }
@@ -306,7 +306,7 @@ export async function DELETE(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      logApiError("DELETE", "/api/account/addresses", error);
+      logApiError("/api/account/addresses", new Error(error.message || "Failed to delete address"));
       return NextResponse.json(
         { success: false, error: "Failed to delete address" },
         { status: 500 }
@@ -315,7 +315,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    logApiError("DELETE", "/api/account/addresses", error);
+    logApiError("/api/account/addresses", error instanceof Error ? error : new Error(error.message || "Internal server error"));
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
       { status: 500 }

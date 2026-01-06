@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       .eq("id", orderId);
 
     if (updateError) {
-      logApiError("POST", "/api/orders/cancel", updateError);
+      logApiError("/api/orders/cancel", new Error(updateError.message || "Failed to cancel order"));
       return NextResponse.json(
         { success: false, error: "Failed to cancel order" },
         { status: 500 }
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       message: "Order cancelled successfully",
     });
   } catch (error: any) {
-    logApiError("POST", "/api/orders/cancel", error);
+    logApiError("/api/orders/cancel", error instanceof Error ? error : new Error(error.message || "Internal server error"));
     return NextResponse.json(
       { success: false, error: error.message || "Internal server error" },
       { status: 500 }
