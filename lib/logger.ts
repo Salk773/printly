@@ -50,18 +50,17 @@ async function writeToDatabase(
     };
 
     // Don't await - fire and forget to avoid blocking
-    supabase
-      .from("logs")
-      .insert([logEntry])
-      .then(() => {
+    (async () => {
+      try {
+        await supabase.from("logs").insert([logEntry]);
         // Success - no action needed
-      })
-      .catch((err) => {
+      } catch (err) {
         // Silently fail - don't break the application if logging fails
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to write log to database:", err);
         }
-      });
+      }
+    })();
   } catch (error) {
     // Silently fail - don't break the application if logging fails
     if (process.env.NODE_ENV === "development") {
