@@ -69,47 +69,64 @@ export default async function HomePage() {
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 3fr) minmax(0, 2.1fr)",
-          gap: 32,
-          marginTop: 32,
+          gap: 40,
+          marginTop: 40,
           alignItems: "center",
+          marginBottom: 60,
         }}
         className="hero-section"
       >
         <div>
           <div
             style={{
-              fontSize: "0.8rem",
+              fontSize: "0.75rem",
               textTransform: "uppercase",
-              letterSpacing: "0.16em",
-              color: "#9ca3af",
-              marginBottom: 12,
+              letterSpacing: "0.2em",
+              color: "#94a3b8",
+              marginBottom: 16,
+              fontWeight: 600,
             }}
           >
-            UAE · 3D printing marketplace
+            🇦🇪 UAE · Premium 3D Printing Marketplace
           </div>
 
-          <h1 style={{ fontSize: "2.8rem", lineHeight: 1.1 }}>
-            Made <span style={{ color: "#c084fc" }}>layer by layer</span>.
+          <h1 style={{ fontSize: "3.2rem", lineHeight: 1.1, fontWeight: 800, marginBottom: 20, letterSpacing: "-0.02em" }}>
+            Made <span style={{ background: "linear-gradient(135deg, #c084fc, #a855f7)", backgroundClip: "text", WebkitBackgroundClip: "text", color: "transparent" }}>layer by layer</span>.
           </h1>
 
-          <p style={{ color: "#9ca3af", maxWidth: 520 }}>
-            Browse ready-made 3D printed parts, decor, and tools from creators
-            across the UAE.
+          <p style={{ color: "#94a3b8", maxWidth: 560, fontSize: "1.1rem", lineHeight: 1.7, marginBottom: 32 }}>
+            Discover unique 3D printed products, custom designs, and premium parts crafted by talented creators across the UAE.
           </p>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-            <Link href="/products" className="btn-primary">
-              Browse Products
+          <div style={{ display: "flex", gap: 16, marginTop: 32, flexWrap: "wrap", alignItems: "center" }}>
+            <Link href="/products" className="btn-primary" style={{ fontSize: "1rem", padding: "12px 24px" }}>
+              🛍️ Shop Now
             </Link>
-            <a href="mailto:info@printly.ae" className="btn-ghost">
-              List your prints
+            <a href="mailto:info@printly.ae" className="btn-ghost" style={{ fontSize: "0.95rem", padding: "12px 24px" }}>
+              Become a Seller
             </a>
+          </div>
+
+          {/* Trust badges */}
+          <div style={{ display: "flex", gap: 32, marginTop: 40, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "1.5rem" }}>✓</span>
+              <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Fast Shipping</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "1.5rem" }}>✓</span>
+              <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Secure Checkout</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "1.5rem" }}>✓</span>
+              <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Quality Guaranteed</span>
+            </div>
           </div>
         </div>
 
-        <div className="card-soft" style={{ padding: 20 }}>
-          <h3>{bannerTitle}</h3>
-          <p style={{ color: "#cbd5f5" }}>
+        <div className="card-soft" style={{ padding: 32, background: "linear-gradient(135deg, rgba(192,132,252,0.1), rgba(168,85,247,0.05))", border: "1px solid rgba(192,132,252,0.2)" }}>
+          <h3 style={{ fontSize: "1.5rem", marginBottom: 12, fontWeight: 700 }}>{bannerTitle}</h3>
+          <p style={{ color: "#cbd5e1", lineHeight: 1.6, fontSize: "1rem" }}>
             {bannerDescription}
           </p>
         </div>
@@ -121,20 +138,23 @@ export default async function HomePage() {
       )}
 
       {/* Featured products */}
-      <section style={{ marginTop: 56 }} className="featured-section">
+      <section style={{ marginTop: 80 }} className="featured-section">
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: 16,
+            marginBottom: 24,
             alignItems: "center",
             flexWrap: "wrap",
             gap: 12,
           }}
         >
-          <h2>Featured products</h2>
-          <Link href="/products" style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
-            View all →
+          <div>
+            <h2 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: 8 }}>Featured Products</h2>
+            <p style={{ color: "#94a3b8", fontSize: "0.95rem" }}>Handpicked favorites from our collection</p>
+          </div>
+          <Link href="/products" style={{ color: "#c084fc", fontSize: "0.95rem", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+            View all <span>→</span>
           </Link>
         </div>
 

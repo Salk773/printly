@@ -9,7 +9,6 @@ import { AuthProvider } from "@/context/AuthProvider";
 import { CartProvider } from "@/context/CartProvider";
 import { WishlistProvider } from "@/context/WishlistProvider";
 import { RecentlyViewedProvider } from "@/context/RecentlyViewedProvider";
-import { ComparisonProvider } from "@/context/ComparisonProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { Toaster } from "react-hot-toast";
@@ -94,25 +93,23 @@ export default function RootLayout({
           <AuthProvider>
             <WishlistProvider>
               <RecentlyViewedProvider>
-                <ComparisonProvider>
-                  <CartProvider>
-                <Toaster position="top-right" />
-                <SideCart />
-                <Navbar />
-                <main
-                  style={{
-                    maxWidth: "1200px",
-                    margin: "0 auto",
-                    padding: "40px 20px",
-                    minHeight: "80vh",
-                  }}
-                  className="main-content"
-                >
-                  {children}
-                </main>
-                <Footer />
-                  </CartProvider>
-                </ComparisonProvider>
+                <CartProvider>
+                  <Toaster position="top-right" />
+                  <SideCart />
+                  <Navbar />
+                  <main
+                    style={{
+                      maxWidth: "1200px",
+                      margin: "0 auto",
+                      padding: "40px 20px",
+                      minHeight: "80vh",
+                    }}
+                    className="main-content"
+                  >
+                    {children}
+                  </main>
+                  <Footer />
+                </CartProvider>
               </RecentlyViewedProvider>
             </WishlistProvider>
           </AuthProvider>

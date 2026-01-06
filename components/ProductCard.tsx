@@ -5,7 +5,6 @@ import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useState } from "react";
 import { useWishlist } from "@/context/WishlistProvider";
-import { useComparison } from "@/context/ComparisonProvider";
 
 type ProductCardProps = {
   product: {
@@ -20,9 +19,7 @@ type ProductCardProps = {
 export default function ProductCard({ product }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { addProduct: addToComparison, isInComparison, removeProduct: removeFromComparison } = useComparison();
   const inWishlist = isInWishlist(product.id);
-  const inComparison = isInComparison(product.id);
 
   return (
     <div
@@ -30,14 +27,15 @@ export default function ProductCard({ product }: ProductCardProps) {
       onMouseLeave={() => setHovered(false)}
       style={{
         background: "#0f172a",
-        borderRadius: 14,
-        border: "1px solid rgba(148,163,184,0.18)",
+        borderRadius: 16,
+        border: hovered ? "1px solid rgba(192,132,252,0.3)" : "1px solid rgba(148,163,184,0.18)",
         overflow: "hidden",
-        transition: "0.25s",
-        transform: hovered ? "translateY(-4px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: hovered ? "translateY(-6px)" : "translateY(0)",
         boxShadow: hovered
-          ? "0 16px 40px rgba(0,0,0,0.55)"
-          : "0 8px 24px rgba(15,23,42,0.7)",
+          ? "0 20px 50px rgba(192,132,252,0.2), 0 8px 24px rgba(0,0,0,0.6)"
+          : "0 4px 16px rgba(0,0,0,0.4)",
+        position: "relative",
       }}
     >
       {/* IMAGE */}
@@ -46,8 +44,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           style={{
             position: "relative",
             width: "100%",
-            height: 220,
+            height: 240,
             overflow: "hidden",
+            background: "linear-gradient(135deg, #1e293b, #0f172a)",
           }}
         >
           <Image
@@ -56,58 +55,23 @@ export default function ProductCard({ product }: ProductCardProps) {
             fill
             style={{
               objectFit: "cover",
-              transition: "0.35s",
-              transform: hovered ? "scale(1.03)" : "scale(1)",
+              transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+              transform: hovered ? "scale(1.08)" : "scale(1)",
             }}
           />
-        </div>
-      </Link>
-
-      {/* CONTENT */}
-      <div style={{ padding: 14 }}>
-        <Link
-          href={`/products/${product.id}`}
-          style={{
-            textDecoration: "none",
-            color: "white",
-            fontWeight: 600,
-            display: "block",
-            marginBottom: 6,
-            fontSize: "1rem",
-          }}
-        >
-          {product.name}
-        </Link>
-
-        <p
-          style={{
-            color: "#9ca3af",
-            fontSize: "0.85rem",
-            minHeight: 32,
-            marginBottom: 10,
-          }}
-        >
-          {product.description?.slice(0, 60)}
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-        >
+          {/* Overlay gradient */}
           <div
             style={{
-              fontWeight: 700,
-              color: "#c084fc",
-              fontSize: "0.95rem",
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "40%",
+              background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
+              pointerEvents: "none",
             }}
-          >
-            {product.price} AED
-          </div>
-
+          />
+          {/* Wishlist button overlay */}
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -120,59 +84,96 @@ export default function ProductCard({ product }: ProductCardProps) {
               });
             }}
             style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
               border: "none",
-              background: "transparent",
+              background: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(8px)",
               cursor: "pointer",
-              fontSize: "1.1rem",
-              color: inWishlist ? "#fb7185" : "#64748b",
-              transition: "0.2s",
+              fontSize: "1.2rem",
+              color: inWishlist ? "#fb7185" : "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s ease",
+              zIndex: 10,
             }}
             aria-label="Toggle wishlist"
           >
             {inWishlist ? "♥" : "♡"}
           </button>
         </div>
+      </Link>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <AddToCartButton
-            id={product.id}
-            name={product.name}
-            price={product.price}
-            image={product.image_main}
-            small
-          />
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (inComparison) {
-                removeFromComparison(product.id);
-              } else {
-                addToComparison({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  image: product.image_main,
-                  description: product.description,
-                  category_id: (product as any).category_id,
-                });
-              }
-            }}
+      {/* CONTENT */}
+      <div style={{ padding: 18 }}>
+        <Link
+          href={`/products/${product.id}`}
+          style={{
+            textDecoration: "none",
+            color: "white",
+            fontWeight: 600,
+            display: "block",
+            marginBottom: 8,
+            fontSize: "1.05rem",
+            lineHeight: 1.4,
+            transition: "color 0.2s ease",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#c084fc")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "white")}
+        >
+          {product.name}
+        </Link>
+
+        <p
+          style={{
+            color: "#94a3b8",
+            fontSize: "0.875rem",
+            minHeight: 40,
+            marginBottom: 14,
+            lineHeight: 1.5,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {product.description?.slice(0, 80) || "Premium 3D printed product"}
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 14,
+          }}
+        >
+          <div
             style={{
-              padding: "6px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(148,163,184,0.3)",
-              background: inComparison ? "rgba(192,132,252,0.2)" : "transparent",
-              color: inComparison ? "#c084fc" : "#9ca3af",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: 600,
+              fontWeight: 700,
+              background: "linear-gradient(135deg, #c084fc, #a855f7)",
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+              fontSize: "1.25rem",
             }}
-            title={inComparison ? "Remove from comparison" : "Add to comparison"}
           >
-            {inComparison ? "✓ Compare" : "Compare"}
-          </button>
+            {product.price} AED
+          </div>
         </div>
+
+        <AddToCartButton
+          id={product.id}
+          name={product.name}
+          price={product.price}
+          image={product.image_main}
+          small
+        />
       </div>
     </div>
   );

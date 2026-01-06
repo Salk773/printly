@@ -18,11 +18,14 @@ export default async function ProductsPage() {
 
   return (
     <>
-      <h1 style={{ fontSize: "1.6rem", marginBottom: 8 }}>Products</h1>
-
-      <p style={{ color: "#9ca3af", fontSize: "0.9rem", marginBottom: 24 }}>
-        All ready-to-print designs. Choose a category or search by name.
-      </p>
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: 800, marginBottom: 12, letterSpacing: "-0.02em" }}>
+          Shop Products
+        </h1>
+        <p style={{ color: "#94a3b8", fontSize: "1rem", lineHeight: 1.6 }}>
+          Discover our curated collection of premium 3D printed products. Filter by category, price, or search for exactly what you need.
+        </p>
+      </div>
 
       <ProductsClient
         products={products || []}

@@ -188,26 +188,57 @@ export default function ProductPageClient({ product }) {
           </p>
 
           {/* PRICE */}
-          <div
-            style={{
-              fontSize: "2rem",
-              fontWeight: 800,
-              background: "linear-gradient(135deg, #c084fc, #a855f7)",
-              backgroundClip: "text",
-              color: "transparent",
-              marginBottom: 24,
-            }}
-          >
-            {product.price} AED
+          <div style={{ marginBottom: 32 }}>
+            <div
+              style={{
+                fontSize: "2.5rem",
+                fontWeight: 800,
+                background: "linear-gradient(135deg, #c084fc, #a855f7)",
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                color: "transparent",
+                marginBottom: 8,
+              }}
+            >
+              {product.price} AED
+            </div>
+            <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Including VAT • Free shipping on orders over 100 AED</p>
           </div>
 
           {/* ADD TO CART */}
-          <AddToCartButton
-            id={product.id}
-            name={product.name}
-            price={product.price}
-            image={product.image_main}
-          />
+          <div style={{ marginBottom: 24 }}>
+            <AddToCartButton
+              id={product.id}
+              name={product.name}
+              price={product.price}
+              image={product.image_main}
+            />
+          </div>
+
+          {/* Trust signals */}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(3, 1fr)", 
+            gap: 16, 
+            padding: "20px",
+            background: "rgba(192,132,252,0.05)",
+            borderRadius: 12,
+            border: "1px solid rgba(192,132,252,0.1)",
+            marginBottom: 24
+          }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: 4 }}>🚚</div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 600 }}>Fast Delivery</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: 4 }}>✓</div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 600 }}>Quality Checked</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: 4 }}>↩️</div>
+              <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 600 }}>Easy Returns</div>
+            </div>
+          </div>
 
           {/* SOCIAL SHARE */}
           <SocialShare

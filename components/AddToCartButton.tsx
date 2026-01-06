@@ -46,24 +46,37 @@ export default function AddToCartButton({
       onClick={handleClick}
       disabled={loading}
       style={{
-        padding: small ? "6px 12px" : "10px 18px",
-        borderRadius: 999,
+        padding: small ? "8px 16px" : "12px 24px",
+        borderRadius: 10,
         border: "none",
         cursor: loading ? "wait" : "pointer",
-        fontSize: small ? "0.8rem" : "0.9rem",
+        fontSize: small ? "0.85rem" : "0.95rem",
         fontWeight: 600,
         background: "linear-gradient(135deg, #c084fc, #a855f7)",
-        color: "#020617",
-        boxShadow: "0 8px 24px rgba(192,132,252,0.25)",
+        color: "#ffffff",
+        boxShadow: "0 4px 16px rgba(192,132,252,0.3)",
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
         opacity: mounted ? 1 : 0,
         transform: mounted ? "translateY(0)" : "translateY(4px)",
-        transition: "opacity 0.35s ease, transform 0.35s ease",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         pointerEvents: loading ? "none" : "auto",
         scale: loading ? 0.98 : 1,
+        width: small ? "auto" : "100%",
+      }}
+      onMouseEnter={(e) => {
+        if (!loading) {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "0 6px 20px rgba(192,132,252,0.4)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!loading) {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "0 4px 16px rgba(192,132,252,0.3)";
+        }
       }}
     >
       {/* LOADING SPINNER */}
@@ -79,7 +92,7 @@ export default function AddToCartButton({
           }}
         />
       ) : (
-        <>🛒 Add to cart</>
+        <><span style={{ fontSize: "1.1em" }}>🛒</span> Add to Cart</>
       )}
 
       {/* Spinner keyframes */}
