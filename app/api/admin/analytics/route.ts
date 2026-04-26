@@ -52,6 +52,11 @@ function normalizeStatus(status: unknown): string {
   return String(status || "").trim().toLowerCase();
 }
 
+function isSalesStatus(status: unknown): boolean {
+  const normalized = normalizeStatus(status);
+  return normalized === "paid" || normalized === "completed";
+}
+
 function getOrderTotal(order: Order): number {
   const total = toFiniteNumber(order.total);
   if (total > 0) return total;
@@ -116,16 +121,16 @@ export async function GET(req: NextRequest) {
 
     const ordersData = (orders || []) as Order[];
 
-    // Calculate lifetime sales (exclude cancelled orders)
+    // Calculate lifetime sales (count paid/completed orders only)
     const lifetimeSales = ordersData
-      .filter((o) => normalizeStatus(o.status) !== "cancelled")
+      .filter((o) => isSalesStatus(o.status))
       .reduce((sum, order) => sum + getOrderTotal(order), 0);
 
     // Calculate monthly sales
     const monthlySalesMap = new Map<string, MonthlySales>();
     
     ordersData
-      .filter((o) => normalizeStatus(o.status) !== "cancelled")
+      .filter((o) => isSalesStatus(o.status))
       .forEach((order) => {
         const date = new Date(order.created_at);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -154,7 +159,7 @@ export async function GET(req: NextRequest) {
     const productMap = new Map<string, ProductPerformance>();
     
     ordersData
-      .filter((o) => normalizeStatus(o.status) !== "cancelled")
+      .filter((o) => isSalesStatus(o.status))
       .forEach((order) => {
         if (!order.items || !Array.isArray(order.items)) return;
 
@@ -189,7 +194,7 @@ export async function GET(req: NextRequest) {
       monthlySales,
       productPerformance,
       totalOrders: ordersData.length,
-      activeOrders: ordersData.filter((o) => normalizeStatus(o.status) !== "cancelled").length,
+      activeOrders: ordersData.filter((o) => isSalesStatus(o.status)).length,
     });
   } catch (error: any) {
     // #region agent log

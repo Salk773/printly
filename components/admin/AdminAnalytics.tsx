@@ -54,6 +54,11 @@ function normalizeStatus(status: unknown): string {
   return String(status || "").trim().toLowerCase();
 }
 
+function isSalesStatus(status: unknown): boolean {
+  const normalized = normalizeStatus(status);
+  return normalized === "paid" || normalized === "completed";
+}
+
 function getOrderTotal(order: FallbackOrder): number {
   const total = toNumber(order.total);
   if (total > 0) return total;
@@ -111,14 +116,70 @@ export default function AdminAnalytics() {
             .order("created_at", { ascending: false });
 
           const rows = ((orders || []) as FallbackOrder[]).filter(
-            (o) => normalizeStatus(o.status) !== "cancelled"
+            (o) => isSalesStatus(o.status)
           );
 
           const lifetimeSales = rows.reduce((sum, o) => sum + getOrderTotal(o), 0);
+          const monthlySalesMap = new Map<string, MonthlySales>();
+          const productMap = new Map<string, ProductPerformance>();
+
+          rows.forEach((order) => {
+            const date = new Date(order.created_at);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+            const monthName = date.toLocaleString("default", { month: "long" });
+            const orderTotal = getOrderTotal(order);
+
+            if (!monthlySalesMap.has(monthKey)) {
+              monthlySalesMap.set(monthKey, {
+                month: monthName,
+                year: date.getFullYear(),
+                total: 0,
+                orderCount: 0,
+              });
+            }
+
+            const month = monthlySalesMap.get(monthKey)!;
+            month.total += orderTotal;
+            month.orderCount += 1;
+
+            if (!Array.isArray(order.items)) return;
+
+            order.items.forEach((item) => {
+              const name = String(item.name || "").trim();
+              if (!name) return;
+              const quantity = toNumber(item.quantity);
+              const price = toNumber(item.price);
+
+              if (!productMap.has(name)) {
+                productMap.set(name, {
+                  name,
+                  totalQuantity: 0,
+                  totalRevenue: 0,
+                  orderCount: 0,
+                });
+              }
+
+              const product = productMap.get(name)!;
+              product.totalQuantity += quantity;
+              product.totalRevenue += price * quantity;
+              product.orderCount += 1;
+            });
+          });
+
+          const monthlySales = Array.from(monthlySalesMap.entries())
+            .map(([key, value]) => ({ key, ...value }))
+            .sort((a, b) => b.key.localeCompare(a.key))
+            .map(({ key, ...value }) => value);
+
+          const productPerformance = Array.from(productMap.values()).sort(
+            (a, b) => b.totalRevenue - a.totalRevenue
+          );
 
           setData({
             ...analyticsData,
             lifetimeSales,
+            monthlySales,
+            productPerformance,
             activeOrders: rows.length,
           });
         } else {
