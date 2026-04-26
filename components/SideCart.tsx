@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function SideCart() {
   const {
@@ -18,6 +19,14 @@ export default function SideCart() {
 
   const { isInWishlist, toggleWishlist } = useWishlist();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Ensure no stale full-screen overlay remains after navigation.
+  useEffect(() => {
+    closeCart();
+    // Intentionally tied to route changes only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const hasItems = items.length > 0;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
@@ -21,6 +21,10 @@ export default function Navbar() {
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const isAdmin =
     !!user?.email && ADMIN_EMAILS.includes(user.email);
