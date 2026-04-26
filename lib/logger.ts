@@ -54,10 +54,22 @@ async function writeToDatabase(
 
     // Await insert so logs are not dropped on short-lived requests.
     await supabase.from("logs").insert([logEntry]);
+    console.log("[LOGS_DEBUG][WRITE_OK]", {
+      level,
+      category,
+      message,
+    });
     // #region agent log
     fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-2",hypothesisId:"L7",location:"lib/logger.ts:write-success",message:"Logger insert success",data:{level,category},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
   } catch (error) {
+    console.error("[LOGS_DEBUG][WRITE_ERROR]", {
+      level,
+      category,
+      message,
+      errorMessage: error instanceof Error ? error.message : "unknown",
+      errorCode: typeof error === "object" && error && "code" in error ? (error as { code?: string }).code : undefined,
+    });
     // #region agent log
     fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-2",hypothesisId:"L8",location:"lib/logger.ts:write-error",message:"Logger insert failed",data:{errorMessage:error instanceof Error ? error.message : "unknown"},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
