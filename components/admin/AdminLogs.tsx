@@ -39,8 +39,14 @@ export default function AdminLogs() {
 
   const fetchLogs = useCallback(async (since?: string) => {
     try {
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H1", location: "components/admin/AdminLogs.tsx:fetch-start", message: "Logs fetch started", data: { hasSince: Boolean(since), filterLevel, filterCategory }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
       const session = await supabase.auth.getSession();
       if (!session.data.session) {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H2", location: "components/admin/AdminLogs.tsx:no-session", message: "No session for logs request", data: {}, timestamp: Date.now() }) }).catch(() => {});
+        // #endregion
         setError("Not authenticated");
         return;
       }
@@ -68,6 +74,9 @@ export default function AdminLogs() {
           Authorization: `Bearer ${token}`,
         },
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H3", location: "components/admin/AdminLogs.tsx:response", message: "Logs API response received", data: { ok: response.ok, status: response.status }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
 
       if (!response.ok) {
         throw new Error("Failed to fetch logs");
@@ -93,6 +102,9 @@ export default function AdminLogs() {
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch logs:", err);
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H4", location: "components/admin/AdminLogs.tsx:catch", message: "Logs fetch failed in client", data: { errorMessage: err?.message || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
       setError(err.message || "Failed to fetch logs");
     } finally {
       setLoading(false);
