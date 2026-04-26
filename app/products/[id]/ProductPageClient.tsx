@@ -65,8 +65,33 @@ export default function ProductPageClient({ product }) {
       // #endregion
     };
 
+    const onAnchorFallback = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+      if (href.startsWith("#")) return;
+      if (anchor.target === "_blank") return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      // Only apply fallback for same-origin internal navigation.
+      if (href.startsWith("/")) {
+        event.preventDefault();
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "post-fix", hypothesisId: "H4", location: "app/products/[id]/ProductPageClient.tsx:anchor-fallback", message: "Forced hard navigation fallback", data: { href }, timestamp: Date.now() }) }).catch(() => {});
+        // #endregion
+        window.location.assign(href);
+      }
+    };
+
     document.addEventListener("click", onCaptureClick, true);
-    return () => document.removeEventListener("click", onCaptureClick, true);
+    document.addEventListener("click", onAnchorFallback, false);
+    return () => {
+      document.removeEventListener("click", onCaptureClick, true);
+      document.removeEventListener("click", onAnchorFallback, false);
+    };
   }, []);
 
   return (
