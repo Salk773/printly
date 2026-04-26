@@ -38,6 +38,9 @@ async function writeToDatabase(
   ipAddress?: string
 ) {
   try {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-2",hypothesisId:"L6",location:"lib/logger.ts:write-start",message:"Logger writeToDatabase start",data:{level,category,hasUserId:Boolean(userId),hasIp:Boolean(ipAddress)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const supabase = supabaseServer();
     
     const logEntry: DatabaseLogEntry = {
@@ -53,8 +56,14 @@ async function writeToDatabase(
     (async () => {
       try {
         await supabase.from("logs").insert([logEntry]);
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-2",hypothesisId:"L7",location:"lib/logger.ts:write-success",message:"Logger insert success",data:{level,category},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // Success - no action needed
       } catch (err) {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-2",hypothesisId:"L8",location:"lib/logger.ts:write-error",message:"Logger insert failed",data:{errorMessage:err instanceof Error ? err.message : "unknown"},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // Silently fail - don't break the application if logging fails
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to write log to database:", err);
