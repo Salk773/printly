@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useWishlist } from "@/context/WishlistProvider";
@@ -30,6 +30,7 @@ export default function ProductPageClient({ product }) {
 
   const [mainImage, setMainImage] = useState(images[0]);
   const [fadeImage, setFadeImage] = useState(true);
+  const debugClickCountRef = useRef(0);
 
   // ✨ Smooth fade transition when switching images
   const handleImageSwitch = (image) => {
@@ -45,6 +46,27 @@ export default function ProductPageClient({ product }) {
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 30);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const onCaptureClick = (event: MouseEvent) => {
+      if (debugClickCountRef.current >= 20) return;
+      debugClickCountRef.current += 1;
+
+      const targetEl = event.target as HTMLElement | null;
+      const pointEl = document.elementFromPoint(
+        event.clientX,
+        event.clientY
+      ) as HTMLElement | null;
+      const clickableAncestor = targetEl?.closest("a,button");
+
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "run1", hypothesisId: "H1-H4", location: "app/products/[id]/ProductPageClient.tsx:capture-click", message: "Captured click on product page", data: { x: event.clientX, y: event.clientY, targetTag: targetEl?.tagName || null, targetClass: targetEl?.className || null, topElementTag: pointEl?.tagName || null, topElementClass: pointEl?.className || null, clickableAncestorTag: clickableAncestor?.tagName || null, clickableAncestorClass: clickableAncestor?.className || null }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
+    };
+
+    document.addEventListener("click", onCaptureClick, true);
+    return () => document.removeEventListener("click", onCaptureClick, true);
   }, []);
 
   return (
