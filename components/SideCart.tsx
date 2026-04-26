@@ -33,19 +33,20 @@ export default function SideCart() {
   return (
     <>
       {/* BACKDROP */}
-      <div
-        onClick={closeCart}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: sideCartOpen ? "rgba(0,0,0,0.45)" : "transparent",
-          backdropFilter: sideCartOpen ? "blur(2px)" : "none",
-          opacity: sideCartOpen ? 1 : 0,
-          transition: "opacity 0.35s ease",
-          pointerEvents: sideCartOpen ? "auto" : "none",
-          zIndex: 9998,
-        }}
-      />
+      {sideCartOpen && (
+        <div
+          onClick={closeCart}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(2px)",
+            opacity: 1,
+            transition: "opacity 0.35s ease",
+            zIndex: 9998,
+          }}
+        />
+      )}
 
       {/* SIDE CART */}
       <div
@@ -62,6 +63,7 @@ export default function SideCart() {
           zIndex: 9999,
           transform: sideCartOpen ? "translateX(0)" : "translateX(102%)",
           transition: "transform 0.45s cubic-bezier(0.25, 1, 0.3, 1)",
+          pointerEvents: sideCartOpen ? "auto" : "none",
           borderLeft: "1px solid rgba(255,255,255,0.05)",
           boxShadow: sideCartOpen
             ? "-6px 0 28px rgba(0,0,0,0.55)"
