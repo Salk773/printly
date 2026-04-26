@@ -26,6 +26,43 @@ interface AnalyticsData {
   activeOrders: number;
 }
 
+interface FallbackOrderItem {
+  name?: string;
+  price?: number | string | null;
+  quantity?: number | string | null;
+}
+
+interface FallbackOrder {
+  total?: number | string | null;
+  status?: string | null;
+  created_at: string;
+  items?: FallbackOrderItem[] | null;
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    const parsed = Number.parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeStatus(status: unknown): string {
+  return String(status || "").trim().toLowerCase();
+}
+
+function getOrderTotal(order: FallbackOrder): number {
+  const total = toNumber(order.total);
+  if (total > 0) return total;
+  if (!Array.isArray(order.items)) return 0;
+  return order.items.reduce((sum, item) => {
+    return sum + toNumber(item.price) * toNumber(item.quantity);
+  }, 0);
+}
+
 export default function AdminAnalytics() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +103,27 @@ export default function AdminAnalytics() {
         }
 
         const analyticsData = await response.json();
-        setData(analyticsData);
+        // Fallback: if API totals are empty despite existing orders, compute from direct orders query.
+        if ((analyticsData?.lifetimeSales || 0) === 0 && (analyticsData?.totalOrders || 0) > 0) {
+          const { data: orders } = await supabase
+            .from("orders")
+            .select("total, status, created_at, items")
+            .order("created_at", { ascending: false });
+
+          const rows = ((orders || []) as FallbackOrder[]).filter(
+            (o) => normalizeStatus(o.status) !== "cancelled"
+          );
+
+          const lifetimeSales = rows.reduce((sum, o) => sum + getOrderTotal(o), 0);
+
+          setData({
+            ...analyticsData,
+            lifetimeSales,
+            activeOrders: rows.length,
+          });
+        } else {
+          setData(analyticsData);
+        }
       } catch (err: any) {
         console.error("Analytics fetch error:", err);
         // #region agent log

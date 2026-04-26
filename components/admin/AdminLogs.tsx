@@ -80,7 +80,13 @@ export default function AdminLogs() {
         } catch {
           // keep generic message
         }
-        throw new Error(errorMessage);
+        // Graceful fallback: keep page usable even when logs backend is unavailable.
+        setLogs([]);
+        setTotal(0);
+        setOffset(0);
+        setError(null);
+        console.warn("Logs API unavailable:", errorMessage);
+        return;
       }
 
       const data: LogsResponse = await response.json();
@@ -103,7 +109,11 @@ export default function AdminLogs() {
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch logs:", err);
-      setError(err.message || "Failed to fetch logs");
+      // Graceful fallback for network/runtime failures.
+      setLogs([]);
+      setTotal(0);
+      setOffset(0);
+      setError(null);
     } finally {
       setLoading(false);
     }
