@@ -54,7 +54,7 @@ function normalizeStatus(status: unknown): string {
 
 function isSalesStatus(status: unknown): boolean {
   const normalized = normalizeStatus(status);
-  return normalized === "paid" || normalized === "completed";
+  return normalized === "paid" || normalized === "processing" || normalized === "completed";
 }
 
 function getOrderTotal(order: Order): number {

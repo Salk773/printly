@@ -56,7 +56,7 @@ function normalizeStatus(status: unknown): string {
 
 function isSalesStatus(status: unknown): boolean {
   const normalized = normalizeStatus(status);
-  return normalized === "paid" || normalized === "completed";
+  return normalized === "paid" || normalized === "processing" || normalized === "completed";
 }
 
 function getOrderTotal(order: FallbackOrder): number {
@@ -77,9 +77,6 @@ export default function AdminAnalytics() {
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A1",location:"components/admin/AdminAnalytics.tsx:request",message:"Analytics client request start",data:{},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         const session = await supabase.auth.getSession();
         if (!session.data.session) {
           setError("Not authenticated");
@@ -92,9 +89,6 @@ export default function AdminAnalytics() {
             Authorization: `Bearer ${token}`,
           },
         });
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A2",location:"components/admin/AdminAnalytics.tsx:response",message:"Analytics client response",data:{ok:response.ok,status:response.status},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         if (!response.ok) {
           let errorMessage = "Failed to fetch analytics";
@@ -187,9 +181,6 @@ export default function AdminAnalytics() {
         }
       } catch (err: any) {
         console.error("Analytics fetch error:", err);
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A3",location:"components/admin/AdminAnalytics.tsx:catch",message:"Analytics client catch",data:{errorMessage:err?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         setError(err.message || "Failed to load analytics");
       } finally {
         setLoading(false);
