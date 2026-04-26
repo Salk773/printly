@@ -15,15 +15,9 @@ export async function DELETE(req: NextRequest) {
   const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
   
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O3", location: "app/api/orders/delete/route.ts:entry", message: "Order delete API entered", data: { hasAuthHeader: Boolean(req.headers.get("authorization")) }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     // Require admin authentication
     const authResult = await requireAdmin(req);
     if (!authResult.authorized) {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O4", location: "app/api/orders/delete/route.ts:auth-failed", message: "Order delete API auth failed", data: { error: (authResult as { authorized: false; response: NextResponse }).response.status }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       logApiCall("DELETE", "/api/orders/delete", 401, { ipAddress });
       return (authResult as { authorized: false; response: NextResponse }).response;
     }
@@ -81,9 +75,6 @@ export async function DELETE(req: NextRequest) {
       .eq("id", validation.data.orderId);
 
     if (deleteError) {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O5", location: "app/api/orders/delete/route.ts:delete-error", message: "Order delete query failed", data: { orderId: validation.data.orderId, errorMessage: deleteError.message || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       logApiError("/api/orders/delete", new Error(deleteError.message || "Failed to delete order"), {
         orderId: validation.data.orderId,
         ipAddress,
@@ -112,9 +103,6 @@ export async function DELETE(req: NextRequest) {
       orderId: validation.data.orderId,
       ipAddress,
     }, user.id, ipAddress);
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O5", location: "app/api/orders/delete/route.ts:success", message: "Order delete API succeeded", data: { orderId: validation.data.orderId }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
 
     return NextResponse.json({
       success: true,
@@ -122,9 +110,6 @@ export async function DELETE(req: NextRequest) {
     });
 
   } catch (error: any) {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O5", location: "app/api/orders/delete/route.ts:catch", message: "Order delete API threw error", data: { errorMessage: error?.message || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     logApiError("/api/orders/delete", error, { ipAddress });
     console.error("Order delete error:", error);
     return NextResponse.json(
@@ -133,4 +118,3 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
-

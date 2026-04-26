@@ -128,30 +128,18 @@ export default function AdminOrders({
 
   const handleDelete = async (orderId: string) => {
     if (!confirm("Are you sure you want to permanently delete this order? This action cannot be undone.")) {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O1", location: "components/admin/AdminOrders.tsx:delete-cancelled", message: "Order delete cancelled by user confirm dialog", data: { orderId }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       return;
     }
 
     setDeletingId(orderId);
     try {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O2", location: "components/admin/AdminOrders.tsx:delete-start", message: "Order delete started in client", data: { orderId }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       const response = await fetch("/api/orders/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId }),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O3", location: "components/admin/AdminOrders.tsx:delete-response", message: "Order delete response received in client", data: { orderId, ok: response.ok, status: response.status }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
 
       const result = await response.json();
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O4", location: "components/admin/AdminOrders.tsx:delete-result", message: "Order delete result parsed in client", data: { orderId, success: Boolean(result?.success), hasError: Boolean(result?.error) }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to delete order");
@@ -164,9 +152,6 @@ export default function AdminOrders({
       reload();
     } catch (error: any) {
       console.error("Delete error:", error);
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-2", hypothesisId: "O5", location: "components/admin/AdminOrders.tsx:delete-catch", message: "Order delete failed in client", data: { orderId, errorMessage: error?.message || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       toast.error(error.message || "Failed to delete order");
       reload(); // Reload to sync state
     } finally {

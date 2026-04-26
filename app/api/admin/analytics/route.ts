@@ -49,15 +49,9 @@ export async function GET(req: NextRequest) {
   const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
   
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H3", location: "app/api/admin/analytics/route.ts:entry", message: "Analytics API entered", data: {}, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     const authResult = await verifyAdmin(req);
 
     if (!authResult.authorized) {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H2", location: "app/api/admin/analytics/route.ts:auth-failed", message: "Analytics API auth failed", data: { error: authResult.error || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       const statusCode = authResult.error?.includes("not an admin") ? 403 : 401;
       logApiCall("GET", "/api/admin/analytics", statusCode, { 
         error: authResult.error,
@@ -160,9 +154,6 @@ export async function GET(req: NextRequest) {
       email: authResult.user!.email,
       ipAddress,
     }, authResult.user!.id, ipAddress);
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H5", location: "app/api/admin/analytics/route.ts:success", message: "Analytics API success", data: { totalOrders: ordersData.length, activeOrders: ordersData.filter((o) => o.status !== "cancelled").length }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
 
     return NextResponse.json({
       lifetimeSales,
@@ -172,9 +163,6 @@ export async function GET(req: NextRequest) {
       activeOrders: ordersData.filter((o) => o.status !== "cancelled").length,
     });
   } catch (error: any) {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f31495" }, body: JSON.stringify({ sessionId: "f31495", runId: "pre-fix-1", hypothesisId: "H4", location: "app/api/admin/analytics/route.ts:catch", message: "Analytics API threw error", data: { errorMessage: error?.message || "unknown" }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     logApiError("/api/admin/analytics", error, { ipAddress });
     console.error("Analytics error:", error);
     return NextResponse.json(
