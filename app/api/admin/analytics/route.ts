@@ -36,8 +36,20 @@ interface ProductPerformance {
 }
 
 function toFiniteNumber(value: unknown): number {
-  const num = typeof value === "number" ? value : Number(value);
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === "string") {
+    const cleaned = value.replace(/[^0-9.-]/g, "");
+    const parsed = Number.parseFloat(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  const num = Number(value);
   return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeStatus(status: unknown): string {
+  return String(status || "").trim().toLowerCase();
 }
 
 function getOrderTotal(order: Order): number {
@@ -106,14 +118,14 @@ export async function GET(req: NextRequest) {
 
     // Calculate lifetime sales (exclude cancelled orders)
     const lifetimeSales = ordersData
-      .filter((o) => o.status !== "cancelled")
+      .filter((o) => normalizeStatus(o.status) !== "cancelled")
       .reduce((sum, order) => sum + getOrderTotal(order), 0);
 
     // Calculate monthly sales
     const monthlySalesMap = new Map<string, MonthlySales>();
     
     ordersData
-      .filter((o) => o.status !== "cancelled")
+      .filter((o) => normalizeStatus(o.status) !== "cancelled")
       .forEach((order) => {
         const date = new Date(order.created_at);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -142,7 +154,7 @@ export async function GET(req: NextRequest) {
     const productMap = new Map<string, ProductPerformance>();
     
     ordersData
-      .filter((o) => o.status !== "cancelled")
+      .filter((o) => normalizeStatus(o.status) !== "cancelled")
       .forEach((order) => {
         if (!order.items || !Array.isArray(order.items)) return;
 
@@ -177,7 +189,7 @@ export async function GET(req: NextRequest) {
       monthlySales,
       productPerformance,
       totalOrders: ordersData.length,
-      activeOrders: ordersData.filter((o) => o.status !== "cancelled").length,
+      activeOrders: ordersData.filter((o) => normalizeStatus(o.status) !== "cancelled").length,
     });
   } catch (error: any) {
     // #region agent log
