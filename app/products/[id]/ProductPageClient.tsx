@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import AddToCartButton from "@/components/AddToCartButton";
 import { useWishlist } from "@/context/WishlistProvider";
@@ -30,7 +30,6 @@ export default function ProductPageClient({ product }) {
 
   const [mainImage, setMainImage] = useState(images[0]);
   const [fadeImage, setFadeImage] = useState(true);
-  const debugClickCountRef = useRef(0);
 
   // ✨ Smooth fade transition when switching images
   const handleImageSwitch = (image) => {
@@ -49,22 +48,6 @@ export default function ProductPageClient({ product }) {
   }, []);
 
   useEffect(() => {
-    const onCaptureClick = (event: MouseEvent) => {
-      if (debugClickCountRef.current >= 20) return;
-      debugClickCountRef.current += 1;
-
-      const targetEl = event.target as HTMLElement | null;
-      const pointEl = document.elementFromPoint(
-        event.clientX,
-        event.clientY
-      ) as HTMLElement | null;
-      const clickableAncestor = targetEl?.closest("a,button");
-
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "run1", hypothesisId: "H1-H4", location: "app/products/[id]/ProductPageClient.tsx:capture-click", message: "Captured click on product page", data: { x: event.clientX, y: event.clientY, targetTag: targetEl?.tagName || null, targetClass: targetEl?.className || null, topElementTag: pointEl?.tagName || null, topElementClass: pointEl?.className || null, clickableAncestorTag: clickableAncestor?.tagName || null, clickableAncestorClass: clickableAncestor?.className || null }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
-    };
-
     const onAnchorFallback = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const anchor = target?.closest("a") as HTMLAnchorElement | null;
@@ -79,17 +62,12 @@ export default function ProductPageClient({ product }) {
       // Only apply fallback for same-origin internal navigation.
       if (href.startsWith("/")) {
         event.preventDefault();
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "post-fix", hypothesisId: "H4", location: "app/products/[id]/ProductPageClient.tsx:anchor-fallback", message: "Forced hard navigation fallback", data: { href }, timestamp: Date.now() }) }).catch(() => {});
-        // #endregion
         window.location.assign(href);
       }
     };
 
-    document.addEventListener("click", onCaptureClick, true);
     document.addEventListener("click", onAnchorFallback, false);
     return () => {
-      document.removeEventListener("click", onCaptureClick, true);
       document.removeEventListener("click", onAnchorFallback, false);
     };
   }, []);

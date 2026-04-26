@@ -21,21 +21,11 @@ export default function SideCart() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Ensure no stale full-screen overlay remains after navigation.
   useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "run1", hypothesisId: "H2", location: "components/SideCart.tsx:route-change", message: "Route changed in SideCart", data: { pathname, sideCartOpen }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     closeCart();
     // Intentionally tied to route changes only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "run1", hypothesisId: "H2", location: "components/SideCart.tsx:state-change", message: "SideCart open state changed", data: { sideCartOpen }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
-  }, [sideCartOpen]);
 
   const hasItems = items.length > 0;
 

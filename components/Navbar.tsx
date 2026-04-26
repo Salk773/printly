@@ -26,12 +26,6 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "669ff9" }, body: JSON.stringify({ sessionId: "669ff9", runId: "run1", hypothesisId: "H3", location: "components/Navbar.tsx:mobile-menu-state", message: "Navbar mobile menu state changed", data: { pathname, mobileMenuOpen, viewportWidth: typeof window !== "undefined" ? window.innerWidth : null }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
-  }, [pathname, mobileMenuOpen]);
-
   const isAdmin =
     !!user?.email && ADMIN_EMAILS.includes(user.email);
 

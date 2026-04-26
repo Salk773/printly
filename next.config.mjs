@@ -55,8 +55,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              // Allow local debug logger during active debug sessions.
-              "connect-src 'self' https://*.supabase.co http://127.0.0.1:7557 http://localhost:7557",
+              "connect-src 'self' https://*.supabase.co",
               "frame-ancestors 'self'",
             ].join("; "),
           },
