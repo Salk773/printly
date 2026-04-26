@@ -26,6 +26,34 @@ interface DatabaseLogEntry {
   ip_address?: string;
 }
 
+interface InMemoryLogEntry {
+  id: string;
+  level: LogLevel;
+  message: string;
+  category: LogCategory;
+  metadata?: Record<string, any>;
+  user_id?: string;
+  ip_address?: string;
+  created_at: string;
+}
+
+const MAX_IN_MEMORY_LOGS = 500;
+const globalWithLogs = globalThis as typeof globalThis & { __inMemoryLogs?: InMemoryLogEntry[] };
+
+function pushInMemoryLog(entry: InMemoryLogEntry) {
+  if (!globalWithLogs.__inMemoryLogs) {
+    globalWithLogs.__inMemoryLogs = [];
+  }
+  globalWithLogs.__inMemoryLogs.unshift(entry);
+  if (globalWithLogs.__inMemoryLogs.length > MAX_IN_MEMORY_LOGS) {
+    globalWithLogs.__inMemoryLogs.length = MAX_IN_MEMORY_LOGS;
+  }
+}
+
+export function getInMemoryLogs() {
+  return [...(globalWithLogs.__inMemoryLogs || [])];
+}
+
 /**
  * Write log entry to database (non-blocking, fails silently)
  */
@@ -51,6 +79,17 @@ async function writeToDatabase(
       user_id: userId,
       ip_address: ipAddress,
     };
+
+    pushInMemoryLog({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      level,
+      message,
+      category,
+      metadata: metadata || {},
+      user_id: userId,
+      ip_address: ipAddress,
+      created_at: new Date().toISOString(),
+    });
 
     // Await insert so logs are not dropped on short-lived requests.
     await supabase.from("logs").insert([logEntry]);
