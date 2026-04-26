@@ -35,6 +35,11 @@ interface ProductPerformance {
   orderCount: number;
 }
 
+function toFiniteNumber(value: unknown): number {
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
 function isValidOrderItem(item: unknown): item is OrderItem {
   if (!item || typeof item !== "object") return false;
   const candidate = item as Partial<OrderItem>;
@@ -93,7 +98,7 @@ export async function GET(req: NextRequest) {
     // Calculate lifetime sales (exclude cancelled orders)
     const lifetimeSales = ordersData
       .filter((o) => o.status !== "cancelled")
-      .reduce((sum, order) => sum + (order.total || 0), 0);
+      .reduce((sum, order) => sum + toFiniteNumber(order.total), 0);
 
     // Calculate monthly sales
     const monthlySalesMap = new Map<string, MonthlySales>();
@@ -115,7 +120,7 @@ export async function GET(req: NextRequest) {
         }
         
         const monthlyData = monthlySalesMap.get(monthKey)!;
-        monthlyData.total += order.total || 0;
+        monthlyData.total += toFiniteNumber(order.total);
         monthlyData.orderCount += 1;
       });
 
@@ -143,8 +148,8 @@ export async function GET(req: NextRequest) {
           }
           
           const productData = productMap.get(item.name)!;
-          productData.totalQuantity += item.quantity || 0;
-          productData.totalRevenue += (item.price || 0) * (item.quantity || 0);
+          productData.totalQuantity += toFiniteNumber(item.quantity);
+          productData.totalRevenue += toFiniteNumber(item.price) * toFiniteNumber(item.quantity);
           productData.orderCount += 1;
         });
       });

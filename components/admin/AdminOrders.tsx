@@ -140,7 +140,10 @@ export default function AdminOrders({
       // #endregion
       const response = await fetch("/api/orders/delete", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ orderId }),
       });
       // #region agent log
