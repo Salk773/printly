@@ -11,7 +11,7 @@ import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/em
 import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
 
 export default function CheckoutPage() {
-  const { items, total, clearCart } = useCart();
+  const { items, total, clearCart, hasHydrated } = useCart();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -35,12 +35,14 @@ export default function CheckoutPage() {
 
   const hasItems = items.length > 0;
 
-  // Redirect if cart empty (but not if order was just placed)
+  // Redirect if cart empty (but not if order was just placed).
+  // Wait for cart hydration so we don't bounce before localStorage loads.
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!hasItems && !orderPlaced) {
       router.push("/cart");
     }
-  }, [hasItems, orderPlaced, router]);
+  }, [hasHydrated, hasItems, orderPlaced, router]);
 
   // Load saved addresses for logged-in users
   useEffect(() => {
@@ -195,6 +197,24 @@ export default function CheckoutPage() {
       `/checkout/success?order=${encodeURIComponent(data.id)}&number=${encodeURIComponent(data.order_number)}`
     );
   };
+
+  if (!hasHydrated) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#0a0f1f",
+          color: "#e5e7eb",
+          padding: "40px 20px 60px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <p style={{ color: "#94a3b8" }}>Loading your cart…</p>
+      </main>
+    );
+  }
 
   return (
     <main

@@ -2,6 +2,7 @@
 
 import { useCart } from "@/context/CartProvider";
 import { useWishlist } from "@/context/WishlistProvider";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function SideCart() {
@@ -243,16 +244,14 @@ export default function SideCart() {
               <span>{total.toFixed(2)} AED</span>
             </div>
 
-            {/* CHECKOUT */}
-            <button
-              onClick={() => {
-                closeCart();
-                router.push("/checkout");
-              }}
-              style={checkoutBtn}
+            {/* CHECKOUT — Link avoids client router edge cases; close cart first */}
+            <Link
+              href="/checkout"
+              onClick={() => closeCart()}
+              style={{ ...checkoutBtn, textAlign: "center", textDecoration: "none", display: "block", boxSizing: "border-box" }}
             >
               Checkout
-            </button>
+            </Link>
 
             {/* VIEW CART */}
             <button

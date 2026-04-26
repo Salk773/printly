@@ -22,6 +22,8 @@ type CartContextType = {
   items: CartItem[];
   count: number;
   total: number;
+  /** false until cart state is read from localStorage (client mount) */
+  hasHydrated: boolean;
 
   sideCartOpen: boolean;
   toggleSideCart: () => void;
@@ -174,6 +176,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       count,
       total,
+      hasHydrated,
 
       sideCartOpen,
       toggleSideCart,
@@ -191,7 +194,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cartJustUpdated,
       isSyncing,
     }),
-    [items, count, total, sideCartOpen, cartJustUpdated, isSyncing]
+    [items, count, total, hasHydrated, sideCartOpen, cartJustUpdated, isSyncing]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
