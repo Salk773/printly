@@ -40,6 +40,15 @@ function toFiniteNumber(value: unknown): number {
   return Number.isFinite(num) ? num : 0;
 }
 
+function getOrderTotal(order: Order): number {
+  const total = toFiniteNumber(order.total);
+  if (total > 0) return total;
+  if (!Array.isArray(order.items)) return total;
+  return order.items
+    .filter(isValidOrderItem)
+    .reduce((sum, item) => sum + toFiniteNumber(item.price) * toFiniteNumber(item.quantity), 0);
+}
+
 function isValidOrderItem(item: unknown): item is OrderItem {
   if (!item || typeof item !== "object") return false;
   const candidate = item as Partial<OrderItem>;
@@ -98,7 +107,7 @@ export async function GET(req: NextRequest) {
     // Calculate lifetime sales (exclude cancelled orders)
     const lifetimeSales = ordersData
       .filter((o) => o.status !== "cancelled")
-      .reduce((sum, order) => sum + toFiniteNumber(order.total), 0);
+      .reduce((sum, order) => sum + getOrderTotal(order), 0);
 
     // Calculate monthly sales
     const monthlySalesMap = new Map<string, MonthlySales>();
@@ -120,7 +129,7 @@ export async function GET(req: NextRequest) {
         }
         
         const monthlyData = monthlySalesMap.get(monthKey)!;
-        monthlyData.total += toFiniteNumber(order.total);
+        monthlyData.total += getOrderTotal(order);
         monthlyData.orderCount += 1;
       });
 

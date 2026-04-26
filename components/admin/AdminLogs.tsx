@@ -73,7 +73,14 @@ export default function AdminLogs() {
       // #endregion
 
       if (!response.ok) {
-        throw new Error("Failed to fetch logs");
+        let errorMessage = "Failed to fetch logs";
+        try {
+          const errorBody = await response.json();
+          if (errorBody?.error) errorMessage = errorBody.error;
+        } catch {
+          // keep generic message
+        }
+        throw new Error(errorMessage);
       }
 
       const data: LogsResponse = await response.json();

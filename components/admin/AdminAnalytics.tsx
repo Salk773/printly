@@ -55,7 +55,14 @@ export default function AdminAnalytics() {
         // #endregion
 
         if (!response.ok) {
-          throw new Error("Failed to fetch analytics");
+          let errorMessage = "Failed to fetch analytics";
+          try {
+            const errorBody = await response.json();
+            if (errorBody?.error) errorMessage = errorBody.error;
+          } catch {
+            // keep generic message
+          }
+          throw new Error(errorMessage);
         }
 
         const analyticsData = await response.json();
