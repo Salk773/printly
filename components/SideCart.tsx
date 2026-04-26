@@ -8,7 +8,7 @@ export default function SideCart() {
   const {
     items,
     sideCartOpen,
-    toggleSideCart,
+    closeCart,
     increaseQuantity,
     decreaseQuantity,
     removeItem,
@@ -18,7 +18,6 @@ export default function SideCart() {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const router = useRouter();
 
-  const closeCart = () => toggleSideCart();
   const hasItems = items.length > 0;
 
   return (
