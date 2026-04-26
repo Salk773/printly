@@ -68,6 +68,9 @@ export default function AdminLogs() {
           Authorization: `Bearer ${token}`,
         },
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"L1",location:"components/admin/AdminLogs.tsx:response",message:"Logs client response",data:{ok:response.ok,status:response.status,hasSince:Boolean(since)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       if (!response.ok) {
         throw new Error("Failed to fetch logs");

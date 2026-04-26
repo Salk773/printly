@@ -49,6 +49,9 @@ export async function GET(req: NextRequest) {
   const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
   
   try {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A4",location:"app/api/admin/analytics/route.ts:entry",message:"Analytics API entry",data:{},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const authResult = await verifyAdmin(req);
 
     if (!authResult.authorized) {
@@ -163,6 +166,9 @@ export async function GET(req: NextRequest) {
       activeOrders: ordersData.filter((o) => o.status !== "cancelled").length,
     });
   } catch (error: any) {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A5",location:"app/api/admin/analytics/route.ts:catch",message:"Analytics API catch",data:{errorMessage:error?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     logApiError("/api/admin/analytics", error, { ipAddress });
     console.error("Analytics error:", error);
     return NextResponse.json(

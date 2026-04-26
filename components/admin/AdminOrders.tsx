@@ -133,11 +133,19 @@ export default function AdminOrders({
 
     setDeletingId(orderId);
     try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"O1",location:"components/admin/AdminOrders.tsx:delete-request",message:"Order delete client request",data:{hasToken:Boolean(token)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const response = await fetch("/api/orders/delete", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId }),
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"O2",location:"components/admin/AdminOrders.tsx:delete-response",message:"Order delete client response",data:{ok:response.ok,status:response.status},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       const result = await response.json();
 
