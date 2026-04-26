@@ -18,7 +18,7 @@ interface Order {
   total: number;
   status: string;
   created_at: string;
-  items: OrderItem[];
+  items: OrderItem[] | null;
 }
 
 interface MonthlySales {
@@ -33,6 +33,16 @@ interface ProductPerformance {
   totalQuantity: number;
   totalRevenue: number;
   orderCount: number;
+}
+
+function isValidOrderItem(item: unknown): item is OrderItem {
+  if (!item || typeof item !== "object") return false;
+  const candidate = item as Partial<OrderItem>;
+  return (
+    typeof candidate.name === "string" &&
+    typeof candidate.price === "number" &&
+    typeof candidate.quantity === "number"
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -118,8 +128,8 @@ export async function GET(req: NextRequest) {
       .filter((o) => o.status !== "cancelled")
       .forEach((order) => {
         if (!order.items || !Array.isArray(order.items)) return;
-        
-        order.items.forEach((item: OrderItem) => {
+
+        order.items.filter(isValidOrderItem).forEach((item) => {
           if (!productMap.has(item.name)) {
             productMap.set(item.name, {
               name: item.name,
