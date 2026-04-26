@@ -47,6 +47,9 @@ export default function AdminLogs() {
         // #region agent log
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L2",location:"components/admin/AdminLogs.tsx:no-session",message:"Logs fetch blocked: no session",data:{},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
+        setLogs([]);
+        setTotal(0);
+        setOffset(0);
         setError("Not authenticated");
         return;
       }
@@ -86,7 +89,10 @@ export default function AdminLogs() {
         } catch {
           // keep generic message
         }
-        // Surface actual API failure instead of silently showing an empty list.
+        // Clear stale data so error state is explicit and trustworthy.
+        setLogs([]);
+        setTotal(0);
+        setOffset(0);
         setError(errorMessage);
         console.error("Logs API unavailable:", errorMessage);
         // #region agent log
@@ -105,7 +111,9 @@ export default function AdminLogs() {
         setLogs((prev) => {
           const existingIds = new Set(prev.map((log) => log.id));
           const newLogs = data.logs.filter((log) => !existingIds.has(log.id));
-          return [...newLogs, ...prev];
+          const merged = [...newLogs, ...prev];
+          setTotal(merged.length);
+          return merged;
         });
       } else {
         // Initial load or filter change
@@ -118,6 +126,9 @@ export default function AdminLogs() {
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch logs:", err);
+      setLogs([]);
+      setTotal(0);
+      setOffset(0);
       setError(err?.message || "Failed to fetch logs");
       // #region agent log
       fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L5",location:"components/admin/AdminLogs.tsx:catch-fallback",message:"Logs fetch catch fallback",data:{errorMessage:err?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
