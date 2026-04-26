@@ -86,12 +86,9 @@ export default function AdminLogs() {
         } catch {
           // keep generic message
         }
-        // Graceful fallback: keep page usable even when logs backend is unavailable.
-        setLogs([]);
-        setTotal(0);
-        setOffset(0);
-        setError(null);
-        console.warn("Logs API unavailable:", errorMessage);
+        // Surface actual API failure instead of silently showing an empty list.
+        setError(errorMessage);
+        console.error("Logs API unavailable:", errorMessage);
         // #region agent log
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L3",location:"components/admin/AdminLogs.tsx:non-ok-fallback",message:"Logs fetch fallback on non-ok response",data:{errorMessage},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
@@ -121,11 +118,7 @@ export default function AdminLogs() {
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch logs:", err);
-      // Graceful fallback for network/runtime failures.
-      setLogs([]);
-      setTotal(0);
-      setOffset(0);
-      setError(null);
+      setError(err?.message || "Failed to fetch logs");
       // #region agent log
       fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L5",location:"components/admin/AdminLogs.tsx:catch-fallback",message:"Logs fetch catch fallback",data:{errorMessage:err?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
