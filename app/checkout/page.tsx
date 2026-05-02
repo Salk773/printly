@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
 import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
 import { CHECKOUT_SHIPPING_AED } from "@/lib/checkoutShipping";
+import { UAE_EMIRATES, normalizeUaeEmirate } from "@/lib/uaeEmirates";
 
 export default function CheckoutPage() {
   const { items, total, clearCart, hasHydrated } = useCart();
@@ -110,7 +111,7 @@ export default function CheckoutPage() {
     setAddress1(address.address_line_1);
     setAddress2(address.address_line_2 || "");
     setCity(address.city);
-    setState(address.state);
+    setState(normalizeUaeEmirate(address.state) || "");
     setPostalCode(address.postal_code || "");
   };
 
@@ -387,7 +388,22 @@ export default function CheckoutPage() {
               onChange={setAddress2}
             />
             <Input label="City" value={city} onChange={setCity} />
-            <Input label="State / Emirate" value={state} onChange={setState} />
+            <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
+              Emirate
+              <select
+                required
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                style={selectFieldStyle}
+              >
+                <option value="">Select emirate</option>
+                {UAE_EMIRATES.map((emirate) => (
+                  <option key={emirate} value={emirate}>
+                    {emirate}
+                  </option>
+                ))}
+              </select>
+            </label>
             <Input
               label="Postal code (optional)"
               value={postalCode}
@@ -587,6 +603,12 @@ const inputStyle = {
   border: "1px solid rgba(148,163,184,0.3)",
   background: "#020617",
   color: "white",
+};
+
+const selectFieldStyle = {
+  ...inputStyle,
+  marginTop: 4,
+  cursor: "pointer",
 };
 
 const textareaStyle = {
