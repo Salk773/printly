@@ -47,7 +47,7 @@ export default function CheckoutSuccessClient() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, clearCart]);
 
   if (loadingSession) {
     return (

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import Stripe from "stripe";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripe } from "@/lib/stripe";
-import { sendPaidOrderEmails } from "@/lib/orderNotifications";
+import { finalizeOrderAfterStripePayment } from "@/lib/stripeOrderFinalize";
 import { logApiError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -49,44 +48,10 @@ export async function POST(req: NextRequest) {
         ? session.payment_intent
         : session.payment_intent?.id;
 
-    const admin = supabaseAdmin();
-
-    const { data: existing } = await admin
-      .from("orders")
-      .select(
-        "id, status, order_number, guest_email, guest_name, phone, address_line_1, address_line_2, city, state, postal_code, items, total, notes"
-      )
-      .eq("id", orderId)
-      .maybeSingle();
-
-    if (!existing) {
-      return NextResponse.json({ received: true });
-    }
-
-    if (existing.status === "paid") {
-      return NextResponse.json({ received: true });
-    }
-
-    const { error: updErr } = await admin
-      .from("orders")
-      .update({
-        status: "paid",
-        stripe_payment_intent_id: paymentIntentId || null,
-      })
-      .eq("id", orderId);
-
-    if (updErr) {
-      logApiError("/api/webhooks/stripe", new Error(updErr.message));
+    const result = await finalizeOrderAfterStripePayment(orderId, paymentIntentId || null);
+    if (!result.ok) {
+      logApiError("/api/webhooks/stripe", new Error("finalizeOrderAfterStripePayment failed"));
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
-    }
-
-    try {
-      await sendPaidOrderEmails(existing);
-    } catch (emailErr) {
-      logApiError(
-        "/api/webhooks/stripe",
-        emailErr instanceof Error ? emailErr : new Error(String(emailErr))
-      );
     }
   }
 
