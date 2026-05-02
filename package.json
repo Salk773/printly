@@ -8,9 +8,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@sentry/nextjs": "^8.0.0",
+    "@sentry/nextjs": "^8.55.2",
     "@supabase/supabase-js": "2.45.4",
-    "next": "14.2.5",
+    "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hot-toast": "^2.4.0",
@@ -22,5 +22,9 @@
     "@types/react": "^18.2.74",
     "@types/react-dom": "^18.2.24",
     "typescript": "^5.4.5"
+  },
+  "overrides": {
+    "glob": "^13.0.6",
+    "uuid": "^11.1.0"
   }
 }
