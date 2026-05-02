@@ -172,9 +172,8 @@ export default function CheckoutPage() {
           return;
         }
 
-        setOrderPlaced(true);
-        clearCart();
-        setLoading(false);
+        // Do not clear the cart until payment succeeds (success page after Stripe).
+        // Otherwise browser Back from Stripe leaves an empty cart.
         window.location.href = result.url;
       } catch (err) {
         console.error(err);

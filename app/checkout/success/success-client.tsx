@@ -2,10 +2,12 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useCart } from "@/context/CartProvider";
 
 export default function CheckoutSuccessClient() {
   const params = useSearchParams();
   const router = useRouter();
+  const { clearCart } = useCart();
 
   const sessionId = params.get("session_id");
   const orderIdParam = params.get("order");
@@ -31,6 +33,7 @@ export default function CheckoutSuccessClient() {
         if (data.success && data.orderId) {
           setOrderId(data.orderId);
           setOrderNumber(data.orderNumber ?? null);
+          clearCart();
         } else {
           setSessionError(data.error || "Could not load order details");
         }
