@@ -39,6 +39,12 @@ export default function OrderDetailsModal({
           </p>
         )}
 
+        {order.saved_address_id && (
+          <p style={{ fontSize: "0.85rem", color: "#94a3b8" }}>
+            Delivery details linked to a saved account address at checkout.
+          </p>
+        )}
+
         {/* ADDRESS */}
         <p>
           <strong>Address:</strong>
@@ -57,6 +63,11 @@ export default function OrderDetailsModal({
         {/* STATUS */}
         <p>
           <strong>Status:</strong> {order.status}
+          {order.stripe_payment_intent_id && (
+            <span style={{ fontSize: "0.75rem", color: "#94a3b8", marginLeft: 8 }}>
+              (Stripe)
+            </span>
+          )}
         </p>
 
         {/* ITEMS */}

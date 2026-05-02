@@ -32,6 +32,7 @@ export default function CheckoutPage() {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [stripeCheckout, setStripeCheckout] = useState(false);
 
   const hasItems = items.length > 0;
 
@@ -43,6 +44,22 @@ export default function CheckoutPage() {
       router.push("/cart");
     }
   }, [hasHydrated, hasItems, orderPlaced, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/checkout/mode");
+        const data = await res.json();
+        if (!cancelled && data?.stripeCheckout) setStripeCheckout(true);
+      } catch {
+        /* legacy checkout */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load saved addresses for logged-in users
   useEffect(() => {
@@ -111,14 +128,60 @@ export default function CheckoutPage() {
 
     setLoading(true);
 
-    // Always store customer email for notifications (even for logged-in users)
     const customerEmail = user?.email || email;
     const customerName = user ? (user.user_metadata?.full_name || user.email?.split("@")[0]) : name;
+
+    if (stripeCheckout) {
+      try {
+        const session = await supabase.auth.getSession();
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (session.data.session?.access_token) {
+          headers.Authorization = `Bearer ${session.data.session.access_token}`;
+        }
+
+        const res = await fetch("/api/checkout/stripe-session", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+            phone: sanitizeInput(phone),
+            address_line_1: sanitizeInput(address1),
+            address_line_2: address2 ? sanitizeInput(address2) : null,
+            city: sanitizeInput(city),
+            state: sanitizeInput(state),
+            postal_code: postalCode ? sanitizeInput(postalCode) : null,
+            notes: notes ? sanitizeInput(notes) : null,
+            saved_address_id: selectedAddressId || null,
+            guest_email: user ? undefined : email,
+            guest_name: user ? undefined : name,
+          }),
+        });
+
+        const result = await res.json();
+        if (!res.ok || !result.success || !result.url) {
+          setLoading(false);
+          toast.error(result.error || "Could not start payment");
+          return;
+        }
+
+        setOrderPlaced(true);
+        clearCart();
+        setLoading(false);
+        window.location.href = result.url;
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        toast.error("Could not start payment");
+      }
+      return;
+    }
 
     const orderPayload = {
       user_id: user?.id ?? null,
       guest_name: customerName,
-      guest_email: customerEmail, // Always store email for notifications
+      guest_email: customerEmail,
 
       phone: sanitizeInput(phone),
       address_line_1: sanitizeInput(address1),
@@ -137,6 +200,7 @@ export default function CheckoutPage() {
       total,
       status: "pending",
       notes: notes ? sanitizeInput(notes) : null,
+      ...(selectedAddressId ? { saved_address_id: selectedAddressId } : {}),
     };
 
     const { data, error } = await supabase
@@ -152,13 +216,9 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Mark order as placed before clearing cart to prevent redirect
     setOrderPlaced(true);
     clearCart();
     setLoading(false);
-
-    // Send email notifications (non-blocking)
-    // Note: customerEmail and customerName are already defined above
 
     const emailData = {
       orderId: data.id,
@@ -182,7 +242,6 @@ export default function CheckoutPage() {
       notes,
     };
 
-    // Send emails in background (don't block redirect)
     Promise.all([
       sendOrderConfirmationEmail(emailData).catch((err) => {
         console.error("Failed to send customer email:", err);
@@ -192,7 +251,6 @@ export default function CheckoutPage() {
       }),
     ]);
 
-    // ✅ Redirect to existing success page
     router.push(
       `/checkout/success?order=${encodeURIComponent(data.id)}&number=${encodeURIComponent(data.order_number)}`
     );
@@ -231,9 +289,13 @@ export default function CheckoutPage() {
         </h1>
 
         <p style={{ color: "#9ca3af", marginBottom: 30 }}>
-          {user 
-            ? "Complete your order below. No payment is required yet."
-            : "Complete your order below. No account required - checkout as a guest. No payment is required yet."}
+          {stripeCheckout
+            ? user
+              ? "Complete your details below. You’ll be redirected to Stripe to pay securely."
+              : "Complete your details below. No account required — you’ll pay securely with Stripe."
+            : user
+              ? "Complete your order below. No payment is required yet."
+              : "Complete your order below. No account required - checkout as a guest. No payment is required yet."}
         </p>
 
         <div
@@ -332,7 +394,13 @@ export default function CheckoutPage() {
             </label>
 
             <button type="submit" disabled={loading} style={buttonStyle}>
-              {loading ? "Placing order..." : "Place order"}
+              {loading
+                ? stripeCheckout
+                  ? "Redirecting to payment..."
+                  : "Placing order..."
+                : stripeCheckout
+                  ? "Continue to payment"
+                  : "Place order"}
             </button>
 
             <Link href="/cart" style={{ fontSize: "0.85rem", color: "#93c5fd" }}>

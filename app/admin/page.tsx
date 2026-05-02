@@ -53,6 +53,9 @@ export type Order = {
   created_at: string;
   notes: string | null;
   archived?: boolean;
+  saved_address_id?: string | null;
+  stripe_checkout_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
 };
 
 /* ============== CONSTANTS ============== */

@@ -1,13 +1,68 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function CheckoutSuccessClient() {
   const params = useSearchParams();
   const router = useRouter();
 
-  const orderId = params.get("order");   // internal (uuid)
-  const orderNumber = params.get("number"); // user-facing
+  const sessionId = params.get("session_id");
+  const orderIdParam = params.get("order");
+  const orderNumberParam = params.get("number");
+
+  const [orderId, setOrderId] = useState(orderIdParam);
+  const [orderNumber, setOrderNumber] = useState(orderNumberParam);
+  const [loadingSession, setLoadingSession] = useState(Boolean(sessionId));
+  const [sessionError, setSessionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/checkout/verify-session?session_id=${encodeURIComponent(sessionId)}`
+        );
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.success && data.orderId) {
+          setOrderId(data.orderId);
+          setOrderNumber(data.orderNumber ?? null);
+        } else {
+          setSessionError(data.error || "Could not load order details");
+        }
+      } catch {
+        if (!cancelled) setSessionError("Could not load order details");
+      } finally {
+        if (!cancelled) setLoadingSession(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  if (loadingSession) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#0a0f1f",
+          color: "#e5e7eb",
+          padding: "60px 20px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <p style={{ color: "#9ca3af" }}>Confirming your payment…</p>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -55,7 +110,18 @@ export default function CheckoutSuccessClient() {
           Thank you for your order. We’ll contact you shortly to confirm.
         </p>
 
-        {/* ✅ USER-FACING ORDER NUMBER */}
+        {sessionError && (
+          <p
+            style={{
+              color: "#fca5a5",
+              fontSize: "0.85rem",
+              marginBottom: 16,
+            }}
+          >
+            {sessionError} Your payment may still have gone through; check your email for confirmation.
+          </p>
+        )}
+
         {orderNumber && (
           <div
             style={{
@@ -74,7 +140,6 @@ export default function CheckoutSuccessClient() {
           </div>
         )}
 
-        {/* Optional: keep UUID hidden for support/debug */}
         {orderId && (
           <div
             style={{
