@@ -11,6 +11,37 @@ export const dynamic = "force-dynamic";
 
 type CartLine = { id: string; quantity: number };
 
+type OrderInsertPayload = Record<string, unknown>;
+
+/** Full insert; retries without columns that often break older DBs (migrations not applied). */
+async function insertPendingOrder(
+  admin: ReturnType<typeof supabaseAdmin>,
+  fullPayload: OrderInsertPayload
+): Promise<{ data: { id: string; order_number: string | null } | null; error: { message: string } | null }> {
+  const slimPayload = { ...fullPayload };
+  delete slimPayload.shipping_cost;
+  delete slimPayload.saved_address_id;
+
+  const attempts = [fullPayload, slimPayload];
+
+  let lastError: { message: string } | null = null;
+
+  for (const payload of attempts) {
+    const { data, error } = await admin
+      .from("orders")
+      .insert(payload)
+      .select("id, order_number")
+      .single();
+
+    if (!error && data) {
+      return { data, error: null };
+    }
+    lastError = error;
+  }
+
+  return { data: null, error: lastError };
+}
+
 export async function POST(req: NextRequest) {
   try {
     logApiCall("POST", "/api/checkout/stripe-session");
@@ -211,7 +242,10 @@ export async function POST(req: NextRequest) {
       (guest_name ? sanitizeInput(String(guest_name)) : null) ||
       customerEmail.split("@")[0];
 
-    const orderPayload = {
+    const savedIdRaw = saved_address_id ? String(saved_address_id).trim() : "";
+    const savedAddressId = savedIdRaw.length > 0 ? savedIdRaw : null;
+
+    const orderPayload: OrderInsertPayload = {
       user_id: userId,
       guest_name: customerName,
       guest_email: customerEmail,
@@ -226,19 +260,26 @@ export async function POST(req: NextRequest) {
       shipping_cost: CHECKOUT_SHIPPING_AED,
       status: "pending",
       notes: notes ? sanitizeInput(String(notes)) : null,
-      saved_address_id: saved_address_id || null,
+      saved_address_id: savedAddressId,
     };
 
-    const { data: orderRow, error: insertErr } = await admin
-      .from("orders")
-      .insert(orderPayload)
-      .select("id, order_number")
-      .single();
+    const { data: orderRow, error: insertErr } = await insertPendingOrder(admin, orderPayload);
 
     if (insertErr || !orderRow) {
-      logApiError("/api/checkout/stripe-session", new Error(insertErr?.message || "Insert failed"));
+      const detail = insertErr?.message || "Insert failed";
+      logApiError("/api/checkout/stripe-session", new Error(detail));
+      const hint =
+        /shipping_cost|saved_address|column|schema/i.test(detail) ||
+        detail.includes("42703") ||
+        detail.includes("PGRST")
+          ? " If this persists, run Supabase migrations for `orders` (shipping + saved_address columns)."
+          : "";
       return NextResponse.json(
-        { success: false, error: "Failed to create order" },
+        {
+          success: false,
+          error: `Failed to create order.${hint}`,
+          detail,
+        },
         { status: 500 }
       );
     }

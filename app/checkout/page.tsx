@@ -173,7 +173,12 @@ export default function CheckoutPage() {
         const result = await res.json();
         if (!res.ok || !result.success || !result.url) {
           setLoading(false);
-          toast.error(result.error || "Could not start payment");
+          console.error("checkout stripe-session:", result);
+          const msg =
+            result.detail && typeof result.detail === "string"
+              ? `${result.error || "Payment setup failed"} — ${result.detail}`
+              : result.error || "Could not start payment";
+          toast.error(msg.length > 220 ? `${msg.slice(0, 217)}…` : msg);
           return;
         }
 
