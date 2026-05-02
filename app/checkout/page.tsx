@@ -34,6 +34,12 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [stripeCheckout, setStripeCheckout] = useState(false);
 
+  /** Matches server Stripe readiness OR optional publishable key (safe to expose) so UI shows pay flow on production. */
+  const stripePublishableReady =
+    typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === "string" &&
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.trim().length > 0;
+  const useOnlinePayment = stripeCheckout || stripePublishableReady;
+
   const hasItems = items.length > 0;
 
   // Redirect if cart empty (but not if order was just placed).
@@ -131,7 +137,7 @@ export default function CheckoutPage() {
     const customerEmail = user?.email || email;
     const customerName = user ? (user.user_metadata?.full_name || user.email?.split("@")[0]) : name;
 
-    if (stripeCheckout) {
+    if (useOnlinePayment) {
       try {
         const session = await supabase.auth.getSession();
         const headers: Record<string, string> = {
@@ -289,10 +295,10 @@ export default function CheckoutPage() {
         </h1>
 
         <p style={{ color: "#9ca3af", marginBottom: 30 }}>
-          {stripeCheckout
+          {useOnlinePayment
             ? user
-              ? "Complete your details below. You’ll be redirected to Stripe to pay securely."
-              : "Complete your details below. No account required — you’ll pay securely with Stripe."
+              ? "Enter your delivery details, then continue to Stripe Checkout. You can pay with Apple Pay (where available), Google Pay, Link, or card."
+              : "Enter your details — no account required. Then continue to Stripe Checkout for Apple Pay, Google Pay, Link, or card."
             : user
               ? "Complete your order below. No payment is required yet."
               : "Complete your order below. No account required - checkout as a guest. No payment is required yet."}
@@ -393,15 +399,31 @@ export default function CheckoutPage() {
               />
             </label>
 
-            <button type="submit" disabled={loading} style={buttonStyle}>
-              {loading
-                ? stripeCheckout
-                  ? "Redirecting to payment..."
-                  : "Placing order..."
-                : stripeCheckout
-                  ? "Continue to payment"
-                  : "Place order"}
+            <button type="submit" disabled={loading} style={useOnlinePayment ? payButtonStyle : buttonStyle}>
+              {loading ? (
+                useOnlinePayment ? (
+                  "Opening secure checkout…"
+                ) : (
+                  "Placing order..."
+                )
+              ) : useOnlinePayment ? (
+                <span style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <span>Pay securely with Stripe</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 600, opacity: 0.92 }}>
+                    Apple Pay, Google Pay & card
+                  </span>
+                </span>
+              ) : (
+                "Place order"
+              )}
             </button>
+
+            {useOnlinePayment && !loading && (
+              <p style={{ fontSize: "0.78rem", color: "#64748b", marginTop: 4, textAlign: "center", lineHeight: 1.45 }}>
+                Apple Pay appears on the next page on supported iPhone, iPad, and Mac browsers when your domain is
+                configured in the Stripe Dashboard.
+              </p>
+            )}
 
             <Link href="/cart" style={{ fontSize: "0.85rem", color: "#93c5fd" }}>
               ← Back to cart
@@ -476,6 +498,13 @@ export default function CheckoutPage() {
               <span>Total</span>
               <span>{total.toFixed(2)} AED</span>
             </div>
+
+            {useOnlinePayment && (
+              <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 8, lineHeight: 1.4 }}>
+                Secured by Stripe. Wallets (e.g. Apple Pay) show automatically when available for your currency and
+                region.
+              </p>
+            )}
           </aside>
         </div>
       </div>
@@ -551,6 +580,12 @@ const buttonStyle = {
   color: "#020617",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const payButtonStyle = {
+  ...buttonStyle,
+  padding: "14px 20px",
+  minHeight: 52,
 };
 
 const summaryStyle = {

@@ -248,6 +248,8 @@ export async function POST(req: NextRequest) {
           },
         },
         customer_email: customerEmail,
+        // Card + Link; Apple Pay / Google Pay show on Stripe’s page when the customer’s device supports them.
+        payment_method_types: ["card", "link"],
       });
     } catch (e) {
       await admin.from("orders").delete().eq("id", orderRow.id);
