@@ -5,6 +5,7 @@ import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { OrderStatusUpdateSchema, validateRequest } from "@/lib/validation/schemas";
 import { logApiCall, logAdminAction, logApiError } from "@/lib/logger";
+import { sendOrderNotification } from "@/lib/orderMail";
 
 export const dynamic = "force-dynamic";
 
@@ -135,12 +136,19 @@ export async function POST(req: NextRequest) {
     const customerEmail = updatedOrder.guest_email;
     const customerName = updatedOrder.guest_name;
 
-    // Only send email notification for paid -> processing transition
+    // Paid → processing: send confirmation email in-process (HTTP self-fetch is unreliable on serverless)
     if (
       validation.data.currentStatus === "paid" &&
       validation.data.newStatus === "processing" &&
       customerEmail
     ) {
+      const rawItems = Array.isArray(updatedOrder.items) ? updatedOrder.items : [];
+      const items = rawItems.map((i: { name?: unknown; price?: unknown; quantity?: unknown }) => ({
+        name: String(i?.name ?? ""),
+        price: Number(i?.price ?? 0),
+        quantity: Math.max(1, Math.floor(Number(i?.quantity ?? 1))),
+      }));
+
       const emailData = {
         orderId: updatedOrder.id,
         orderNumber: updatedOrder.order_number,
@@ -154,22 +162,24 @@ export async function POST(req: NextRequest) {
           state: updatedOrder.state || "",
           postalCode: updatedOrder.postal_code,
         },
-        items: updatedOrder.items || [],
-        total: updatedOrder.total,
+        items,
+        total: Number(updatedOrder.total),
         notes: updatedOrder.notes,
       };
 
-      // Send email in background (don't block response)
-      fetch(`${req.nextUrl.origin}/api/orders/notify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "processing",
-          orderData: emailData,
-        }),
-      }).catch((err) => {
-        console.error("Failed to send processing email:", err);
+      const emailResult = await sendOrderNotification({
+        type: "processing",
+        orderData: emailData,
       });
+      if (!emailResult.success) {
+        logApiError(
+          "/api/orders/update-status",
+          new Error(emailResult.error || "Processing confirmation email failed"),
+          { orderId, ipAddress },
+          user.id,
+          ipAddress
+        );
+      }
     }
 
     logApiCall("POST", "/api/orders/update-status", 200, {
