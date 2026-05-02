@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
 import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
+import { CHECKOUT_SHIPPING_AED } from "@/lib/checkoutShipping";
 
 export default function CheckoutPage() {
   const { items, total, clearCart, hasHydrated } = useCart();
@@ -39,6 +40,9 @@ export default function CheckoutPage() {
     typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === "string" &&
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.trim().length > 0;
   const useOnlinePayment = stripeCheckout || stripePublishableReady;
+
+  const subtotal = total;
+  const grandTotal = subtotal + CHECKOUT_SHIPPING_AED;
 
   const hasItems = items.length > 0;
 
@@ -202,7 +206,8 @@ export default function CheckoutPage() {
         image: i.image,
         id: i.id,
       })),
-      total,
+      total: grandTotal,
+      shipping_cost: CHECKOUT_SHIPPING_AED,
       status: "pending",
       notes: notes ? sanitizeInput(notes) : null,
       ...(selectedAddressId ? { saved_address_id: selectedAddressId } : {}),
@@ -243,7 +248,7 @@ export default function CheckoutPage() {
         price: i.price,
         quantity: i.quantity,
       })),
-      total,
+      total: grandTotal,
       notes,
     };
 
@@ -491,11 +496,36 @@ export default function CheckoutPage() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
+                fontSize: "0.9rem",
+                color: "#94a3b8",
+              }}
+            >
+              <span>Subtotal</span>
+              <span>{subtotal.toFixed(2)} AED</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.9rem",
+                color: "#94a3b8",
+              }}
+            >
+              <span>Shipping</span>
+              <span>{CHECKOUT_SHIPPING_AED.toFixed(2)} AED</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
                 fontWeight: 700,
+                marginTop: 8,
+                paddingTop: 12,
+                borderTop: "1px solid rgba(148,163,184,0.15)",
               }}
             >
               <span>Total</span>
-              <span>{total.toFixed(2)} AED</span>
+              <span>{grandTotal.toFixed(2)} AED</span>
             </div>
 
             {useOnlinePayment && (

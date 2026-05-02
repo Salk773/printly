@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
 import { getStripe, siteUrl } from "@/lib/stripe";
 import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
 import { logApiCall, logApiError } from "@/lib/logger";
+import { CHECKOUT_SHIPPING_AED } from "@/lib/checkoutShipping";
 
 export const dynamic = "force-dynamic";
 
@@ -191,6 +192,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const shippingMinor = Math.round(CHECKOUT_SHIPPING_AED * 100);
+    computedTotal += CHECKOUT_SHIPPING_AED;
+    lineItems.push({
+      price_data: {
+        currency: "aed",
+        unit_amount: shippingMinor,
+        product_data: {
+          name: "Shipping",
+          description: "Standard delivery",
+        },
+      },
+      quantity: 1,
+    });
+
     const customerEmail = userEmail || String(guest_email || "").trim();
     const customerName =
       userName ||
@@ -209,6 +224,7 @@ export async function POST(req: NextRequest) {
       postal_code: postal_code ? sanitizeInput(String(postal_code)) : null,
       items: orderItemsJson,
       total: Math.round(computedTotal * 100) / 100,
+      shipping_cost: CHECKOUT_SHIPPING_AED,
       status: "pending",
       notes: notes ? sanitizeInput(String(notes)) : null,
       saved_address_id: saved_address_id || null,
