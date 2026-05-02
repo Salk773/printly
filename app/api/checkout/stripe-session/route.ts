@@ -199,8 +199,7 @@ export async function POST(req: NextRequest) {
         currency: "aed",
         unit_amount: shippingMinor,
         product_data: {
-          name: "Shipping",
-          description: "Standard delivery",
+          name: "Shipping (standard delivery)",
         },
       },
       quantity: 1,
