@@ -239,23 +239,47 @@ export default function AdminOrders({
               {o.total.toFixed(2)} AED
             </div>
 
-            {/* STATUS */}
-            <select
-              className="select"
-              value={o.status}
-              style={{
-                fontWeight: 600,
-                color: getStatusColor(o.status),
-              }}
-              onChange={(e) => handleStatusChange(o.id, e.target.value, o.status)}
-            >
-              <option value="pending">Pending</option>
-              <option value="paid">Paid</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="refunded">Refunded</option>
-            </select>
+            {/* STATUS — badge shows current color; select stays neutral (options can't be styled per-row in HTML) */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  padding: "4px 8px",
+                  borderRadius: 8,
+                  color: getStatusColor(o.status),
+                  background: getStatusBg(o.status),
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {o.status}
+              </span>
+              <select
+                className="select"
+                value={o.status}
+                aria-label="Change order status"
+                style={{
+                  fontWeight: 600,
+                  color: "#e5e7eb",
+                  background: "#020617",
+                  border: "1px solid rgba(148,163,184,0.35)",
+                  borderRadius: 8,
+                  padding: "6px 8px",
+                  fontSize: 13,
+                  maxWidth: 140,
+                }}
+                onChange={(e) => handleStatusChange(o.id, e.target.value, o.status)}
+              >
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            </div>
 
             {/* ARCHIVE/UNARCHIVE */}
             <button

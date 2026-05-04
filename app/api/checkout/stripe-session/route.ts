@@ -6,6 +6,8 @@ import { getStripe, siteUrl } from "@/lib/stripe";
 import { validateCheckoutForm, sanitizeInput } from "@/lib/validation";
 import { logApiCall, logApiError } from "@/lib/logger";
 import { CHECKOUT_SHIPPING_AED } from "@/lib/checkoutShipping";
+import { validateCouponForSubtotal } from "@/lib/checkoutCoupon";
+import { applyDiscountMinorToProductLineItems } from "@/lib/stripeProductLineDiscount";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,8 @@ async function insertPendingOrder(
   const slimPayload = { ...fullPayload };
   delete slimPayload.shipping_cost;
   delete slimPayload.saved_address_id;
+  delete slimPayload.discount_amount;
+  delete slimPayload.coupon_code;
 
   const attempts = [fullPayload, slimPayload];
 
@@ -89,6 +93,7 @@ export async function POST(req: NextRequest) {
       city,
       state,
       postal_code,
+      coupon_code: rawCouponCode,
     } = body;
 
     const items = rawItems as CartLine[] | undefined;
@@ -166,7 +171,7 @@ export async function POST(req: NextRequest) {
       quantity: number;
     }[] = [];
 
-    let computedTotal = 0;
+    let productSubtotal = 0;
     const orderItemsJson: Array<{
       id: string;
       name: string;
@@ -194,7 +199,7 @@ export async function POST(req: NextRequest) {
         );
       }
       const amountMinor = Math.round(unit * 100);
-      computedTotal += unit * q;
+      productSubtotal += unit * q;
 
       const img = product.image_main || "";
       const relativeOrAbsolute =
@@ -223,8 +228,35 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    let discountAed = 0;
+    let couponCodeStored: string | null = null;
+    const trimmedCoupon =
+      typeof rawCouponCode === "string" ? rawCouponCode.trim() : "";
+    if (trimmedCoupon) {
+      const couponResult = await validateCouponForSubtotal(trimmedCoupon, productSubtotal);
+      if (couponResult.ok === false) {
+        return NextResponse.json(
+          { success: false, error: couponResult.error },
+          { status: 400 }
+        );
+      }
+      discountAed = couponResult.discountAed;
+      couponCodeStored = couponResult.codeNormalized;
+      applyDiscountMinorToProductLineItems(
+        lineItems,
+        Math.round(discountAed * 100)
+      );
+    }
+
     const shippingMinor = Math.round(CHECKOUT_SHIPPING_AED * 100);
-    computedTotal += CHECKOUT_SHIPPING_AED;
+    const productsMinorSum = lineItems.reduce(
+      (s, li) => s + li.price_data.unit_amount * li.quantity,
+      0
+    );
+    const productTotalAfterDiscount = productsMinorSum / 100;
+    const orderTotalAed =
+      Math.round((productTotalAfterDiscount + CHECKOUT_SHIPPING_AED) * 100) / 100;
+
     lineItems.push({
       price_data: {
         currency: "aed",
@@ -256,8 +288,10 @@ export async function POST(req: NextRequest) {
       state: sanitizeInput(String(state)),
       postal_code: postal_code ? sanitizeInput(String(postal_code)) : null,
       items: orderItemsJson,
-      total: Math.round(computedTotal * 100) / 100,
+      total: orderTotalAed,
       shipping_cost: CHECKOUT_SHIPPING_AED,
+      discount_amount: discountAed,
+      coupon_code: couponCodeStored,
       status: "pending",
       notes: notes ? sanitizeInput(String(notes)) : null,
       saved_address_id: savedAddressId,

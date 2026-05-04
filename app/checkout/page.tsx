@@ -36,6 +36,13 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [stripeCheckout, setStripeCheckout] = useState(false);
 
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount_amount: number;
+  } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+
   /** Matches server Stripe readiness OR optional publishable key (safe to expose) so UI shows pay flow on production. */
   const stripePublishableReady =
     typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === "string" &&
@@ -43,7 +50,9 @@ export default function CheckoutPage() {
   const useOnlinePayment = stripeCheckout || stripePublishableReady;
 
   const subtotal = total;
-  const grandTotal = subtotal + CHECKOUT_SHIPPING_AED;
+  const discountAmount = appliedCoupon?.discount_amount ?? 0;
+  const grandTotal =
+    Math.round((Math.max(0, subtotal - discountAmount) + CHECKOUT_SHIPPING_AED) * 100) / 100;
 
   const hasItems = items.length > 0;
 
@@ -102,6 +111,41 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error("Error loading saved addresses:", error);
+    }
+  };
+
+  const applyCouponCode = async () => {
+    const raw = couponInput.trim();
+    if (!raw) {
+      toast.error("Enter a discount code");
+      return;
+    }
+    setCouponBusy(true);
+    try {
+      const res = await fetch("/api/checkout/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: raw,
+          subtotal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || "Could not apply code");
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({
+        code: data.coupon.code,
+        discount_amount: data.coupon.discount_amount,
+      });
+      toast.success(`Applied ${data.coupon.code}`);
+    } catch {
+      toast.error("Could not apply code");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponBusy(false);
     }
   };
 
@@ -167,6 +211,7 @@ export default function CheckoutPage() {
             saved_address_id: selectedAddressId || null,
             guest_email: user ? undefined : email,
             guest_name: user ? undefined : name,
+            coupon_code: appliedCoupon?.code ?? undefined,
           }),
         });
 
@@ -214,6 +259,8 @@ export default function CheckoutPage() {
       })),
       total: grandTotal,
       shipping_cost: CHECKOUT_SHIPPING_AED,
+      discount_amount: discountAmount,
+      coupon_code: appliedCoupon?.code ?? null,
       status: "pending",
       notes: notes ? sanitizeInput(notes) : null,
       ...(selectedAddressId ? { saved_address_id: selectedAddressId } : {}),
@@ -524,6 +571,98 @@ export default function CheckoutPage() {
               <span>Subtotal</span>
               <span>{subtotal.toFixed(2)} AED</span>
             </div>
+
+            <div style={{ marginTop: 8 }}>
+              <label style={{ fontSize: "0.75rem", color: "#94a3b8", display: "block", marginBottom: 6 }}>
+                Discount code (applies to products only, not shipping)
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  placeholder="CODE"
+                  disabled={couponBusy}
+                  style={{
+                    flex: 1,
+                    padding: "8px 10px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(148,163,184,0.3)",
+                    background: "#020617",
+                    color: "white",
+                    fontSize: "0.85rem",
+                    textTransform: "uppercase",
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={couponBusy}
+                  onClick={() => void applyCouponCode()}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    border: "1px solid rgba(192,132,252,0.4)",
+                    background: "rgba(192,132,252,0.12)",
+                    color: "#e9d5ff",
+                    fontWeight: 600,
+                    fontSize: "0.8rem",
+                    cursor: couponBusy ? "wait" : "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {couponBusy ? "…" : "Apply"}
+                </button>
+              </div>
+              {appliedCoupon ? (
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: "0.8rem",
+                    color: "#86efac",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span>
+                    {appliedCoupon.code} (−{appliedCoupon.discount_amount.toFixed(2)} AED)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppliedCoupon(null);
+                      setCouponInput("");
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {discountAmount > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "0.9rem",
+                  color: "#86efac",
+                }}
+              >
+                <span>Discount</span>
+                <span>−{discountAmount.toFixed(2)} AED</span>
+              </div>
+            ) : null}
+
             <div
               style={{
                 display: "flex",
