@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   }
 
   const parsed = validateRequest(CouponCreateSchema, body);
-  if (!parsed.success) {
+  if (parsed.success === false) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
