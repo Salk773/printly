@@ -227,7 +227,7 @@ export default function ProductPageClient({ product }) {
             >
               {product.price} AED
             </div>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Including VAT • Free shipping on orders over 100 AED</p>
+            <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Including VAT</p>
           </div>
 
           {/* ADD TO CART */}

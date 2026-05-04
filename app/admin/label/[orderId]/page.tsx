@@ -90,7 +90,12 @@ export default function AdminShippingLabelPage() {
         state: row.state != null ? String(row.state) : null,
         postal_code: row.postal_code != null ? String(row.postal_code) : null,
         items: items as Order["items"],
-        total: typeof row.total === "number" ? row.total : Number(row.total),
+        total: (() => {
+          const t = row.total;
+          if (t == null || t === "") return 0;
+          const n = typeof t === "number" ? t : Number(t);
+          return Number.isFinite(n) ? n : 0;
+        })(),
         status: row.status != null ? String(row.status) : "unknown",
         created_at:
           row.created_at != null ? String(row.created_at) : new Date().toISOString(),

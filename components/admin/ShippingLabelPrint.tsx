@@ -95,7 +95,8 @@ export default function ShippingLabelPrint({
         }}
       >
         <span style={{ fontWeight: 700 }}>
-          Total {order.total.toFixed(2)} AED
+          Total{" "}
+          {Number.isFinite(order.total) ? order.total.toFixed(2) : "0.00"} AED
         </span>
         {shippingExtra != null ? (
           <span style={{ fontSize: 10 }}>Ship {shippingExtra.toFixed(2)} AED</span>
