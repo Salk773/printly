@@ -1,5 +1,7 @@
 "use client";
 
+import toast from "react-hot-toast";
+
 interface SocialShareProps {
   productName: string;
   productUrl: string;
@@ -21,14 +23,26 @@ export default function SocialShare({
 
   const shareLinks = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fullUrl)}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(fullUrl)}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${fullUrl}`)}`,
     email: `mailto:?subject=${encodeURIComponent(productName)}&body=${encodeURIComponent(`${shareText}\n\n${fullUrl}`)}`,
   };
 
   const handleShare = (platform: keyof typeof shareLinks) => {
     const url = shareLinks[platform];
+    if (platform === "email") {
+      window.location.href = url;
+      return;
+    }
     window.open(url, "_blank", "width=600,height=400");
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Could not copy link");
+    }
   };
 
   return (
@@ -44,6 +58,7 @@ export default function SocialShare({
     >
       <span style={{ fontSize: "0.85rem", color: "#9ca3af" }}>Share:</span>
       <button
+        type="button"
         onClick={() => handleShare("facebook")}
         style={{
           padding: "6px 12px",
@@ -59,7 +74,8 @@ export default function SocialShare({
         Facebook
       </button>
       <button
-        onClick={() => handleShare("twitter")}
+        type="button"
+        onClick={() => void handleCopyLink()}
         style={{
           padding: "6px 12px",
           borderRadius: 8,
@@ -69,11 +85,12 @@ export default function SocialShare({
           cursor: "pointer",
           fontSize: "0.85rem",
         }}
-        title="Share on Twitter"
+        title="Copy product link"
       >
-        Twitter
+        Copy link
       </button>
       <button
+        type="button"
         onClick={() => handleShare("whatsapp")}
         style={{
           padding: "6px 12px",
@@ -89,6 +106,7 @@ export default function SocialShare({
         WhatsApp
       </button>
       <button
+        type="button"
         onClick={() => handleShare("email")}
         style={{
           padding: "6px 12px",

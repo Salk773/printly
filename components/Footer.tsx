@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { getPublicSocialUrls } from "@/lib/siteSocial";
 
 export default function Footer() {
+  const social = getPublicSocialUrls();
+
   return (
     <footer
       style={{
@@ -84,6 +87,29 @@ export default function Footer() {
             <Link href="/refund" style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}>
               Refund Policy
             </Link>
+          </div>
+        </div>
+        <div>
+          <h4 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 12, color: "#e5e7eb" }}>
+            Follow us
+          </h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <a
+              href={social.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}
+            >
+              Instagram
+            </a>
+            <a
+              href={social.tiktok}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#94a3b8", fontSize: "0.9rem", textDecoration: "none" }}
+            >
+              TikTok
+            </a>
           </div>
         </div>
       </div>

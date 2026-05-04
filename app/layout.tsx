@@ -50,6 +50,7 @@ export const metadata: Metadata = {
       },
     ],
   },
+  // Link preview cards (e.g. when URLs are shared in apps); not a brand X/Twitter account.
   twitter: {
     card: "summary_large_image",
     title: "Printly - 3D Printing Marketplace",
