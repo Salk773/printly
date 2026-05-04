@@ -38,7 +38,7 @@ export async function PATCH(
   }
 
   const parsed = validateRequest(CouponUpdateSchema, body);
-  if (!parsed.success) {
+  if (parsed.success === false) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
