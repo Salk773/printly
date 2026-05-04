@@ -47,13 +47,13 @@ export async function POST(req: NextRequest) {
 
     // Validate input
     const validation = validateRequest(OrderStatusUpdateSchema, body);
-    if (!validation.success) {
+    if (validation.success === false) {
       logApiCall("POST", "/api/orders/update-status", 400, { 
-        error: (validation as { success: false; error: string }).error,
+        error: validation.error,
         ipAddress 
       }, user.id, ipAddress);
       return NextResponse.json(
-        { error: (validation as { success: false; error: string }).error },
+        { error: validation.error },
         { status: 400 }
       );
     }

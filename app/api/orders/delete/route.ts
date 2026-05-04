@@ -36,13 +36,13 @@ export async function DELETE(req: NextRequest) {
 
     // Validate input
     const validation = validateRequest(OrderDeleteSchema, body);
-    if (!validation.success) {
+    if (validation.success === false) {
       logApiCall("DELETE", "/api/orders/delete", 400, { 
-        error: (validation as { success: false; error: string }).error,
+        error: validation.error,
         ipAddress 
       }, user.id, ipAddress);
       return NextResponse.json(
-        { success: false, error: (validation as { success: false; error: string }).error },
+        { success: false, error: validation.error },
         { status: 400 }
       );
     }

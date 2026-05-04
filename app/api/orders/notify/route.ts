@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
     }
 
     const validation = validateRequest(OrderNotifySchema, body);
-    if (!validation.success) {
+    if (validation.success === false) {
       logApiCall("POST", "/api/orders/notify", 400, {
-        error: (validation as { success: false; error: string }).error,
+        error: validation.error,
         ipAddress
       }, undefined, ipAddress);
       return NextResponse.json(
-        { error: (validation as { success: false; error: string }).error },
+        { error: validation.error },
         { status: 400 }
       );
     }

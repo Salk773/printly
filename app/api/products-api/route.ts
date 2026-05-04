@@ -51,9 +51,9 @@ export async function POST(req: NextRequest) {
 
   // Validate input
   const validation = validateRequest(ProductCreateSchema, body);
-  if (!validation.success) {
+  if (validation.success === false) {
     return NextResponse.json(
-      { ok: false, error: (validation as { success: false; error: string }).error },
+      { ok: false, error: validation.error },
       { status: 400 }
     );
   }
@@ -95,9 +95,9 @@ export async function DELETE(req: NextRequest) {
 
   // Validate input
   const validation = validateRequest(ProductDeleteSchema, body);
-  if (!validation.success) {
+  if (validation.success === false) {
     return NextResponse.json(
-      { ok: false, error: (validation as { success: false; error: string }).error },
+      { ok: false, error: validation.error },
       { status: 400 }
     );
   }
@@ -131,9 +131,9 @@ export async function PUT(req: NextRequest) {
 
   // Validate input
   const validation = validateRequest(ProductUpdateSchema, body);
-  if (!validation.success) {
+  if (validation.success === false) {
     return NextResponse.json(
-      { ok: false, error: (validation as { success: false; error: string }).error },
+      { ok: false, error: validation.error },
       { status: 400 }
     );
   }

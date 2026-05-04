@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
 
   // Validate input
   const validation = validateRequest(CategoryCreateSchema, body);
-  if (!validation.success) {
+  if (validation.success === false) {
     return NextResponse.json(
-      { ok: false, error: (validation as { success: false; error: string }).error },
+      { ok: false, error: validation.error },
       { status: 400 }
     );
   }
@@ -80,9 +80,9 @@ export async function DELETE(req: NextRequest) {
 
   // Validate input
   const validation = validateRequest(CategoryDeleteSchema, body);
-  if (!validation.success) {
+  if (validation.success === false) {
     return NextResponse.json(
-      { ok: false, error: (validation as { success: false; error: string }).error },
+      { ok: false, error: validation.error },
       { status: 400 }
     );
   }
