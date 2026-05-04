@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { sortOrdersForDisplay } from "@/lib/orderSort";
 
 interface Order {
   id: string;
@@ -47,7 +48,7 @@ export default function OrdersPage() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      setOrders(sortOrdersForDisplay(data || []));
     } catch (error: any) {
       console.error("Error loading orders:", error);
     } finally {

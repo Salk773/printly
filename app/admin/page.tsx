@@ -16,6 +16,7 @@ import AdminLogs from "@/components/admin/AdminLogs";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminCoupons from "@/components/admin/AdminCoupons";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
+import { sortOrdersForDisplay } from "@/lib/orderSort";
 
 /* ================= TYPES ================= */
 
@@ -167,7 +168,7 @@ export default function AdminPage() {
       ...p,
       stock_quantity: p.stock_quantity !== undefined ? p.stock_quantity : null,
     })));
-    setOrders((ords as Order[]) || []);
+    setOrders(sortOrdersForDisplay((ords as Order[]) || []));
 
     const urls =
       gallery.data?.map(

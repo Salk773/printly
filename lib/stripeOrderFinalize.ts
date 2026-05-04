@@ -45,13 +45,24 @@ export async function finalizeOrderAfterStripePayment(
     return { ok: true, skipped: true };
   }
 
-  const { error: updErr } = await admin
-    .from("orders")
-    .update({
-      status: "paid",
-      stripe_payment_intent_id: paymentIntentId || null,
-    })
-    .eq("id", orderId);
+  let updErr = (
+    await admin
+      .from("orders")
+      .update({
+        status: "paid",
+        stripe_payment_intent_id: paymentIntentId || null,
+      })
+      .eq("id", orderId)
+  ).error;
+
+  // Prod DBs missing migration 012 fail on stripe_payment_intent_id — still mark paid.
+  if (updErr) {
+    const retry = await admin
+      .from("orders")
+      .update({ status: "paid" })
+      .eq("id", orderId);
+    updErr = retry.error;
+  }
 
   if (updErr) {
     return { ok: false, skipped: false };
