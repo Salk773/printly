@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { CouponUpdateSchema, validateRequest } from "@/lib/validation/schemas";
+import { hintMissingCouponsTable } from "@/lib/couponsDbHint";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +88,8 @@ export async function PATCH(
       );
     }
     console.error("admin coupon patch:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const hint = hintMissingCouponsTable(error.message);
+    return NextResponse.json({ error: hint ?? error.message }, { status: 500 });
   }
 
   if (!data) {
@@ -119,7 +121,8 @@ export async function DELETE(
 
   if (error) {
     console.error("admin coupon delete:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const hint = hintMissingCouponsTable(error.message);
+    return NextResponse.json({ error: hint ?? error.message }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

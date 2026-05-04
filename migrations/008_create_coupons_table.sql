@@ -22,18 +22,14 @@ CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
 CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(active);
 CREATE INDEX IF NOT EXISTS idx_coupons_valid_dates ON coupons(valid_from, valid_until);
 
--- Enable RLS (admin only access)
+-- Enable RLS (admin API uses service role and bypasses RLS)
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Anyone can view active coupons (for validation)
--- But only admins can see all coupons
+-- Checkout validates codes using anon key: only active rows are readable.
+DROP POLICY IF EXISTS "Anyone can view active coupons" ON coupons;
 CREATE POLICY "Anyone can view active coupons"
   ON coupons FOR SELECT
-  USING (active = true OR EXISTS (
-    SELECT 1 FROM auth.users 
-    WHERE auth.users.id = auth.uid() 
-    AND auth.users.email IN (SELECT unnest(string_to_array(current_setting('app.admin_emails', true), ',')))
-  ));
+  USING (active = true);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_coupons_updated_at()
@@ -45,8 +41,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_coupons_timestamp ON coupons;
 CREATE TRIGGER update_coupons_timestamp
   BEFORE UPDATE ON coupons
   FOR EACH ROW
-  EXECUTE FUNCTION update_coupons_updated_at();
+  EXECUTE PROCEDURE update_coupons_updated_at();
 

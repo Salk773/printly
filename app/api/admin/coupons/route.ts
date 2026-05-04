@@ -3,6 +3,7 @@ import "server-only";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { CouponCreateSchema, validateRequest } from "@/lib/validation/schemas";
+import { hintMissingCouponsTable } from "@/lib/couponsDbHint";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,11 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error("admin coupons list:", error);
-    return NextResponse.json({ error: "Failed to load coupons" }, { status: 500 });
+    const hint = hintMissingCouponsTable(error.message);
+    return NextResponse.json(
+      { error: hint ?? "Failed to load coupons" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ coupons: data ?? [] });
@@ -90,7 +95,8 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("admin coupon create:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const hint = hintMissingCouponsTable(error.message);
+    return NextResponse.json({ error: hint ?? error.message }, { status: 500 });
   }
 
   return NextResponse.json({ coupon: data });
