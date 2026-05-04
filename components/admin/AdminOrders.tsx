@@ -208,7 +208,7 @@ export default function AdminOrders({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto auto auto auto",
+              gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto auto auto auto auto",
               gap: 12,
               alignItems: "center",
             }}
@@ -277,6 +277,18 @@ export default function AdminOrders({
             >
               {deletingId === o.id ? "..." : "🗑️"}
             </button>
+
+            {/* LABEL (opens print page) */}
+            <a
+              className="btn-ghost"
+              href={`/admin/label/${o.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 12, textAlign: "center", textDecoration: "none" }}
+              title="Shipping label"
+            >
+              Label
+            </a>
 
             {/* VIEW */}
             <button

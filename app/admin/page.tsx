@@ -56,6 +56,7 @@ export type Order = {
   saved_address_id?: string | null;
   stripe_checkout_session_id?: string | null;
   stripe_payment_intent_id?: string | null;
+  shipping_cost?: number | null;
 };
 
 /* ============== CONSTANTS ============== */

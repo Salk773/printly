@@ -130,13 +130,28 @@ export default function OrderDetailsModal({
           Total: {order.total.toFixed(2)} AED
         </p>
 
-        <button
-          className="btn-primary"
-          style={{ marginTop: 12 }}
-          onClick={onClose}
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+          }}
         >
-          Close
-        </button>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() =>
+              window.open(`/admin/label/${order.id}?print=1`, "_blank", "noopener,noreferrer")
+            }
+          >
+            Print shipping label
+          </button>
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </div>
     </div>
   );
