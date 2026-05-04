@@ -58,6 +58,52 @@ export const OrderDeleteSchema = z.object({
   orderId: z.string().uuid("Invalid order ID"),
 });
 
+/** Admin: create discount code */
+export const CouponCreateSchema = z
+  .object({
+    code: z.string().min(1, "Code is required").max(50, "Code too long"),
+    discount_type: z.enum(["percentage", "fixed"]),
+    value: z.number().positive("Value must be positive"),
+    min_purchase: z.number().min(0).optional().default(0),
+    max_discount: z.number().positive().nullable().optional(),
+    valid_from: z.string().optional(),
+    valid_until: z.string().nullable().optional(),
+    usage_limit: z.number().int().positive().nullable().optional(),
+    active: z.boolean().optional().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.discount_type === "percentage" && data.value > 100) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Percentage cannot exceed 100",
+        path: ["value"],
+      });
+    }
+  });
+
+/** Admin: update discount code (partial) */
+export const CouponUpdateSchema = z
+  .object({
+    code: z.string().min(1).max(50).optional(),
+    discount_type: z.enum(["percentage", "fixed"]).optional(),
+    value: z.number().positive().optional(),
+    min_purchase: z.number().min(0).nullable().optional(),
+    max_discount: z.number().positive().nullable().optional(),
+    valid_from: z.string().nullable().optional(),
+    valid_until: z.string().nullable().optional(),
+    usage_limit: z.number().int().positive().nullable().optional(),
+    active: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.discount_type === "percentage" && data.value != null && data.value > 100) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Percentage cannot exceed 100",
+        path: ["value"],
+      });
+    }
+  });
+
 // Email notification schema
 export const OrderNotifySchema = z.object({
   type: z.enum(["admin", "customer", "processing"]),
