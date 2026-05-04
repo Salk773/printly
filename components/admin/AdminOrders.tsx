@@ -208,7 +208,8 @@ export default function AdminOrders({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto auto auto auto auto",
+              gridTemplateColumns:
+                "minmax(100px, 2fr) minmax(52px, 0.85fr) minmax(72px, 1fr) minmax(240px, 1.5fr) auto auto auto auto auto",
               gap: 12,
               alignItems: "center",
             }}
@@ -240,7 +241,16 @@ export default function AdminOrders({
             </div>
 
             {/* STATUS — badge shows current color; select stays neutral (options can't be styled per-row in HTML) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto minmax(128px, 1fr)",
+                gap: 8,
+                alignItems: "center",
+                width: "100%",
+                minWidth: 0,
+              }}
+            >
               <span
                 style={{
                   fontSize: 10,
@@ -266,9 +276,11 @@ export default function AdminOrders({
                   background: "#020617",
                   border: "1px solid rgba(148,163,184,0.35)",
                   borderRadius: 8,
-                  padding: "6px 8px",
+                  padding: "6px 10px",
                   fontSize: 13,
-                  maxWidth: 140,
+                  width: "100%",
+                  minWidth: 128,
+                  maxWidth: "100%",
                 }}
                 onChange={(e) => handleStatusChange(o.id, e.target.value, o.status)}
               >
