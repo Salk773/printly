@@ -15,7 +15,7 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   const auth = await requireAdmin(req);
-  if (!auth.authorized) return auth.response;
+  if (auth.authorized === false) return auth.response;
 
   const parsed = uuidSchema.safeParse(params.orderId);
   if (!parsed.success) {
