@@ -20,8 +20,10 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await requireAdmin(req);
-  if (!auth.authorized) return auth.response;
+  const authResult = await requireAdmin(req);
+  if (!authResult.authorized) {
+    return (authResult as { authorized: false; response: NextResponse }).response;
+  }
 
   const idParsed = uuidSchema.safeParse(params.id);
   if (!idParsed.success) {
@@ -102,8 +104,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await requireAdmin(req);
-  if (!auth.authorized) return auth.response;
+  const authResult = await requireAdmin(req);
+  if (!authResult.authorized) {
+    return (authResult as { authorized: false; response: NextResponse }).response;
+  }
 
   const idParsed = uuidSchema.safeParse(params.id);
   if (!idParsed.success) {

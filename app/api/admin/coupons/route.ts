@@ -14,8 +14,10 @@ function normalizeCode(raw: string): string {
  * GET /api/admin/coupons — list all coupons (admin only)
  */
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.authorized) return auth.response;
+  const authResult = await requireAdmin(req);
+  if (!authResult.authorized) {
+    return (authResult as { authorized: false; response: NextResponse }).response;
+  }
 
   const admin = supabaseAdmin();
   const { data, error } = await admin
@@ -35,8 +37,10 @@ export async function GET(req: NextRequest) {
  * POST /api/admin/coupons — create coupon (admin only)
  */
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
-  if (!auth.authorized) return auth.response;
+  const authResult = await requireAdmin(req);
+  if (!authResult.authorized) {
+    return (authResult as { authorized: false; response: NextResponse }).response;
+  }
 
   let body: unknown;
   try {
