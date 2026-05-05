@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendPaidOrderEmails } from "@/lib/orderNotifications";
+import { decrementStockForOrderItems } from "@/lib/orderStock";
 
 type OrderRow = {
   id: string;
@@ -66,6 +67,11 @@ export async function finalizeOrderAfterStripePayment(
 
   if (updErr) {
     return { ok: false, skipped: false };
+  }
+
+  const stockResult = await decrementStockForOrderItems(admin, existing.items);
+  if (stockResult.ok === false) {
+    console.error("Stock decrement after Stripe payment:", stockResult.error);
   }
 
   try {

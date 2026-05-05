@@ -56,6 +56,26 @@ export async function POST(req: NextRequest) {
 
     const result = await sendOrderNotification({ type, orderData: payload });
 
+    if (result.skipped) {
+      await recordEmailNotificationEvent({
+        notification_type: type,
+        order_id: payload.orderId,
+        to_email: type === "admin" ? null : payload.customerEmail,
+        status: "skipped",
+        error_message: "User opted out of order update emails",
+      });
+      logApiCall("POST", "/api/orders/notify", 200, {
+        type,
+        orderId: payload.orderId,
+        skipped: true,
+        ipAddress,
+      }, undefined, ipAddress);
+      return NextResponse.json({
+        success: true,
+        message: "Skipped per email preferences",
+      });
+    }
+
     if (!result.success) {
       await recordEmailNotificationEvent({
         notification_type: type,

@@ -128,7 +128,17 @@ export default function AdminEmailCenter() {
                     <td style={{ padding: "6px 4px", wordBreak: "break-all", maxWidth: 180 }}>
                       {ev.to_email ?? "—"}
                     </td>
-                    <td style={{ padding: "6px 4px", color: ev.status === "failed" ? "#ef4444" : "#22c55e" }}>
+                    <td
+                      style={{
+                        padding: "6px 4px",
+                        color:
+                          ev.status === "failed"
+                            ? "#ef4444"
+                            : ev.status === "skipped"
+                              ? "#fbbf24"
+                              : "#22c55e",
+                      }}
+                    >
                       {ev.status}
                       {ev.error_message && (
                         <span style={{ display: "block", fontSize: 11, marginTop: 2 }}>{ev.error_message}</span>

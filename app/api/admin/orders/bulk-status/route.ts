@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
         type: "processing",
         orderData: emailData,
       });
-      if (!emailResult.success) {
+      if (!emailResult.success && !emailResult.skipped) {
         emailWarning = emailResult.error ?? "email_failed";
       }
     }

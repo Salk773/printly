@@ -1,6 +1,8 @@
 import "server-only";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { sanitizeOrderDataForEmail, escapeHtml } from "@/lib/security/sanitize";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { userWantsOrderUpdateEmails } from "@/lib/emailPreferenceGate";
 
 export interface OrderEmailData {
   orderId: string;
@@ -249,10 +251,25 @@ async function sendEmail(
 export async function sendOrderNotification(params: {
   type: "admin" | "customer" | "processing";
   orderData: OrderEmailData;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
   const { type, orderData } = params;
   const isAdmin = type === "admin";
   const isProcessing = type === "processing";
+
+  if (!isAdmin) {
+    const admin = supabaseAdmin();
+    const { data: ord } = await admin
+      .from("orders")
+      .select("user_id")
+      .eq("id", orderData.orderId)
+      .maybeSingle();
+    const allow = await userWantsOrderUpdateEmails(
+      ord?.user_id as string | null | undefined
+    );
+    if (!allow) {
+      return { success: true, skipped: true };
+    }
+  }
 
   const sanitizedOrderData = sanitizeOrderDataForEmail({
     orderId: orderData.orderId,

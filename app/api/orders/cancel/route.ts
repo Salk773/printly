@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import "server-only";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logApiCall, logApiError } from "@/lib/logger";
+import { incrementStockForOrderItems } from "@/lib/orderStock";
 
 export const dynamic = "force-dynamic";
 
@@ -76,11 +78,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Restore stock quantities if order had items
-    // Note: This assumes products table has stock_quantity column
-    // We'll need to get product IDs from order items
-    // For now, we'll just update the status
-    // Stock restoration can be added later when we have product_id in order items
+    if (order.status === "paid") {
+      const admin = supabaseAdmin();
+      const restore = await incrementStockForOrderItems(admin, order.items);
+      if (restore.ok === false) {
+        console.error("Stock restore on cancel:", restore.error);
+      }
+    }
 
     return NextResponse.json({
       success: true,

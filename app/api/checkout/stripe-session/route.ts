@@ -8,6 +8,7 @@ import { logApiCall, logApiError } from "@/lib/logger";
 import { CHECKOUT_SHIPPING_AED } from "@/lib/checkoutShipping";
 import { validateCouponForSubtotal } from "@/lib/checkoutCoupon";
 import { applyDiscountMinorToProductLineItems } from "@/lib/stripeProductLineDiscount";
+import { validateCartStock } from "@/lib/orderStock";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ async function insertPendingOrder(
 ): Promise<{ data: { id: string; order_number: string | null } | null; error: { message: string } | null }> {
   const slimPayload = { ...fullPayload };
   delete slimPayload.shipping_cost;
+  delete slimPayload.shipping_method_id;
   delete slimPayload.saved_address_id;
   delete slimPayload.discount_amount;
   delete slimPayload.coupon_code;
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest) {
       state,
       postal_code,
       coupon_code: rawCouponCode,
+      shipping_method_id: rawShippingMethodId,
     } = body;
 
     const items = rawItems as CartLine[] | undefined;
@@ -161,6 +164,18 @@ export async function POST(req: NextRequest) {
     }
 
     const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const stockLines = items.map((i) => ({
+      id: i.id,
+      quantity: Math.min(Math.max(1, Math.floor(Number(i.quantity))), 999),
+    }));
+    const stockCheck = await validateCartStock(admin, stockLines);
+    if (stockCheck.ok === false) {
+      return NextResponse.json(
+        { success: false, error: stockCheck.message },
+        { status: 400 }
+      );
+    }
 
     const lineItems: {
       price_data: {
@@ -248,21 +263,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const shippingMinor = Math.round(CHECKOUT_SHIPPING_AED * 100);
+    const shippingMethodIdRaw =
+      typeof rawShippingMethodId === "string" ? rawShippingMethodId.trim() : "";
+    let shippingCostAed = CHECKOUT_SHIPPING_AED;
+    let resolvedShippingMethodId: string | null = null;
+    let shippingDisplayName = "Standard delivery";
+
+    if (shippingMethodIdRaw) {
+      const { data: shipRow, error: shipErr } = await admin
+        .from("shipping_methods")
+        .select("id, name, cost, active")
+        .eq("id", shippingMethodIdRaw)
+        .maybeSingle();
+
+      if (shipErr || !shipRow || !shipRow.active) {
+        return NextResponse.json(
+          { success: false, error: "Invalid or inactive shipping method" },
+          { status: 400 }
+        );
+      }
+      const c = Number(shipRow.cost);
+      if (!Number.isFinite(c) || c < 0) {
+        return NextResponse.json(
+          { success: false, error: "Invalid shipping cost" },
+          { status: 400 }
+        );
+      }
+      shippingCostAed = c;
+      resolvedShippingMethodId = shipRow.id;
+      shippingDisplayName = shipRow.name;
+    }
+
+    const shippingMinor = Math.round(shippingCostAed * 100);
     const productsMinorSum = lineItems.reduce(
       (s, li) => s + li.price_data.unit_amount * li.quantity,
       0
     );
     const productTotalAfterDiscount = productsMinorSum / 100;
     const orderTotalAed =
-      Math.round((productTotalAfterDiscount + CHECKOUT_SHIPPING_AED) * 100) / 100;
+      Math.round((productTotalAfterDiscount + shippingCostAed) * 100) / 100;
 
     lineItems.push({
       price_data: {
         currency: "aed",
         unit_amount: shippingMinor,
         product_data: {
-          name: "Shipping (standard delivery)",
+          name: `Shipping: ${shippingDisplayName}`,
         },
       },
       quantity: 1,
@@ -289,7 +335,8 @@ export async function POST(req: NextRequest) {
       postal_code: postal_code ? sanitizeInput(String(postal_code)) : null,
       items: orderItemsJson,
       total: orderTotalAed,
-      shipping_cost: CHECKOUT_SHIPPING_AED,
+      shipping_cost: shippingCostAed,
+      shipping_method_id: resolvedShippingMethodId,
       discount_amount: discountAed,
       coupon_code: couponCodeStored,
       status: "pending",

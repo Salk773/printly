@@ -43,6 +43,11 @@ export default function CheckoutPage() {
   } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
 
+  const [shippingMethods, setShippingMethods] = useState<
+    Array<{ id: string; name: string; cost: number; estimated_days?: number | null }>
+  >([]);
+  const [selectedShippingId, setSelectedShippingId] = useState<string>("");
+
   /** Matches server Stripe readiness OR optional publishable key (safe to expose) so UI shows pay flow on production. */
   const stripePublishableReady =
     typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === "string" &&
@@ -51,8 +56,11 @@ export default function CheckoutPage() {
 
   const subtotal = total;
   const discountAmount = appliedCoupon?.discount_amount ?? 0;
+  const selectedShipping = shippingMethods.find((m) => m.id === selectedShippingId);
+  const effectiveShippingAed =
+    selectedShipping != null ? Number(selectedShipping.cost) : CHECKOUT_SHIPPING_AED;
   const grandTotal =
-    Math.round((Math.max(0, subtotal - discountAmount) + CHECKOUT_SHIPPING_AED) * 100) / 100;
+    Math.round((Math.max(0, subtotal - discountAmount) + effectiveShippingAed) * 100) / 100;
 
   const hasItems = items.length > 0;
 
@@ -74,6 +82,26 @@ export default function CheckoutPage() {
         if (!cancelled && data?.stripeCheckout) setStripeCheckout(true);
       } catch {
         /* legacy checkout */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/checkout/shipping");
+        const data = await res.json();
+        if (cancelled || !data?.success || !Array.isArray(data.methods)) return;
+        setShippingMethods(data.methods);
+        if (data.methods.length > 0) {
+          setSelectedShippingId(String(data.methods[0].id));
+        }
+      } catch {
+        /* fall back to flat shipping rate */
       }
     })();
     return () => {
@@ -212,6 +240,7 @@ export default function CheckoutPage() {
             guest_email: user ? undefined : email,
             guest_name: user ? undefined : name,
             coupon_code: appliedCoupon?.code ?? undefined,
+            shipping_method_id: selectedShippingId || undefined,
           }),
         });
 
@@ -238,6 +267,26 @@ export default function CheckoutPage() {
       return;
     }
 
+    try {
+      const vs = await fetch("/api/checkout/validate-stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+        }),
+      });
+      const vsJson = await vs.json();
+      if (!vs.ok || !vsJson.success) {
+        setLoading(false);
+        toast.error(vsJson.error || "Inventory check failed");
+        return;
+      }
+    } catch {
+      setLoading(false);
+      toast.error("Could not verify inventory");
+      return;
+    }
+
     const orderPayload = {
       user_id: user?.id ?? null,
       guest_name: customerName,
@@ -258,7 +307,8 @@ export default function CheckoutPage() {
         id: i.id,
       })),
       total: grandTotal,
-      shipping_cost: CHECKOUT_SHIPPING_AED,
+      shipping_cost: effectiveShippingAed,
+      shipping_method_id: selectedShippingId || null,
       discount_amount: discountAmount,
       coupon_code: appliedCoupon?.code ?? null,
       status: "pending",
@@ -461,6 +511,57 @@ export default function CheckoutPage() {
               value={postalCode}
               onChange={setPostalCode}
             />
+
+            {shippingMethods.length > 0 ? (
+              <div>
+                <span style={{ fontSize: "0.85rem", color: "#cbd5f5", display: "block", marginBottom: 8 }}>
+                  Delivery option
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {shippingMethods.map((m) => {
+                    const cost = Number(m.cost);
+                    const labelCost = Number.isFinite(cost) ? `${cost.toFixed(2)} AED` : "";
+                    const days =
+                      m.estimated_days != null && m.estimated_days > 0
+                        ? ` · ~${m.estimated_days} day${m.estimated_days === 1 ? "" : "s"}`
+                        : "";
+                    return (
+                      <label
+                        key={m.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          cursor: "pointer",
+                          padding: "10px 12px",
+                          borderRadius: 10,
+                          border:
+                            selectedShippingId === m.id
+                              ? "1px solid rgba(192,132,252,0.55)"
+                              : "1px solid rgba(148,163,184,0.25)",
+                          background: selectedShippingId === m.id ? "rgba(192,132,252,0.08)" : "#020617",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="shipping_method"
+                          checked={selectedShippingId === m.id}
+                          onChange={() => setSelectedShippingId(m.id)}
+                          style={{ marginTop: 4 }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{m.name}</div>
+                          <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: 2 }}>
+                            {labelCost}
+                            {days}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <label style={{ fontSize: "0.85rem", color: "#cbd5f5" }}>
               Notes / requirements
@@ -672,7 +773,7 @@ export default function CheckoutPage() {
               }}
             >
               <span>Shipping</span>
-              <span>{CHECKOUT_SHIPPING_AED.toFixed(2)} AED</span>
+              <span>{effectiveShippingAed.toFixed(2)} AED</span>
             </div>
             <div
               style={{

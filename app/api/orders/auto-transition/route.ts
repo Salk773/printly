@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { logBackgroundJob, logOrderEvent } from "@/lib/logger";
 import { escapeHtml } from "@/lib/security/sanitize";
+import { userWantsOrderUpdateEmails } from "@/lib/emailPreferenceGate";
 
 export const dynamic = "force-dynamic";
 
@@ -88,9 +89,20 @@ function formatCompletionEmail(orderData: any): string {
 /**
  * Send completion email to customer
  */
-async function sendCompletionEmail(orderData: any): Promise<{ success: boolean; error?: string }> {
+async function sendCompletionEmail(orderData: any): Promise<{
+  success: boolean;
+  error?: string;
+  skipped?: boolean;
+}> {
+  const wants = await userWantsOrderUpdateEmails(orderData.user_id);
+  if (!wants) {
+    return { success: true, skipped: true };
+  }
+
   const edgeFunctionUrl = process.env.SUPABASE_EDGE_FUNCTION_URL;
-  const customerEmail = orderData.guest_email || orderData.user_id;
+  const customerEmail = orderData.guest_email
+    ? String(orderData.guest_email).trim()
+    : "";
 
   if (!customerEmail) {
     return { success: false, error: "No customer email found" };
@@ -229,7 +241,8 @@ export async function POST(req: NextRequest) {
       if (emailResult.success) {
         logOrderEvent("auto-completed", order.id, {
           orderNumber: order.order_number,
-          emailSent: true,
+          emailSent: !emailResult.skipped,
+          emailSkipped: Boolean(emailResult.skipped),
         });
       }
     }

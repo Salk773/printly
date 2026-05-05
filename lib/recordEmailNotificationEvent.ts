@@ -5,7 +5,7 @@ export async function recordEmailNotificationEvent(params: {
   notification_type: string;
   order_id?: string | null;
   to_email?: string | null;
-  status: "sent" | "failed";
+  status: "sent" | "failed" | "skipped";
   error_message?: string | null;
 }): Promise<void> {
   try {
