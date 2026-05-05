@@ -22,6 +22,10 @@ CREATE INDEX IF NOT EXISTS idx_logs_user_id ON logs(user_id);
 -- Enable Row Level Security
 ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
 
+-- Policies: drop first so this migration is safe to re-run (avoids 42710 duplicate policy)
+DROP POLICY IF EXISTS "Admins can read logs" ON logs;
+DROP POLICY IF EXISTS "Service role can insert logs" ON logs;
+
 -- Policy: Only admins can read logs
 -- Note: This assumes you have an admin check function or will use service role key
 -- For now, we'll allow authenticated users to read (you can restrict further based on admin emails)
