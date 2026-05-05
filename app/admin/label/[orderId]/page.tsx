@@ -189,16 +189,12 @@ export default function AdminShippingLabelPage() {
             display: none !important;
           }
 
-          .screen-label-wrap {
-            display: none !important;
-          }
-
-          .print-label-wrap,
-          .print-label-wrap * {
+          .shipping-label-root,
+          .shipping-label-root * {
             visibility: visible !important;
           }
 
-          .print-label-wrap {
+          .shipping-label-root {
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
@@ -206,9 +202,6 @@ export default function AdminShippingLabelPage() {
             height: 6in !important;
             overflow: hidden !important;
             background: #fff !important;
-          }
-
-          .print-label-wrap .shipping-label-root {
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -261,13 +254,8 @@ export default function AdminShippingLabelPage() {
           </span>
         </div>
 
-        <div className="screen-label-wrap">
-          <ShippingLabelPrint order={order} labelWidthIn={labelWidthIn} />
-        </div>
+        <ShippingLabelPrint order={order} labelWidthIn={labelWidthIn} />
       </main>
-      <div className="print-label-wrap" aria-hidden>
-        <ShippingLabelPrint order={order} labelWidthIn={4} />
-      </div>
     </>
   );
 }
