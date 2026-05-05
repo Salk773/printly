@@ -3,93 +3,92 @@ import "server-only";
 import { verifyAdmin } from "@/lib/auth/adminAuth";
 import { logApiCall, logApiError } from "@/lib/logger";
 import { createClient } from "@supabase/supabase-js";
+import {
+  type RawOrderRow,
+  buildChartSeries,
+  buildMonthlySales,
+  buildProductPerformance,
+  customerInsights,
+  daysBetweenInclusive,
+  endOfUtcDay,
+  funnelCounts,
+  funnelRevenueByStatus,
+  growthPct,
+  isSalesStatus,
+  startOfUtcDay,
+  summarizePeriod,
+} from "@/lib/admin/analyticsAggregate";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-interface OrderItem {
-  name: string;
-  price: number;
-  quantity: number;
-}
+const ORDER_SELECT =
+  "id, total, status, created_at, items, guest_email, guest_name, shipping_cost, discount_amount, coupon_code";
 
-interface Order {
-  id: string;
-  total: number;
-  status: string;
-  created_at: string;
-  items: OrderItem[] | null;
-}
+type Preset = "7d" | "30d" | "90d" | "all" | "custom";
 
-interface MonthlySales {
-  month: string;
-  year: number;
-  total: number;
-  orderCount: number;
-}
-
-interface ProductPerformance {
-  name: string;
-  totalQuantity: number;
-  totalRevenue: number;
-  orderCount: number;
-}
-
-function toFiniteNumber(value: unknown): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
+function parsePreset(value: string | null): Preset {
+  if (value === "7d" || value === "30d" || value === "90d" || value === "all" || value === "custom") {
+    return value;
   }
-  if (typeof value === "string") {
-    const cleaned = value.replace(/[^0-9.-]/g, "");
-    const parsed = Number.parseFloat(cleaned);
-    return Number.isFinite(parsed) ? parsed : 0;
+  return "30d";
+}
+
+function resolveRange(
+  preset: Preset,
+  fromParam: string | null,
+  toParam: string | null
+): { from: Date; to: Date; compare: boolean } | { error: string } {
+  const now = new Date();
+
+  if (preset === "custom") {
+    if (!fromParam || !toParam) {
+      return { error: "Custom range requires from and to (ISO dates)" };
+    }
+    const from = startOfUtcDay(new Date(fromParam));
+    const to = endOfUtcDay(new Date(toParam));
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      return { error: "Invalid from or to date" };
+    }
+    if (from.getTime() > to.getTime()) {
+      return { error: "from must be before to" };
+    }
+    return { from, to, compare: true };
   }
-  const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
+
+  if (preset === "all") {
+    return { from: new Date(0), to: endOfUtcDay(now), compare: false };
+  }
+
+  const end = endOfUtcDay(now);
+  const start = startOfUtcDay(new Date());
+  const days = preset === "7d" ? 7 : preset === "90d" ? 90 : 30;
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  return { from: start, to: end, compare: true };
 }
 
-function normalizeStatus(status: unknown): string {
-  return String(status || "").trim().toLowerCase();
-}
-
-function isSalesStatus(status: unknown): boolean {
-  const normalized = normalizeStatus(status);
-  return normalized === "paid" || normalized === "processing" || normalized === "completed";
-}
-
-function getOrderTotal(order: Order): number {
-  const total = toFiniteNumber(order.total);
-  if (total > 0) return total;
-  if (!Array.isArray(order.items)) return total;
-  return order.items
-    .filter(isValidOrderItem)
-    .reduce((sum, item) => sum + toFiniteNumber(item.price) * toFiniteNumber(item.quantity), 0);
-}
-
-function isValidOrderItem(item: unknown): item is OrderItem {
-  if (!item || typeof item !== "object") return false;
-  const candidate = item as Partial<OrderItem>;
-  return (
-    typeof candidate.name === "string" &&
-    typeof candidate.price === "number" &&
-    typeof candidate.quantity === "number"
-  );
+function previousRange(
+  from: Date,
+  to: Date
+): { from: Date; to: Date } {
+  const spanMs = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - spanMs);
+  return { from: startOfUtcDay(prevFrom), to: endOfUtcDay(prevTo) };
 }
 
 export async function GET(req: NextRequest) {
-  const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
-  
+  const ipAddress =
+    req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A4",location:"app/api/admin/analytics/route.ts:entry",message:"Analytics API entry",data:{},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const authResult = await verifyAdmin(req);
 
     if (!authResult.authorized) {
       const statusCode = authResult.error?.includes("not an admin") ? 403 : 401;
-      logApiCall("GET", "/api/admin/analytics", statusCode, { 
+      logApiCall("GET", "/api/admin/analytics", statusCode, {
         error: authResult.error,
-        ipAddress 
+        ipAddress,
       }, undefined, ipAddress);
       return NextResponse.json(
         { error: authResult.error },
@@ -97,115 +96,172 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Use admin client to access orders
+    const { searchParams } = new URL(req.url);
+    const preset = parsePreset(searchParams.get("preset"));
+    const fromParam = searchParams.get("from");
+    const toParam = searchParams.get("to");
+
+    const resolved = resolveRange(preset, fromParam, toParam);
+    if ("error" in resolved) {
+      return NextResponse.json({ error: resolved.error }, { status: 400 });
+    }
+
+    const { from, to, compare } = resolved;
+
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+        auth: { autoRefreshToken: false, persistSession: false },
       }
     );
 
-    // Fetch all orders (excluding cancelled ones for sales calculations)
-    const { data: orders, error } = await supabaseAdmin
+    const fromIso = from.getTime() === 0 ? null : from.toISOString();
+    const toIso = to.toISOString();
+
+    let currentQuery = supabaseAdmin
       .from("orders")
-      .select("id, total, status, created_at, items")
+      .select(ORDER_SELECT)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      throw error;
+    if (fromIso) {
+      currentQuery = currentQuery.gte("created_at", fromIso);
+    }
+    currentQuery = currentQuery.lte("created_at", toIso);
+
+    const { data: currentRows, error: curErr } = await currentQuery;
+    if (curErr) throw curErr;
+
+    const periodOrders = (currentRows || []) as RawOrderRow[];
+    const rangeDays =
+      from.getTime() === 0
+        ? null
+        : daysBetweenInclusive(from, to);
+
+    const compareRange =
+      compare && from.getTime() > 0
+        ? previousRange(from, to)
+        : null;
+
+    let compareOrders: RawOrderRow[] = [];
+    if (compareRange) {
+      const { data: co } = await supabaseAdmin
+        .from("orders")
+        .select(ORDER_SELECT)
+        .gte("created_at", compareRange.from.toISOString())
+        .lte("created_at", compareRange.to.toISOString())
+        .order("created_at", { ascending: false });
+      compareOrders = (co || []) as RawOrderRow[];
     }
 
-    const ordersData = (orders || []) as Order[];
+    let priorEmailSet = new Set<string>();
+    if (fromIso) {
+      const { data: priorRows } = await supabaseAdmin
+        .from("orders")
+        .select("guest_email, status, created_at")
+        .lt("created_at", fromIso);
 
-    // Calculate lifetime sales (count paid/completed orders only)
-    const lifetimeSales = ordersData
-      .filter((o) => isSalesStatus(o.status))
-      .reduce((sum, order) => sum + getOrderTotal(order), 0);
+      priorEmailSet = new Set(
+        (priorRows || [])
+          .filter((o) => isSalesStatus(o.status))
+          .map((o) => String((o as { guest_email?: string }).guest_email || "").trim().toLowerCase())
+          .filter(Boolean)
+      );
+    }
 
-    // Calculate monthly sales
-    const monthlySalesMap = new Map<string, MonthlySales>();
-    
-    ordersData
-      .filter((o) => isSalesStatus(o.status))
-      .forEach((order) => {
-        const date = new Date(order.created_at);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-        const monthName = date.toLocaleString("default", { month: "long" });
-        
-        if (!monthlySalesMap.has(monthKey)) {
-          monthlySalesMap.set(monthKey, {
-            month: monthName,
-            year: date.getFullYear(),
-            total: 0,
-            orderCount: 0,
-          });
+    const summary = summarizePeriod(periodOrders);
+    const compareSummary = compareOrders.length
+      ? summarizePeriod(compareOrders)
+      : null;
+
+    const growth = compareSummary
+      ? {
+          revenuePct: growthPct(
+            summary.revenueAed,
+            compareSummary.revenueAed
+          ),
+          ordersPct: growthPct(
+            summary.salesOrdersCount,
+            compareSummary.salesOrdersCount
+          ),
+          aovPct: growthPct(
+            summary.averageOrderValue,
+            compareSummary.averageOrderValue
+          ),
         }
-        
-        const monthlyData = monthlySalesMap.get(monthKey)!;
-        monthlyData.total += getOrderTotal(order);
-        monthlyData.orderCount += 1;
-      });
+      : null;
 
-    const monthlySales = Array.from(monthlySalesMap.entries())
-      .map(([key, value]) => ({ key, ...value }))
-      .sort((a, b) => b.key.localeCompare(a.key))
-      .map(({ key, ...value }) => value);
+    const funnel = funnelCounts(periodOrders);
+    const funnelRevenue = funnelRevenueByStatus(periodOrders);
 
-    // Calculate product performance
-    const productMap = new Map<string, ProductPerformance>();
-    
-    ordersData
-      .filter((o) => isSalesStatus(o.status))
-      .forEach((order) => {
-        if (!order.items || !Array.isArray(order.items)) return;
+    const granularity =
+      rangeDays === null || rangeDays > 92 ? "monthly" : "daily";
+    const chartSeries = buildChartSeries(periodOrders, granularity);
 
-        order.items.filter(isValidOrderItem).forEach((item) => {
-          if (!productMap.has(item.name)) {
-            productMap.set(item.name, {
-              name: item.name,
-              totalQuantity: 0,
-              totalRevenue: 0,
-              orderCount: 0,
-            });
-          }
-          
-          const productData = productMap.get(item.name)!;
-          productData.totalQuantity += toFiniteNumber(item.quantity);
-          productData.totalRevenue += toFiniteNumber(item.price) * toFiniteNumber(item.quantity);
-          productData.orderCount += 1;
-        });
-      });
+    const monthlySalesTable = buildMonthlySales(periodOrders);
 
-    const productPerformance = Array.from(productMap.values())
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+    const productPerformance = buildProductPerformance(periodOrders);
+    const customers = customerInsights(periodOrders, priorEmailSet);
 
-    logApiCall("GET", "/api/admin/analytics", 200, {
-      userId: authResult.user!.id,
-      email: authResult.user!.email,
-      ipAddress,
-    }, authResult.user!.id, ipAddress);
+    let lifetimeSummary = summary;
+    if (preset !== "all") {
+      const { data: allRows } = await supabaseAdmin
+        .from("orders")
+        .select(ORDER_SELECT)
+        .order("created_at", { ascending: false });
+      lifetimeSummary = summarizePeriod((allRows || []) as RawOrderRow[]);
+    }
+
+    logApiCall(
+      "GET",
+      "/api/admin/analytics",
+      200,
+      {
+        userId: authResult.user!.id,
+        email: authResult.user!.email,
+        ipAddress,
+      },
+      authResult.user!.id,
+      ipAddress
+    );
 
     return NextResponse.json({
-      lifetimeSales,
-      monthlySales,
+      preset,
+      range: {
+        from: fromIso,
+        to: toIso,
+        label:
+          preset === "all"
+            ? "All time"
+            : `${fromIso?.slice(0, 10) ?? "?"} → ${toIso.slice(0, 10)}`,
+        days: rangeDays,
+      },
+      compareRange: compareRange
+        ? {
+            from: compareRange.from.toISOString(),
+            to: compareRange.to.toISOString(),
+          }
+        : null,
+      summary,
+      compareSummary,
+      growth,
+      funnel,
+      funnelRevenue,
+      chartSeries,
+      chartGranularity: granularity,
+      monthlySales: monthlySalesTable,
       productPerformance,
-      totalOrders: ordersData.length,
-      activeOrders: ordersData.filter((o) => isSalesStatus(o.status)).length,
+      customers,
+      lifetime: lifetimeSummary,
     });
-  } catch (error: any) {
-    // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"A5",location:"app/api/admin/analytics/route.ts:catch",message:"Analytics API catch",data:{errorMessage:error?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    logApiError("/api/admin/analytics", error, { ipAddress });
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    const errObj = error instanceof Error ? error : new Error(String(error));
+    logApiError("/api/admin/analytics", errObj, { ipAddress });
     console.error("Analytics error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: err.message || "Internal server error" },
       { status: 500 }
     );
   }
 }
-
