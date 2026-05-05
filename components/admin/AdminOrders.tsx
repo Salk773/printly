@@ -4,6 +4,14 @@ import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { useState } from "react";
 
+function orderMatchesSearch(o: Order, q: string): boolean {
+  if (!q) return true;
+  const parts = [o.order_number, o.guest_name, o.guest_email]
+    .filter((x): x is string => x != null && String(x).trim() !== "")
+    .map((s) => String(s).toLowerCase());
+  return parts.some((s) => s.includes(q));
+}
+
 export default function AdminOrders({
   orders,
   setOrders,
@@ -17,10 +25,16 @@ export default function AdminOrders({
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [orderSearch, setOrderSearch] = useState("");
 
-  const filteredOrders = showArchived
+  const bucket = showArchived
     ? orders.filter((o) => o.archived)
     : orders.filter((o) => !o.archived);
+
+  const query = orderSearch.trim().toLowerCase();
+  const filteredOrders = query
+    ? bucket.filter((o) => orderMatchesSearch(o, query))
+    : bucket;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -135,9 +149,6 @@ export default function AdminOrders({
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"O1",location:"components/admin/AdminOrders.tsx:delete-request",message:"Order delete client request",data:{hasToken:Boolean(token)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const response = await fetch("/api/orders/delete", {
         method: "DELETE",
         headers: {
@@ -146,9 +157,6 @@ export default function AdminOrders({
         },
         body: JSON.stringify({ orderId }),
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"O2",location:"components/admin/AdminOrders.tsx:delete-response",message:"Order delete client response",data:{ok:response.ok,status:response.status},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       const result = await response.json();
 
@@ -170,19 +178,40 @@ export default function AdminOrders({
     }
   };
 
-  if (!filteredOrders.length) {
+  const toolbar = (
+    <div
+      style={{
+        marginBottom: 20,
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 12,
+        alignItems: "center",
+      }}
+    >
+      <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <input
+          type="checkbox"
+          checked={showArchived}
+          onChange={(e) => setShowArchived(e.target.checked)}
+        />
+        Show archived orders
+      </label>
+      <input
+        type="search"
+        className="input"
+        placeholder="Search order #, name, or email…"
+        value={orderSearch}
+        onChange={(e) => setOrderSearch(e.target.value)}
+        style={{ flex: "1 1 220px", minWidth: 200, maxWidth: 420 }}
+        aria-label="Search orders by number, customer name, or email"
+      />
+    </div>
+  );
+
+  if (!bucket.length) {
     return (
       <div>
-        <div style={{ marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-            />
-            Show archived orders
-          </label>
-        </div>
+        {toolbar}
         <p style={{ opacity: 0.6 }}>
           {showArchived ? "No archived orders found." : "No orders found."}
         </p>
@@ -190,18 +219,20 @@ export default function AdminOrders({
     );
   }
 
+  if (!filteredOrders.length) {
+    return (
+      <div>
+        {toolbar}
+        <p style={{ opacity: 0.6 }}>
+          No orders match your search. Try another order number, name, or email.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div style={{ marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-          />
-          Show archived orders
-        </label>
-      </div>
+      {toolbar}
 
       {filteredOrders.map((o) => (
         <AdminCard key={o.id} maxWidth={900} style={{ opacity: o.archived ? 0.6 : 1 }}>

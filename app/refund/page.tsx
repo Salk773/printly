@@ -55,7 +55,7 @@ export default function RefundPolicyPage() {
             To be eligible for a return, the following conditions must be met:
           </p>
           <ul style={{ color: "#cbd5e1", paddingLeft: 24 }}>
-            <li>The item must be returned within <strong>14 days</strong> of delivery</li>
+            <li>The item must be returned within <strong>5 days</strong> of delivery</li>
             <li>The item must be unused, in its original packaging, and in the same condition as when you received it</li>
             <li>The item must not be damaged, altered, or customized</li>
             <li>You must have proof of purchase (order number or receipt)</li>
@@ -74,7 +74,7 @@ export default function RefundPolicyPage() {
             <li>Items that have been used, damaged, or altered</li>
             <li>Items without original packaging</li>
             <li>Digital products or downloadable content</li>
-            <li>Items returned after the 14-day return period</li>
+            <li>Items returned after the 5-day return period</li>
           </ul>
         </section>
 
