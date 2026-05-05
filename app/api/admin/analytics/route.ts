@@ -22,8 +22,8 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ORDER_SELECT =
-  "id, total, status, created_at, items, guest_email, guest_name, shipping_cost, discount_amount, coupon_code";
+/** Use * so missing optional columns (e.g. shipping_cost from migration 011) do not break PostgREST. */
+const ORDER_SELECT = "*";
 
 type Preset = "7d" | "30d" | "90d" | "all" | "custom";
 
