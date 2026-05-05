@@ -164,27 +164,39 @@ export default function AdminShippingLabelPage() {
     <>
       <style jsx global>{`
         @media print {
+          @page {
+            size: 4in 6in;
+            margin: 0;
+          }
+
           html,
           body {
             width: 4in !important;
             height: 6in !important;
-            overflow: hidden !important;
-          }
-          body {
-            background: #fff !important;
-            color: #111 !important;
             margin: 0 !important;
             padding: 0 !important;
-          }
-          main {
-            min-height: 0 !important;
-            padding: 0 !important;
+            overflow: hidden !important;
             background: #fff !important;
+            color: #111 !important;
           }
+
+          body * {
+            visibility: hidden !important;
+          }
+
           .label-no-print {
             display: none !important;
           }
+
+          .shipping-label-root,
+          .shipping-label-root * {
+            visibility: visible !important;
+          }
+
           .shipping-label-root {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -195,11 +207,9 @@ export default function AdminShippingLabelPage() {
             padding: 0.12in !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
+            background: #fff !important;
+            color: #111 !important;
           }
-        }
-        @page {
-          size: 4in 6in;
-          margin: 0;
         }
       `}</style>
 
