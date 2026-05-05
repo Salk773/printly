@@ -10,7 +10,8 @@ import ShippingLabelPrint from "@/components/admin/ShippingLabelPrint";
 function defaultLabelWidth(): number {
   const raw = process.env.NEXT_PUBLIC_LABEL_WIDTH_IN;
   const n = raw ? Number(raw) : 4;
-  if (Number.isFinite(n) && n >= 2 && n <= 4) return n;
+  // Keep this fixed at 4in for shipping labels to match 100x150mm media.
+  if (Number.isFinite(n) && n >= 4) return 4;
   return 4;
 }
 
@@ -188,21 +189,32 @@ export default function AdminShippingLabelPage() {
             display: none !important;
           }
 
-          .shipping-label-root,
-          .shipping-label-root * {
+          .screen-label-wrap {
+            display: none !important;
+          }
+
+          .print-label-wrap,
+          .print-label-wrap * {
             visibility: visible !important;
           }
 
-          .shipping-label-root {
+          .print-label-wrap {
             position: fixed !important;
             left: 0 !important;
             top: 0 !important;
+            width: 4in !important;
+            height: 6in !important;
+            overflow: hidden !important;
+            background: #fff !important;
+          }
+
+          .print-label-wrap .shipping-label-root {
             border: none !important;
             border-radius: 0 !important;
             box-shadow: none !important;
             margin: 0 !important;
             max-width: none !important;
-            width: var(--labelWidth, 4in) !important;
+            width: 4in !important;
             height: 6in !important;
             padding: 0.12in !important;
             box-sizing: border-box !important;
@@ -249,8 +261,13 @@ export default function AdminShippingLabelPage() {
           </span>
         </div>
 
-        <ShippingLabelPrint order={order} labelWidthIn={labelWidthIn} />
+        <div className="screen-label-wrap">
+          <ShippingLabelPrint order={order} labelWidthIn={labelWidthIn} />
+        </div>
       </main>
+      <div className="print-label-wrap" aria-hidden>
+        <ShippingLabelPrint order={order} labelWidthIn={4} />
+      </div>
     </>
   );
 }
