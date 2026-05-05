@@ -39,14 +39,8 @@ export default function AdminLogs() {
 
   const fetchLogs = useCallback(async (since?: string) => {
     try {
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L1",location:"components/admin/AdminLogs.tsx:fetch-start",message:"Logs fetch start",data:{hasSince:Boolean(since),filterLevel,filterCategory},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const session = await supabase.auth.getSession();
       if (!session.data.session) {
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L2",location:"components/admin/AdminLogs.tsx:no-session",message:"Logs fetch blocked: no session",data:{},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         setLogs([]);
         setTotal(0);
         setOffset(0);
@@ -77,9 +71,6 @@ export default function AdminLogs() {
           Authorization: `Bearer ${token}`,
         },
       });
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-2",hypothesisId:"L1",location:"components/admin/AdminLogs.tsx:response",message:"Logs client response",data:{ok:response.ok,status:response.status,hasSince:Boolean(since)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       if (!response.ok) {
         let errorMessage = "Failed to fetch logs";
@@ -95,17 +86,11 @@ export default function AdminLogs() {
         setOffset(0);
         setError(errorMessage);
         console.error("Logs API unavailable:", errorMessage);
-        // #region agent log
-        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L3",location:"components/admin/AdminLogs.tsx:non-ok-fallback",message:"Logs fetch fallback on non-ok response",data:{errorMessage},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return;
       }
 
       const data: LogsResponse = await response.json();
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L4",location:"components/admin/AdminLogs.tsx:data-received",message:"Logs payload received",data:{returned:data.logs.length,total:data.total,hasSince:Boolean(since)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      
+
       if (since) {
         // Append new logs to the beginning
         setLogs((prev) => {
@@ -130,9 +115,6 @@ export default function AdminLogs() {
       setTotal(0);
       setOffset(0);
       setError(err?.message || "Failed to fetch logs");
-      // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"f31495"},body:JSON.stringify({sessionId:"f31495",runId:"debug-logs-1",hypothesisId:"L5",location:"components/admin/AdminLogs.tsx:catch-fallback",message:"Logs fetch catch fallback",data:{errorMessage:err?.message||"unknown"},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     } finally {
       setLoading(false);
     }
