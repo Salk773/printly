@@ -1,19 +1,42 @@
+export type AdminTab =
+  | "products"
+  | "categories"
+  | "homepage"
+  | "orders"
+  | "reviews"
+  | "shipping"
+  | "inventory"
+  | "customers"
+  | "coupons"
+  | "emails"
+  | "analytics"
+  | "logs";
+
 export default function AdminTabs({
   setTab,
 }: {
-  setTab: (
-    t: "products" | "categories" | "homepage" | "orders" | "coupons" | "logs" | "analytics"
-  ) => void;
+  setTab: (t: AdminTab) => void;
 }) {
+  const btn = (id: AdminTab, label: string) => (
+    <button key={id} type="button" onClick={() => setTab(id)}>
+      {label}
+    </button>
+  );
+
   return (
     <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-      <button onClick={() => setTab("products")}>Products</button>
-      <button onClick={() => setTab("categories")}>Categories</button>
-      <button onClick={() => setTab("homepage")}>Homepage</button>
-      <button onClick={() => setTab("orders")}>Orders</button>
-      <button onClick={() => setTab("coupons")}>Discount codes</button>
-      <button onClick={() => setTab("analytics")}>Analytics</button>
-      <button onClick={() => setTab("logs")}>Logs</button>
+      {btn("products", "Products")}
+      {btn("categories", "Categories")}
+      {btn("homepage", "Homepage")}
+      {btn("orders", "Orders")}
+      {btn("reviews", "Reviews")}
+      {btn("inventory", "Stock")}
+      {btn("shipping", "Shipping")}
+      {btn("customers", "Customers")}
+      {btn("coupons", "Discount codes")}
+      {btn("emails", "Emails")}
+      {btn("analytics", "Analytics")}
+      {btn("logs", "Logs")}
     </div>
   );
 }

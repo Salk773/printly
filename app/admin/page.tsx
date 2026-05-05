@@ -8,6 +8,7 @@ import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
 import EditProductModal from "@/components/EditProductModal";
 import AdminTabs from "@/components/admin/AdminTabs";
+import type { AdminTab } from "@/components/admin/AdminTabs";
 import AdminHomepage from "@/components/admin/AdminHomepage";
 import AdminProducts from "@/components/admin/AdminProducts";
 import AdminCategories from "@/components/admin/AdminCategories";
@@ -15,6 +16,11 @@ import AdminOrders from "@/components/admin/AdminOrders";
 import AdminLogs from "@/components/admin/AdminLogs";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
 import AdminCoupons from "@/components/admin/AdminCoupons";
+import AdminReviews from "@/components/admin/AdminReviews";
+import AdminShipping from "@/components/admin/AdminShipping";
+import AdminInventory from "@/components/admin/AdminInventory";
+import AdminCustomers from "@/components/admin/AdminCustomers";
+import AdminEmailCenter from "@/components/admin/AdminEmailCenter";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { sortOrdersForDisplay } from "@/lib/orderSort";
 
@@ -74,9 +80,7 @@ export default function AdminPage() {
   const [adminChecked, setAdminChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const [tab, setTab] = useState<
-    "products" | "categories" | "homepage" | "orders" | "coupons" | "logs" | "analytics"
-  >("products");
+  const [tab, setTab] = useState<AdminTab>("products");
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -435,6 +439,24 @@ export default function AdminPage() {
 
       {tab === "coupons" && <AdminCoupons logAdminAction={logAdminAction} />}
 
+      {tab === "reviews" && <AdminReviews logAdminAction={logAdminAction} />}
+
+      {tab === "shipping" && <AdminShipping logAdminAction={logAdminAction} />}
+
+      {tab === "inventory" && (
+        <AdminInventory
+          products={products}
+          onEditProduct={(p) => {
+            setTab("products");
+            setEditingProduct(p);
+          }}
+        />
+      )}
+
+      {tab === "customers" && <AdminCustomers />}
+
+      {tab === "emails" && <AdminEmailCenter />}
+
       {tab === "analytics" && <AdminAnalytics />}
 
       {tab === "logs" && <AdminLogs />}
@@ -443,6 +465,7 @@ export default function AdminPage() {
         <OrderDetailsModal
           order={viewingOrder}
           onClose={() => setViewingOrder(null)}
+          onOrderUpdated={loadData}
         />
       )}
 

@@ -58,6 +58,29 @@ export const OrderDeleteSchema = z.object({
   orderId: z.string().uuid("Invalid order ID"),
 });
 
+export const BulkOrderStatusSchema = z.object({
+  orderIds: z.array(z.string().uuid()).min(1, "At least one order required").max(200),
+  newStatus: z.enum(["pending", "paid", "processing", "completed", "cancelled", "refunded"], {
+    errorMap: () => ({ message: "Invalid status value" }),
+  }),
+});
+
+export const OrderRefundSchema = z.object({
+  amountAed: z.number().positive().optional(),
+});
+
+export const ShippingMethodPatchSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).nullable().optional(),
+  cost: z.number().min(0).optional(),
+  estimated_days: z.number().int().min(0).max(365).optional(),
+  active: z.boolean().optional(),
+});
+
+export const ReviewVisibleSchema = z.object({
+  visible: z.boolean(),
+});
+
 /** Admin: create discount code */
 export const CouponCreateSchema = z
   .object({

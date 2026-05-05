@@ -1,8 +1,10 @@
+"use client";
+
 import AdminCard from "@/components/admin/AdminCard";
 import { Order } from "@/app/admin/page";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 function orderMatchesSearch(o: Order, q: string): boolean {
   if (!q) return true;
@@ -11,6 +13,21 @@ function orderMatchesSearch(o: Order, q: string): boolean {
     .map((s) => String(s).toLowerCase());
   return parts.some((s) => s.includes(q));
 }
+
+function dateInRange(created: string, from: string, to: string): boolean {
+  const t = new Date(created).getTime();
+  if (from) {
+    const f = new Date(`${from}T00:00:00.000Z`).getTime();
+    if (t < f) return false;
+  }
+  if (to) {
+    const e = new Date(`${to}T23:59:59.999Z`).getTime();
+    if (t > e) return false;
+  }
+  return true;
+}
+
+const STATUS_OPTIONS = ["all", "pending", "paid", "processing", "completed", "cancelled", "refunded"] as const;
 
 export default function AdminOrders({
   orders,
@@ -26,15 +43,129 @@ export default function AdminOrders({
   const [showArchived, setShowArchived] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [orderSearch, setOrderSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<string>("processing");
+  const [bulkWorking, setBulkWorking] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const bucket = showArchived
-    ? orders.filter((o) => o.archived)
-    : orders.filter((o) => !o.archived);
+  const bucket = useMemo(
+    () =>
+      showArchived ? orders.filter((o) => o.archived) : orders.filter((o) => !o.archived),
+    [orders, showArchived]
+  );
+
+  const pipelineFiltered = useMemo(() => {
+    let rows = bucket;
+    if (statusFilter !== "all") {
+      rows = rows.filter((o) => o.status === statusFilter);
+    }
+    rows = rows.filter((o) => dateInRange(o.created_at, dateFrom, dateTo));
+    const query = orderSearch.trim().toLowerCase();
+    if (query) {
+      rows = rows.filter((o) => orderMatchesSearch(o, query));
+    }
+    return rows;
+  }, [bucket, statusFilter, dateFrom, dateTo, orderSearch]);
 
   const query = orderSearch.trim().toLowerCase();
-  const filteredOrders = query
-    ? bucket.filter((o) => orderMatchesSearch(o, query))
-    : bucket;
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  const selectAllVisible = () => {
+    setSelected(new Set(pipelineFiltered.map((o) => o.id)));
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) {
+        toast.error("Please log in");
+        return;
+      }
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
+      const res = await fetch(`/api/admin/orders/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `orders-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV downloaded.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const applyBulkStatus = async () => {
+    const ids = pipelineFiltered.filter((o) => selected.has(o.id)).map((o) => o.id);
+    if (!ids.length) {
+      toast.error("Select at least one order in the current list.");
+      return;
+    }
+    if (!confirm(`Update ${ids.length} order(s) to “${bulkStatus}”?`)) return;
+
+    setBulkWorking(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) {
+        toast.error("Please log in");
+        return;
+      }
+      const res = await fetch("/api/admin/orders/bulk-status", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderIds: ids,
+          newStatus: bulkStatus,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Bulk update failed");
+
+      if (result.failed > 0) {
+        toast.error(`Updated with ${result.failed} failure(s). Refresh recommended.`);
+      } else {
+        toast.success(`Updated ${result.updated} order(s).`);
+      }
+      clearSelection();
+      reload();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Bulk update failed");
+      reload();
+    } finally {
+      setBulkWorking(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -71,13 +202,11 @@ export default function AdminOrders({
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string, currentStatus: string) => {
-    // Optimistic UI update
     setOrders((prev: Order[]) =>
       prev.map((x) => (x.id === orderId ? { ...x, status: newStatus } : x))
     );
 
     try {
-      // Get auth token for admin API call
       const session = await supabase.auth.getSession();
       if (!session.data.session) {
         toast.error("Please log in to update order status");
@@ -105,7 +234,6 @@ export default function AdminOrders({
         throw new Error(result.error || "Failed to update status");
       }
 
-      // Only send notification for paid -> processing transition
       if (currentStatus === "paid" && newStatus === "processing") {
         toast.success("Order status updated to processing. Customer notified.");
       } else {
@@ -114,16 +242,13 @@ export default function AdminOrders({
     } catch (error: any) {
       console.error("Status update error:", error);
       toast.error(error.message || "Failed to update order status");
-      reload(); // Rollback on error
+      reload();
     }
   };
 
   const handleArchive = async (orderId: string, archive: boolean) => {
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ archived: archive })
-        .eq("id", orderId);
+      const { error } = await supabase.from("orders").update({ archived: archive }).eq("id", orderId);
 
       if (error) throw error;
 
@@ -164,15 +289,19 @@ export default function AdminOrders({
         throw new Error(result.error || "Failed to delete order");
       }
 
-      // Optimistically remove from UI
       setOrders((prev: Order[]) => prev.filter((x) => x.id !== orderId));
+      setSelected((prev) => {
+        const n = new Set(prev);
+        n.delete(orderId);
+        return n;
+      });
 
       toast.success("Order deleted.");
       reload();
     } catch (error: any) {
       console.error("Delete error:", error);
       toast.error(error.message || "Failed to delete order");
-      reload(); // Reload to sync state
+      reload();
     } finally {
       setDeletingId(null);
     }
@@ -181,7 +310,7 @@ export default function AdminOrders({
   const toolbar = (
     <div
       style={{
-        marginBottom: 20,
+        marginBottom: 16,
         display: "flex",
         flexWrap: "wrap",
         gap: 12,
@@ -194,7 +323,38 @@ export default function AdminOrders({
           checked={showArchived}
           onChange={(e) => setShowArchived(e.target.checked)}
         />
-        Show archived orders
+        Show archived
+      </label>
+      <select
+        className="select"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_OPTIONS)[number])}
+        aria-label="Filter by status"
+        style={{ minWidth: 140 }}
+      >
+        {STATUS_OPTIONS.map((s) => (
+          <option key={s} value={s}>
+            {s === "all" ? "All statuses" : s}
+          </option>
+        ))}
+      </select>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+        From
+        <input
+          type="date"
+          className="input"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+        />
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+        To
+        <input
+          type="date"
+          className="input"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+        />
       </label>
       <input
         type="search"
@@ -202,29 +362,64 @@ export default function AdminOrders({
         placeholder="Search order #, name, or email…"
         value={orderSearch}
         onChange={(e) => setOrderSearch(e.target.value)}
-        style={{ flex: "1 1 220px", minWidth: 200, maxWidth: 420 }}
+        style={{ flex: "1 1 200px", minWidth: 180, maxWidth: 400 }}
         aria-label="Search orders by number, customer name, or email"
       />
+      <button type="button" className="btn-ghost" disabled={exporting} onClick={exportCsv}>
+        {exporting ? "…" : "Export CSV"}
+      </button>
     </div>
   );
+
+  const bulkBar =
+    selected.size > 0 ? (
+      <AdminCard maxWidth={900} style={{ marginBottom: 16, padding: "12px 16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 14 }}>
+            {selected.size} selected (visible list)
+          </span>
+          <select
+            className="select"
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            style={{ minWidth: 140 }}
+          >
+            <option value="pending">pending</option>
+            <option value="paid">paid</option>
+            <option value="processing">processing</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
+            <option value="refunded">refunded</option>
+          </select>
+          <button type="button" className="btn-primary" disabled={bulkWorking} onClick={applyBulkStatus}>
+            {bulkWorking ? "…" : "Apply to selected"}
+          </button>
+          <button type="button" className="btn-ghost" onClick={selectAllVisible}>
+            Select all in list
+          </button>
+          <button type="button" className="btn-ghost" onClick={clearSelection}>
+            Clear
+          </button>
+        </div>
+      </AdminCard>
+    ) : null;
 
   if (!bucket.length) {
     return (
       <div>
         {toolbar}
-        <p style={{ opacity: 0.6 }}>
-          {showArchived ? "No archived orders found." : "No orders found."}
-        </p>
+        <p style={{ opacity: 0.6 }}>{showArchived ? "No archived orders found." : "No orders found."}</p>
       </div>
     );
   }
 
-  if (!filteredOrders.length) {
+  if (!pipelineFiltered.length) {
     return (
       <div>
         {toolbar}
         <p style={{ opacity: 0.6 }}>
-          No orders match your search. Try another order number, name, or email.
+          No orders match your filters
+          {query ? " or search" : ""}. Adjust status, dates, or search.
         </p>
       </div>
     );
@@ -233,45 +428,39 @@ export default function AdminOrders({
   return (
     <div>
       {toolbar}
+      {bulkBar}
 
-      {filteredOrders.map((o) => (
+      {pipelineFiltered.map((o) => (
         <AdminCard key={o.id} maxWidth={900} style={{ opacity: o.archived ? 0.6 : 1 }}>
           <div
             style={{
               display: "grid",
               gridTemplateColumns:
-                "minmax(100px, 2fr) minmax(52px, 0.85fr) minmax(72px, 1fr) minmax(240px, 1.5fr) auto auto auto auto auto",
+                "auto minmax(100px, 2fr) minmax(52px, 0.85fr) minmax(72px, 1fr) minmax(240px, 1.5fr) auto auto auto auto auto auto",
               gap: 12,
               alignItems: "center",
             }}
           >
-            {/* CUSTOMER */}
+            <input
+              type="checkbox"
+              checked={selected.has(o.id)}
+              onChange={() => toggleSelect(o.id)}
+              aria-label={`Select order ${o.order_number ?? o.id}`}
+            />
+
             <div>
               <strong>{o.guest_name || "Guest"}</strong>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>
-                {o.guest_email}
-              </div>
-              <div style={{ fontSize: 11, opacity: 0.4 }}>
-                {new Date(o.created_at).toLocaleString()}
-              </div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{o.guest_email}</div>
+              <div style={{ fontSize: 11, opacity: 0.4 }}>{new Date(o.created_at).toLocaleString()}</div>
               {o.archived && (
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
-                  Archived
-                </div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>Archived</div>
               )}
             </div>
 
-            {/* ITEMS */}
-            <div style={{ fontSize: 13 }}>
-              {o.items.length} items
-            </div>
+            <div style={{ fontSize: 13 }}>{o.items.length} items</div>
 
-            {/* TOTAL */}
-            <div style={{ fontWeight: 700 }}>
-              {o.total.toFixed(2)} AED
-            </div>
+            <div style={{ fontWeight: 700 }}>{o.total.toFixed(2)} AED</div>
 
-            {/* STATUS — badge shows current color; select stays neutral (options can't be styled per-row in HTML) */}
             <div
               style={{
                 display: "grid",
@@ -324,7 +513,6 @@ export default function AdminOrders({
               </select>
             </div>
 
-            {/* ARCHIVE/UNARCHIVE */}
             <button
               className="btn-ghost"
               onClick={() => handleArchive(o.id, !o.archived)}
@@ -334,7 +522,6 @@ export default function AdminOrders({
               {o.archived ? "📦" : "📁"}
             </button>
 
-            {/* DELETE */}
             <button
               className="btn-ghost"
               onClick={() => handleDelete(o.id)}
@@ -345,7 +532,6 @@ export default function AdminOrders({
               {deletingId === o.id ? "..." : "🗑️"}
             </button>
 
-            {/* LABEL (opens print page) */}
             <a
               className="btn-ghost"
               href={`/admin/label/${o.id}`}
@@ -357,11 +543,7 @@ export default function AdminOrders({
               Label
             </a>
 
-            {/* VIEW */}
-            <button
-              className="btn-ghost"
-              onClick={() => onView(o)}
-            >
+            <button className="btn-ghost" onClick={() => onView(o)}>
               View
             </button>
           </div>

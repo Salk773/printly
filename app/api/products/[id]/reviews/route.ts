@@ -16,6 +16,7 @@ export async function GET(
       .from("reviews")
       .select("*")
       .eq("product_id", productId)
+      .eq("visible", true)
       .order("created_at", { ascending: false });
 
     if (error) {

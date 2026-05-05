@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth/adminAuth";
 import { OrderStatusUpdateSchema, validateRequest } from "@/lib/validation/schemas";
 import { logApiCall, logAdminAction, logApiError } from "@/lib/logger";
 import { sendOrderNotification } from "@/lib/orderMail";
+import { recordEmailNotificationEvent } from "@/lib/recordEmailNotificationEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -170,6 +171,13 @@ export async function POST(req: NextRequest) {
       const emailResult = await sendOrderNotification({
         type: "processing",
         orderData: emailData,
+      });
+      await recordEmailNotificationEvent({
+        notification_type: "processing",
+        order_id: updatedOrder.id,
+        to_email: customerEmail,
+        status: emailResult.success ? "sent" : "failed",
+        error_message: emailResult.success ? null : emailResult.error ?? null,
       });
       if (!emailResult.success) {
         logApiError(

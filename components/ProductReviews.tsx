@@ -35,6 +35,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         .from("reviews")
         .select("*")
         .eq("product_id", productId)
+        .eq("visible", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;

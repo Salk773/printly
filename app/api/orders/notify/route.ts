@@ -3,6 +3,7 @@ import "server-only";
 import { OrderNotifySchema, validateRequest } from "@/lib/validation/schemas";
 import { logApiCall, logApiError } from "@/lib/logger";
 import { sendOrderNotification, type OrderEmailData } from "@/lib/orderMail";
+import { recordEmailNotificationEvent } from "@/lib/recordEmailNotificationEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,13 @@ export async function POST(req: NextRequest) {
     const result = await sendOrderNotification({ type, orderData: payload });
 
     if (!result.success) {
+      await recordEmailNotificationEvent({
+        notification_type: type,
+        order_id: payload.orderId,
+        to_email: type === "admin" ? null : payload.customerEmail,
+        status: "failed",
+        error_message: result.error || "Failed to send email",
+      });
       logApiError("/api/orders/notify", new Error(result.error || "Failed to send email"), {
         type,
         orderId: payload.orderId,
@@ -67,6 +75,13 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    await recordEmailNotificationEvent({
+      notification_type: type,
+      order_id: payload.orderId,
+      to_email: type === "admin" ? "admin-alerts" : payload.customerEmail,
+      status: "sent",
+    });
 
     logApiCall("POST", "/api/orders/notify", 200, {
       type,
