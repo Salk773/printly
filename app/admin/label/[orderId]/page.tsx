@@ -164,11 +164,22 @@ export default function AdminShippingLabelPage() {
     <>
       <style jsx global>{`
         @media print {
+          html,
+          body {
+            width: 4in !important;
+            height: 6in !important;
+            overflow: hidden !important;
+          }
           body {
             background: #fff !important;
             color: #111 !important;
             margin: 0 !important;
             padding: 0 !important;
+          }
+          main {
+            min-height: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
           }
           .label-no-print {
             display: none !important;
@@ -180,11 +191,15 @@ export default function AdminShippingLabelPage() {
             margin: 0 !important;
             max-width: none !important;
             width: var(--labelWidth, 4in) !important;
+            height: 6in !important;
+            padding: 0.12in !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
           }
         }
         @page {
-          size: auto;
-          margin: 0.15in;
+          size: 4in 6in;
+          margin: 0;
         }
       `}</style>
 
