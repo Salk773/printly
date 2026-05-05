@@ -129,21 +129,23 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </Link>
 
-        <p
-          style={{
-            color: "#94a3b8",
-            fontSize: "0.875rem",
-            minHeight: 40,
-            marginBottom: 14,
-            lineHeight: 1.5,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {product.description?.slice(0, 80) || "Premium 3D printed product"}
-        </p>
+        {product.description?.trim() ? (
+          <p
+            style={{
+              color: "#94a3b8",
+              fontSize: "0.875rem",
+              minHeight: 40,
+              marginBottom: 14,
+              lineHeight: 1.5,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {product.description.trim().slice(0, 160)}
+          </p>
+        ) : null}
 
         <div
           style={{

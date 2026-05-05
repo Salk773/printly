@@ -91,16 +91,18 @@ export default function FeaturedProductsGrid({ products }: Props) {
             >
               {p.name}
             </strong>
-            <p
-              style={{
-                color: "#9ca3af",
-                fontSize: "0.8rem",
-                transition: "opacity 0.3s ease",
-                opacity: hoveredId === p.id ? 1 : 0.8,
-              }}
-            >
-              {p.description}
-            </p>
+            {p.description?.trim() ? (
+              <p
+                style={{
+                  color: "#9ca3af",
+                  fontSize: "0.8rem",
+                  transition: "opacity 0.3s ease",
+                  opacity: hoveredId === p.id ? 1 : 0.8,
+                }}
+              >
+                {p.description.trim()}
+              </p>
+            ) : null}
             <div
               style={{
                 fontWeight: 600,

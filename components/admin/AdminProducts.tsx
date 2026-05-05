@@ -42,7 +42,7 @@ export default function AdminProducts({
       <AdminCard maxWidth={760}>
         <h2 style={{ marginBottom: 12 }}>Add product</h2>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
           <input
             className="input"
             placeholder="Name"
@@ -80,6 +80,21 @@ export default function AdminProducts({
             ))}
           </select>
         </div>
+
+        <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", color: "#94a3b8" }}>
+          Short description{" "}
+          <span style={{ fontWeight: 400, opacity: 0.85 }}>(shown on product cards)</span>
+        </label>
+        <textarea
+          className="textarea"
+          placeholder="Optional — appears under the product name on listing cards"
+          value={newProduct.description}
+          onChange={(e) =>
+            setNewProduct((p: any) => ({ ...p, description: e.target.value }))
+          }
+          rows={3}
+          style={{ width: "100%", marginBottom: 12 }}
+        />
 
         {/* FEATURED CHECKBOX */}
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>

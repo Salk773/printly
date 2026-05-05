@@ -172,12 +172,18 @@ export default function EditProductModal({
           ))}
         </select>
 
+        <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", color: "#94a3b8" }}>
+          Short description{" "}
+          <span style={{ fontWeight: 400, opacity: 0.85 }}>(shown on product cards)</span>
+        </label>
         <textarea
           className="textarea"
+          placeholder="Optional — appears under the product name on listing cards"
           value={form.description}
           onChange={(e) =>
             setForm({ ...form, description: e.target.value })
           }
+          rows={3}
         />
 
         <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
