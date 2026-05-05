@@ -202,15 +202,34 @@ export default function ProductPageClient({ product }) {
             {inWishlist ? "♥ Wishlisted" : "♡ Add to wishlist"}
           </button>
 
-          <p
-            style={{
-              color: "#94a3b8",
-              marginBottom: 20,
-              lineHeight: 1.55,
-            }}
-          >
-            {product.description}
-          </p>
+          {product.description?.trim() ? (
+            <section style={{ marginBottom: 24 }}>
+              <h2
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#64748b",
+                  marginBottom: 10,
+                }}
+              >
+                Description
+              </h2>
+              <p
+                style={{
+                  color: "#cbd5e1",
+                  margin: 0,
+                  lineHeight: 1.65,
+                  fontSize: "1.05rem",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {product.description.trim()}
+              </p>
+            </section>
+          ) : null}
 
           {/* PRICE */}
           <div style={{ marginBottom: 32 }}>
