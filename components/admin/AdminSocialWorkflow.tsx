@@ -15,6 +15,13 @@ type PostDraft = {
   hashtags: string;
 };
 
+type ActivityEntry = {
+  id: string;
+  message: string;
+  tone: "info" | "success" | "error";
+  createdAt: string;
+};
+
 function getExtension(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase();
   return ext && ext.length <= 5 ? ext : "jpg";
@@ -25,11 +32,12 @@ function platformLabel(platform: string) {
 }
 
 function statusColor(status: string) {
-  if (status === "published") return "#166534";
-  if (status === "failed") return "#991b1b";
-  if (status === "approved") return "#1d4ed8";
-  if (status === "waiting_approval") return "#92400e";
-  return "#374151";
+  if (status === "published") return "#22c55e";
+  if (status === "failed") return "#f87171";
+  if (status === "approved") return "#93c5fd";
+  if (status === "waiting_approval") return "#fbbf24";
+  if (status === "processing" || status === "publishing") return "#c084fc";
+  return "#94a3b8";
 }
 
 export default function AdminSocialWorkflow() {
@@ -40,6 +48,23 @@ export default function AdminSocialWorkflow() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [setupSql, setSetupSql] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+
+  const addActivity = useCallback((message: string, tone: ActivityEntry["tone"] = "info") => {
+    setActivity((current) => [
+      {
+        id: crypto.randomUUID(),
+        message,
+        tone,
+        createdAt: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      },
+      ...current,
+    ].slice(0, 12));
+  }, []);
 
   const getToken = useCallback(async () => {
     const session = await supabase.auth.getSession();
@@ -72,18 +97,21 @@ export default function AdminSocialWorkflow() {
   const loadAssets = useCallback(async () => {
     setLoading(true);
     try {
+      addActivity("Loading creative workflow queue...");
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
       setLoadError(null);
       setSetupSql(null);
+      addActivity("Workflow queue loaded", "success");
     } catch (error) {
       const message = getErrorMessage(error, "Failed to load workflow");
       setLoadError(message);
+      addActivity(message, "error");
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [apiFetch]);
+  }, [addActivity, apiFetch]);
 
   useEffect(() => {
     loadAssets();
@@ -113,6 +141,7 @@ export default function AdminSocialWorkflow() {
       if (!token) throw new Error("You must be signed in as an admin.");
 
       for (const file of Array.from(files)) {
+        addActivity(`Validating ${file.name}...`);
         const validationForm = new FormData();
         validationForm.append("file", file);
         await apiFetch("/api/upload/validate", {
@@ -121,6 +150,7 @@ export default function AdminSocialWorkflow() {
         });
 
         const path = `creative/originals/${crypto.randomUUID()}.${getExtension(file.name)}`;
+        addActivity(`Uploading ${file.name} to Supabase Storage...`);
         const { error: uploadError } = await supabase.storage
           .from("uploads")
           .upload(path, file, {
@@ -133,6 +163,7 @@ export default function AdminSocialWorkflow() {
         const { data } = supabase.storage.from("uploads").getPublicUrl(path);
         if (!data.publicUrl) throw new Error("Failed to create public image URL.");
 
+        addActivity(`Registering ${file.name} in the workflow queue...`);
         await apiFetch("/api/admin/creative-workflow/upload", {
           method: "POST",
           body: JSON.stringify({
@@ -146,10 +177,13 @@ export default function AdminSocialWorkflow() {
         });
       }
 
+      addActivity("Upload complete. Next step: process the asset.", "success");
       toast.success("Upload registered");
       await loadAssets();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Upload failed"));
+      const message = getErrorMessage(error, "Upload failed");
+      addActivity(message, "error");
+      toast.error(message);
     } finally {
       setUploading(false);
     }
@@ -175,11 +209,13 @@ export default function AdminSocialWorkflow() {
   const runDatabaseSetup = async () => {
     setBusyId("schema-setup");
     try {
+      addActivity("Checking database setup...");
       const data = await apiFetch("/api/admin/schema/creative-workflow", {
         method: "POST",
       });
 
       if (data.success) {
+        addActivity("Database setup completed", "success");
         toast.success(data.message || "Database schema is ready");
         await loadAssets();
         return;
@@ -187,6 +223,7 @@ export default function AdminSocialWorkflow() {
 
       if (data.sql) {
         setSetupSql(data.sql);
+        addActivity("Database credentials missing. SQL is ready to copy.", "error");
       }
 
       toast.error(
@@ -204,10 +241,12 @@ export default function AdminSocialWorkflow() {
     runAction(
       assetId,
       async () => {
+        addActivity("Starting AI edit, description, social format, and trend steps...");
         await apiFetch("/api/admin/creative-workflow/process", {
           method: "POST",
           body: JSON.stringify({ assetId }),
         });
+        addActivity("Processing complete. Review and approve the social drafts.", "success");
       },
       "Asset processed"
     );
@@ -217,6 +256,7 @@ export default function AdminSocialWorkflow() {
       post.id,
       async () => {
         const draft = drafts[post.id];
+        addActivity(`Approving ${platformLabel(post.platform)} caption and tags...`);
         await apiFetch("/api/admin/creative-workflow/approve", {
           method: "POST",
           body: JSON.stringify({
@@ -229,6 +269,7 @@ export default function AdminSocialWorkflow() {
             selectedAudio: post.selected_audio,
           }),
         });
+        addActivity(`${platformLabel(post.platform)} draft approved`, "success");
       },
       `${platformLabel(post.platform)} post approved`
     );
@@ -237,10 +278,12 @@ export default function AdminSocialWorkflow() {
     runAction(
       post.id,
       async () => {
+        addActivity(`Sending ${platformLabel(post.platform)} post to publishing adapter...`);
         await apiFetch("/api/admin/creative-workflow/publish", {
           method: "POST",
           body: JSON.stringify({ postId: post.id }),
         });
+        addActivity(`${platformLabel(post.platform)} publish request finished`, "success");
       },
       `${platformLabel(post.platform)} post sent to publisher`
     );
@@ -274,18 +317,20 @@ export default function AdminSocialWorkflow() {
       >
         <div>
           <h2>AI Social Publishing Workflow</h2>
-          <p style={{ color: "#555", maxWidth: 760 }}>
-            Upload product pictures, generate edited assets and captions, approve
-            platform posts, then publish through the configured scheduler adapter.
+          <p style={{ color: "#94a3b8", maxWidth: 760 }}>
+            Upload product pictures, let the workflow create edited images,
+            descriptions, social drafts, ranked tags, and audio ideas, then approve
+            what should be published.
           </p>
         </div>
         <label
+          className="btn-primary"
           style={{
-            border: "1px solid #ddd",
-            borderRadius: 8,
-            padding: "10px 14px",
+            border: "none",
+            borderRadius: 12,
+            padding: "12px 18px",
             cursor: uploading ? "not-allowed" : "pointer",
-            background: uploading ? "#f3f4f6" : "#fff",
+            opacity: uploading ? 0.7 : 1,
           }}
         >
           {uploading ? "Uploading..." : "Upload pictures"}
@@ -301,6 +346,18 @@ export default function AdminSocialWorkflow() {
             }}
           />
         </label>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.35fr) minmax(260px, 0.65fr)",
+          gap: 16,
+          marginBottom: 18,
+        }}
+      >
+        <WorkflowExplainer />
+        <ProgressPanel loading={loading || uploading || Boolean(busyId)} activity={activity} />
       </div>
 
       {loading && <p>Loading workflow...</p>}
@@ -361,11 +418,10 @@ export default function AdminSocialWorkflow() {
           return (
             <article
               key={asset.id}
+              className="card-soft"
               style={{
-                border: "1px solid #e5e7eb",
                 borderRadius: 12,
                 padding: 16,
-                background: "#fff",
               }}
             >
               <div
@@ -382,11 +438,11 @@ export default function AdminSocialWorkflow() {
                     style={{
                       width: "100%",
                       borderRadius: 10,
-                      border: "1px solid #eee",
+                      border: "1px solid rgba(148,163,184,0.25)",
                       objectFit: "cover",
                     }}
                   />
-                  <p style={{ fontSize: 13, color: "#555", wordBreak: "break-word" }}>
+                  <p style={{ fontSize: 13, color: "#94a3b8", wordBreak: "break-word" }}>
                     {asset.original_filename}
                   </p>
                 </div>
@@ -410,6 +466,7 @@ export default function AdminSocialWorkflow() {
                       )}
                     </div>
                     <button
+                      className="btn-primary"
                       type="button"
                       disabled={busyId === asset.id || asset.status === "processing"}
                       onClick={() => processAsset(asset.id)}
@@ -417,6 +474,8 @@ export default function AdminSocialWorkflow() {
                       {busyId === asset.id ? "Processing..." : "Process / regenerate"}
                     </button>
                   </div>
+
+                  <AssetProgress asset={asset} />
 
                   <GeneratedCopy asset={asset} />
 
@@ -451,6 +510,136 @@ export default function AdminSocialWorkflow() {
   );
 }
 
+function WorkflowExplainer() {
+  const steps = [
+    {
+      title: "1. Upload",
+      text: "Store the original picture in Supabase and add it to the creative queue.",
+    },
+    {
+      title: "2. Generate",
+      text: "Create an edited image, image description, platform captions, tags, and audio ideas.",
+    },
+    {
+      title: "3. Approve",
+      text: "Review the Instagram and TikTok drafts, edit the caption or hashtags, then approve.",
+    },
+    {
+      title: "4. Publish",
+      text: "Send approved posts to the scheduler adapter or keep them as internal drafts until connected.",
+    },
+  ];
+
+  return (
+    <div className="card-soft" style={{ padding: 16 }}>
+      <h3 style={{ marginTop: 0, marginBottom: 12 }}>How it works</h3>
+      <div style={{ display: "grid", gap: 10 }}>
+        {steps.map((step) => (
+          <div
+            key={step.title}
+            style={{
+              border: "1px solid rgba(148,163,184,0.18)",
+              borderRadius: 12,
+              padding: 12,
+              background: "rgba(2,6,23,0.45)",
+            }}
+          >
+            <strong style={{ color: "#c084fc" }}>{step.title}</strong>
+            <p style={{ margin: "4px 0 0", color: "#cbd5e1", fontSize: 13 }}>
+              {step.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProgressPanel({
+  loading,
+  activity,
+}: {
+  loading: boolean;
+  activity: ActivityEntry[];
+}) {
+  return (
+    <div className="card-soft" style={{ padding: 16 }}>
+      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Live progress</h3>
+      <p style={{ margin: "0 0 12px", color: "#94a3b8", fontSize: 13 }}>
+        {loading
+          ? "A workflow action is running. Watch each step appear below."
+          : "No action running right now."}
+      </p>
+      <div style={{ display: "grid", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+        {activity.length === 0 ? (
+          <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+            Upload or process an image to see progress here.
+          </p>
+        ) : (
+          activity.map((entry) => (
+            <div
+              key={entry.id}
+              style={{
+                border: "1px solid rgba(148,163,184,0.16)",
+                borderRadius: 10,
+                padding: 10,
+                background:
+                  entry.tone === "error"
+                    ? "rgba(127,29,29,0.25)"
+                    : entry.tone === "success"
+                      ? "rgba(22,101,52,0.18)"
+                      : "rgba(15,23,42,0.7)",
+              }}
+            >
+              <div style={{ color: "#94a3b8", fontSize: 11 }}>{entry.createdAt}</div>
+              <div style={{ color: "#e5e7eb", fontSize: 13 }}>{entry.message}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AssetProgress({ asset }: { asset: CreativeWorkflowItem }) {
+  const hasEdited = (asset.creative_renditions || []).some(
+    (rendition) => rendition.rendition_type === "edited"
+  );
+  const socialPosts = asset.social_posts || [];
+  const hasDrafts = socialPosts.length > 0;
+  const approved = socialPosts.some((post) => post.status === "approved" || post.status === "published");
+  const published = socialPosts.some((post) => post.status === "published" || post.status === "draft");
+
+  const stages = [
+    { label: "Uploaded", done: true },
+    { label: "Edited", done: hasEdited || asset.status === "ready" },
+    { label: "Social drafts", done: hasDrafts },
+    { label: "Approved", done: approved },
+    { label: "Published/Drafted", done: published },
+  ];
+
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+      {stages.map((stage) => (
+        <span
+          key={stage.label}
+          style={{
+            border: `1px solid ${stage.done ? "rgba(192,132,252,0.55)" : "rgba(148,163,184,0.22)"}`,
+            borderRadius: 999,
+            padding: "5px 9px",
+            color: stage.done ? "#e9d5ff" : "#94a3b8",
+            background: stage.done ? "rgba(192,132,252,0.14)" : "rgba(15,23,42,0.55)",
+            fontSize: 12,
+          }}
+        >
+          {stage.done ? "✓ " : ""}
+          {stage.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function GeneratedCopy({ asset }: { asset: CreativeWorkflowItem }) {
   const imageDescription = (asset.creative_descriptions || []).find(
     (description) => description.description_type === "image"
@@ -461,15 +650,15 @@ function GeneratedCopy({ asset }: { asset: CreativeWorkflowItem }) {
   return (
     <div
       style={{
-        background: "#f9fafb",
-        border: "1px solid #eee",
+        background: "rgba(15,23,42,0.7)",
+        border: "1px solid rgba(148,163,184,0.18)",
         borderRadius: 8,
         padding: 12,
         marginTop: 10,
       }}
     >
       <strong>{imageDescription.title}</strong>
-      <p style={{ marginBottom: 0 }}>{imageDescription.description}</p>
+      <p style={{ marginBottom: 0, color: "#cbd5e1" }}>{imageDescription.description}</p>
     </div>
   );
 }
@@ -497,9 +686,10 @@ function PostApprovalCard({
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
+        border: "1px solid rgba(148,163,184,0.22)",
         borderRadius: 10,
         padding: 12,
+        background: "rgba(2,6,23,0.38)",
       }}
     >
       <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
@@ -510,7 +700,7 @@ function PostApprovalCard({
           </p>
         </div>
         {rendition && (
-          <span style={{ color: "#555", fontSize: 13 }}>
+          <span style={{ color: "#94a3b8", fontSize: 13 }}>
             {rendition.width} x {rendition.height}
           </span>
         )}
@@ -524,6 +714,7 @@ function PostApprovalCard({
           onChange={(event) =>
             onDraftChange({ caption: event.target.value, hashtags })
           }
+          className="textarea"
           style={{ width: "100%", marginTop: 4 }}
         />
       </label>
@@ -535,12 +726,13 @@ function PostApprovalCard({
           onChange={(event) =>
             onDraftChange({ caption, hashtags: event.target.value })
           }
+          className="input"
           style={{ width: "100%", marginTop: 4 }}
         />
       </label>
 
       {post.selected_audio && (
-        <p style={{ color: "#555", fontSize: 13 }}>
+        <p style={{ color: "#94a3b8", fontSize: 13 }}>
           Audio suggestion: <strong>{post.selected_audio.label}</strong> -{" "}
           {post.selected_audio.usage_note}
         </p>
@@ -550,6 +742,7 @@ function PostApprovalCard({
 
       <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
         <button
+          className="btn-primary"
           type="button"
           disabled={busy || post.status === "published"}
           onClick={onApprove}
@@ -557,6 +750,7 @@ function PostApprovalCard({
           {busy ? "Working..." : "Approve"}
         </button>
         <button
+          className="btn-ghost"
           type="button"
           disabled={busy || (post.status !== "approved" && post.status !== "failed")}
           onClick={onPublish}
