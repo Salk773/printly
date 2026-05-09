@@ -53,6 +53,12 @@ export default function AdminSocialWorkflow() {
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H0",location:"components/admin/AdminSocialWorkflow.tsx:mount",message:"Social workflow component mounted",data:{userAgent:typeof navigator==="undefined"?"server":navigator.userAgent.slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, []);
+
   const upsertLocalAsset = useCallback((asset: CreativeWorkflowItem) => {
     setLocalAssets((current) => {
       const withoutCurrent = current.filter((item) => item.id !== asset.id);
@@ -492,6 +498,9 @@ export default function AdminSocialWorkflow() {
             disabled={uploading}
             style={{ display: "none" }}
             onChange={(event) => {
+              // #region agent log
+              fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H0,H1",location:"components/admin/AdminSocialWorkflow.tsx:file-input-change",message:"File input onChange fired",data:{fileCount:event.target.files?.length??0,fileNames:Array.from(event.target.files??[]).map((file)=>file.name)},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
               uploadFiles(event.target.files);
               event.target.value = "";
             }}
