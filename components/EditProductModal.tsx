@@ -3,8 +3,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import AdminImageUpload from "@/components/AdminImageUpload";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 const MAX_GALLERY = 8;
+
+function isMissingProductColumnError(error: any, column: string) {
+  const message = getErrorMessage(error, "").toLowerCase();
+  return (
+    error?.code === "PGRST204" &&
+    message.includes(column.toLowerCase())
+  );
+}
 
 export default function EditProductModal({
   product,
@@ -93,39 +102,40 @@ export default function EditProductModal({
 
     setSaving(true);
 
+    const optionalColumns = {
+      featured: form.featured,
+      weight_text: form.weight_text.trim() || null,
+      dimensions_text: form.dimensions_text.trim() || null,
+    };
+
     // Build update payload
     const updatePayload: any = {
       name: form.name,
       price: Number(form.price),
       description: form.description,
-      weight_text: form.weight_text.trim() || null,
-      dimensions_text: form.dimensions_text.trim() || null,
       category_id: form.category_id || null,
       image_main: form.image_main,
       images: form.images,
       active: form.active,
+      ...optionalColumns,
     };
-
-    // Try to include featured - if column doesn't exist, we'll retry without it
-    updatePayload.featured = form.featured;
 
     let { error } = await supabase
       .from("products")
       .update(updatePayload)
       .eq("id", product.id);
 
-    // If error is about featured column not existing, retry without it
-    if (error && (error.message?.includes("featured") || error.code === "PGRST204")) {
-      console.warn("Featured column doesn't exist, updating without it");
-      delete updatePayload.featured;
-      const retryResult = await supabase
-        .from("products")
-        .update(updatePayload)
-        .eq("id", product.id);
-      error = retryResult.error;
-      
-      if (!error) {
-        alert("Product updated, but 'featured' column doesn't exist yet. Please run migration: migrations/003_add_featured_column.sql");
+    const missingOptionalColumns: string[] = [];
+    for (const column of Object.keys(optionalColumns)) {
+      if (error && isMissingProductColumnError(error, column)) {
+        console.warn(`${column} column doesn't exist, updating without it`);
+        delete updatePayload[column];
+        missingOptionalColumns.push(column);
+        const retryResult = await supabase
+          .from("products")
+          .update(updatePayload)
+          .eq("id", product.id);
+        error = retryResult.error;
       }
     }
 
@@ -133,8 +143,14 @@ export default function EditProductModal({
 
     if (error) {
       console.error("Update error:", error);
-      alert("Failed to update product: " + error.message);
+      alert("Failed to update product: " + getErrorMessage(error));
       return;
+    }
+
+    if (missingOptionalColumns.length > 0) {
+      alert(
+        `Product updated, but these optional columns are missing in Supabase: ${missingOptionalColumns.join(", ")}. Please run the related product migrations.`
+      );
     }
 
     onSaved();

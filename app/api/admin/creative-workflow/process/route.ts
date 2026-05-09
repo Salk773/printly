@@ -10,6 +10,7 @@ import {
   generateDescriptions,
   researchTrends,
 } from "@/lib/creative/providers";
+import { getErrorMessage } from "@/lib/errorMessage";
 import type {
   CreativeAsset,
   CreativeDescription,
@@ -211,14 +212,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ asset: refreshed });
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = error instanceof Error ? error : new Error(getErrorMessage(error));
     await admin
       .from("creative_assets")
       .update({ status: "failed", error_message: err.message })
       .eq("id", parsed.data.assetId);
     logApiError("/api/admin/creative-workflow/process", err, undefined, authResult.user.id);
     return NextResponse.json(
-      { error: err.message || "Failed to process creative asset" },
+      { error: getErrorMessage(err, "Failed to process creative asset") },
       { status: 500 }
     );
   }

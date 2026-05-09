@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { getErrorMessage } from "@/lib/errorMessage";
 import type {
   CreativeRendition,
   CreativeWorkflowItem,
@@ -59,7 +60,7 @@ export default function AdminSocialWorkflow() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || "Request failed");
+        throw new Error(getErrorMessage(data.error ?? data, "Request failed"));
       }
       return data;
     },
@@ -72,7 +73,7 @@ export default function AdminSocialWorkflow() {
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load workflow");
+      toast.error(getErrorMessage(error, "Failed to load workflow"));
     } finally {
       setLoading(false);
     }
@@ -142,7 +143,7 @@ export default function AdminSocialWorkflow() {
       toast.success("Upload registered");
       await loadAssets();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed");
+      toast.error(getErrorMessage(error, "Upload failed"));
     } finally {
       setUploading(false);
     }
@@ -159,7 +160,7 @@ export default function AdminSocialWorkflow() {
       toast.success(successMessage);
       await loadAssets();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Action failed");
+      toast.error(getErrorMessage(error, "Action failed"));
     } finally {
       setBusyId(null);
     }

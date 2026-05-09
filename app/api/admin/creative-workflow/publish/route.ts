@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logAdminAction, logApiError } from "@/lib/logger";
 import { publishSocialPost } from "@/lib/socialPublishing";
+import { getErrorMessage } from "@/lib/errorMessage";
 import type { CreativeRendition, SocialPost } from "@/lib/creative/types";
 
 export const dynamic = "force-dynamic";
@@ -94,14 +95,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ post: updated });
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = error instanceof Error ? error : new Error(getErrorMessage(error));
     await admin
       .from("social_posts")
       .update({ status: "failed", error_message: err.message })
       .eq("id", parsed.data.postId);
     logApiError("/api/admin/creative-workflow/publish", err, undefined, authResult.user.id);
     return NextResponse.json(
-      { error: err.message || "Failed to publish social post" },
+      { error: getErrorMessage(err, "Failed to publish social post") },
       { status: 500 }
     );
   }

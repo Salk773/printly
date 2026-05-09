@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { logAdminAction, logApiError } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -62,10 +63,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ post: data });
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
+    const err = error instanceof Error ? error : new Error(getErrorMessage(error));
     logApiError("/api/admin/creative-workflow/approve", err, undefined, authResult.user.id);
     return NextResponse.json(
-      { error: err.message || "Failed to approve social post" },
+      { error: getErrorMessage(err, "Failed to approve social post") },
       { status: 500 }
     );
   }
