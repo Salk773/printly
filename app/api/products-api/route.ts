@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
   const { error } = await admin.from("products").insert({
     name: validation.data.name,
     description: validation.data.description,
+    weight_text: validation.data.weight_text || null,
+    dimensions_text: validation.data.dimensions_text || null,
     price: validation.data.price,
     image_main: validation.data.image_main,
     category_id: validation.data.category_id,

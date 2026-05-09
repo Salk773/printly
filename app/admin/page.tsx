@@ -32,6 +32,8 @@ export type Product = {
   id: string;
   name: string;
   description: string;
+  weight_text?: string | null;
+  dimensions_text?: string | null;
   price: number;
   image_main: string;
   images: string[] | null;
@@ -98,6 +100,8 @@ export default function AdminPage() {
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
+    weight_text: "",
+    dimensions_text: "",
     price: "",
     image_main: "",
     images: [] as string[],
@@ -225,6 +229,8 @@ export default function AdminPage() {
         featured: newProduct.featured || false,
         stock_quantity: newProduct.stock_quantity ? Number(newProduct.stock_quantity) : null,
         low_stock_threshold: newProduct.low_stock_threshold ? Number(newProduct.low_stock_threshold) : 5,
+        weight_text: newProduct.weight_text?.trim() || null,
+        dimensions_text: newProduct.dimensions_text?.trim() || null,
       },
     ]).select().single();
 
@@ -240,6 +246,8 @@ export default function AdminPage() {
     setNewProduct({
       name: "",
       description: "",
+      weight_text: "",
+      dimensions_text: "",
       price: "",
       image_main: "",
       images: [],

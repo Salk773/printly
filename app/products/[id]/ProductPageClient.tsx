@@ -202,7 +202,9 @@ export default function ProductPageClient({ product }) {
             {inWishlist ? "♥ Wishlisted" : "♡ Add to wishlist"}
           </button>
 
-          {product.description?.trim() ? (
+          {product.description?.trim() ||
+          product.weight_text?.trim() ||
+          product.dimensions_text?.trim() ? (
             <section style={{ marginBottom: 24 }}>
               <h2
                 style={{
@@ -216,18 +218,66 @@ export default function ProductPageClient({ product }) {
               >
                 Description
               </h2>
-              <p
-                style={{
-                  color: "#cbd5e1",
-                  margin: 0,
-                  lineHeight: 1.65,
-                  fontSize: "1.05rem",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}
-              >
-                {product.description.trim()}
-              </p>
+              {product.description?.trim() ? (
+                <p
+                  style={{
+                    color: "#cbd5e1",
+                    margin: "0 0 16px",
+                    lineHeight: 1.65,
+                    fontSize: "1.05rem",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {product.description.trim()}
+                </p>
+              ) : null}
+              {(product.weight_text?.trim() || product.dimensions_text?.trim()) && (
+                <dl
+                  style={{
+                    margin: 0,
+                    display: "grid",
+                    gap: 10,
+                    fontSize: "1rem",
+                    color: "#cbd5e1",
+                  }}
+                >
+                  {product.weight_text?.trim() ? (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <dt
+                        style={{
+                          margin: 0,
+                          fontWeight: 600,
+                          color: "#94a3b8",
+                          minWidth: 100,
+                        }}
+                      >
+                        Weight
+                      </dt>
+                      <dd style={{ margin: 0, flex: "1 1 200px" }}>
+                        {product.weight_text.trim()}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {product.dimensions_text?.trim() ? (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <dt
+                        style={{
+                          margin: 0,
+                          fontWeight: 600,
+                          color: "#94a3b8",
+                          minWidth: 100,
+                        }}
+                      >
+                        Dimensions
+                      </dt>
+                      <dd style={{ margin: 0, flex: "1 1 200px" }}>
+                        {product.dimensions_text.trim()}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              )}
             </section>
           ) : null}
 

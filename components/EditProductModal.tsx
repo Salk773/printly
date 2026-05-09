@@ -21,6 +21,8 @@ export default function EditProductModal({
     name: "",
     price: 0,
     description: "",
+    weight_text: "",
+    dimensions_text: "",
     category_id: "",
     image_main: "",
     images: [] as string[],
@@ -36,6 +38,8 @@ export default function EditProductModal({
       name: product.name ?? "",
       price: product.price ?? 0,
       description: product.description ?? "",
+      weight_text: product.weight_text ?? "",
+      dimensions_text: product.dimensions_text ?? "",
       category_id: product.category_id ?? "",
       image_main: product.image_main ?? "",
       images: Array.isArray(product.images) ? product.images : [],
@@ -94,6 +98,8 @@ export default function EditProductModal({
       name: form.name,
       price: Number(form.price),
       description: form.description,
+      weight_text: form.weight_text.trim() || null,
+      dimensions_text: form.dimensions_text.trim() || null,
       category_id: form.category_id || null,
       image_main: form.image_main,
       images: form.images,
@@ -184,6 +190,32 @@ export default function EditProductModal({
             setForm({ ...form, description: e.target.value })
           }
           rows={3}
+        />
+
+        <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", color: "#94a3b8" }}>
+          Weight <span style={{ fontWeight: 400, opacity: 0.85 }}>(shown on product page)</span>
+        </label>
+        <input
+          className="input"
+          placeholder="e.g. 250 g, 2.5 kg"
+          value={form.weight_text}
+          onChange={(e) =>
+            setForm({ ...form, weight_text: e.target.value })
+          }
+          style={{ marginBottom: 12 }}
+        />
+
+        <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", color: "#94a3b8" }}>
+          Dimensions <span style={{ fontWeight: 400, opacity: 0.85 }}>(shown on product page)</span>
+        </label>
+        <input
+          className="input"
+          placeholder="e.g. 30 × 20 × 5 cm"
+          value={form.dimensions_text}
+          onChange={(e) =>
+            setForm({ ...form, dimensions_text: e.target.value })
+          }
+          style={{ marginBottom: 12 }}
         />
 
         <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>

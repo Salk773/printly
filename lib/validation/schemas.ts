@@ -8,6 +8,8 @@ import { z } from "zod";
 export const ProductCreateSchema = z.object({
   name: z.string().min(1, "Name is required").max(200, "Name too long"),
   description: z.string().max(5000, "Description too long").optional().default(""),
+  weight_text: z.string().max(200).optional().default(""),
+  dimensions_text: z.string().max(200).optional().default(""),
   price: z.number().positive("Price must be positive"),
   image_main: z.string().url("Invalid image URL"),
   category_id: z.string().uuid("Invalid category ID").nullable().optional(),
@@ -19,6 +21,8 @@ export const ProductUpdateSchema = z.object({
   id: z.string().uuid("Invalid product ID"),
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(5000).optional(),
+  weight_text: z.string().max(200).nullable().optional(),
+  dimensions_text: z.string().max(200).nullable().optional(),
   price: z.number().positive().optional(),
   image_main: z.string().url().optional(),
   category_id: z.string().uuid().nullable().optional(),

@@ -96,6 +96,27 @@ export default function AdminProducts({
           style={{ width: "100%", marginBottom: 12 }}
         />
 
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <input
+            className="input"
+            placeholder="Weight (e.g. 250 g)"
+            value={newProduct.weight_text || ""}
+            onChange={(e) =>
+              setNewProduct((p: any) => ({ ...p, weight_text: e.target.value }))
+            }
+            style={{ flex: "1 1 200px", minWidth: 160 }}
+          />
+          <input
+            className="input"
+            placeholder="Dimensions (e.g. 30 × 20 × 5 cm)"
+            value={newProduct.dimensions_text || ""}
+            onChange={(e) =>
+              setNewProduct((p: any) => ({ ...p, dimensions_text: e.target.value }))
+            }
+            style={{ flex: "1 1 200px", minWidth: 160 }}
+          />
+        </div>
+
         {/* FEATURED CHECKBOX */}
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <input

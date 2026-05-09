@@ -145,7 +145,6 @@ export default function Navbar() {
           {[
             { name: "Home", path: "/" },
             { name: "Products", path: "/products" },
-            { name: "Wishlist", path: "/wishlist" },
             ...(user ? [{ name: "Account", path: "/account" }] : []),
           ].map((item) => (
             <Link
@@ -178,19 +177,26 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* WISHLIST ICON */}
+          {/* WISHLIST — single nav entry (avoids duplicating the text link + icon) */}
           <Link
             href="/wishlist"
+            title="Wishlist"
+            aria-label={
+              wishlistItems.length > 0
+                ? `Wishlist, ${wishlistItems.length} items`
+                : "Wishlist"
+            }
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
-              fontSize: "0.9rem",
-              color: "#e5e7eb",
+              fontSize: "1.15rem",
+              color: wishlistItems.length > 0 ? "#fb7185" : "#e5e7eb",
               textDecoration: "none",
+              lineHeight: 1,
             }}
           >
-            <span>♡</span>
+            <span aria-hidden>{wishlistItems.length > 0 ? "♥" : "♡"}</span>
             {wishlistItems.length > 0 && (
               <span
                 style={{
