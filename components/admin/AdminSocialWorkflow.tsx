@@ -38,6 +38,7 @@ export default function AdminSocialWorkflow() {
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [setupSql, setSetupSql] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
 
   const getToken = useCallback(async () => {
@@ -74,6 +75,7 @@ export default function AdminSocialWorkflow() {
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
       setLoadError(null);
+      setSetupSql(null);
     } catch (error) {
       const message = getErrorMessage(error, "Failed to load workflow");
       setLoadError(message);
@@ -184,12 +186,12 @@ export default function AdminSocialWorkflow() {
       }
 
       if (data.sql) {
-        console.info("Creative workflow setup SQL:", data.sql);
+        setSetupSql(data.sql);
       }
 
       toast.error(
         data.message ||
-          "Database credentials are missing. SQL was printed to the browser console."
+          "Database credentials are missing. Copy the SQL below into Supabase SQL Editor."
       );
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to run database setup"));
@@ -242,6 +244,16 @@ export default function AdminSocialWorkflow() {
       },
       `${platformLabel(post.platform)} post sent to publisher`
     );
+
+  const copySetupSql = async () => {
+    if (!setupSql) return;
+    try {
+      await navigator.clipboard.writeText(setupSql);
+      toast.success("Setup SQL copied");
+    } catch {
+      toast.error("Could not copy SQL automatically. Select and copy it manually.");
+    }
+  };
 
   const emptyState = useMemo(
     () => !loading && assets.length === 0,
@@ -311,6 +323,30 @@ export default function AdminSocialWorkflow() {
           >
             {busyId === "schema-setup" ? "Running setup..." : "Run database setup"}
           </button>
+          {setupSql && (
+            <div style={{ marginTop: 14 }}>
+              <p style={{ margin: "0 0 8px", color: "#555" }}>
+                Your app cannot connect directly to the database yet. Copy this SQL,
+                run it in Supabase SQL Editor, then refresh this page.
+              </p>
+              <button type="button" onClick={copySetupSql} style={{ marginBottom: 8 }}>
+                Copy SQL
+              </button>
+              <textarea
+                readOnly
+                value={setupSql}
+                rows={12}
+                style={{
+                  width: "100%",
+                  fontFamily: "monospace",
+                  fontSize: 12,
+                  borderRadius: 8,
+                  border: "1px solid #d1d5db",
+                  padding: 10,
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
       {emptyState && <p>No creative assets yet. Upload pictures to begin.</p>}

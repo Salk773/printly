@@ -27,6 +27,9 @@ export default function EditProductModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const supportsWeightText = Object.prototype.hasOwnProperty.call(product, "weight_text");
+  const supportsDimensionsText = Object.prototype.hasOwnProperty.call(product, "dimensions_text");
+
   const [form, setForm] = useState({
     name: "",
     price: 0,
@@ -103,11 +106,17 @@ export default function EditProductModal({
 
     setSaving(true);
 
-    const optionalColumns = {
+    const optionalColumns: Record<string, unknown> = {
       featured: form.featured,
-      weight_text: form.weight_text.trim() || null,
-      dimensions_text: form.dimensions_text.trim() || null,
     };
+
+    if (supportsWeightText) {
+      optionalColumns.weight_text = form.weight_text.trim() || null;
+    }
+
+    if (supportsDimensionsText) {
+      optionalColumns.dimensions_text = form.dimensions_text.trim() || null;
+    }
 
     // Build update payload
     const updatePayload: any = {
@@ -151,6 +160,13 @@ export default function EditProductModal({
     if (missingOptionalColumns.length > 0) {
       alert(
         `Product updated, but these optional columns are missing in Supabase: ${missingOptionalColumns.join(", ")}. Please run the related product migrations.`
+      );
+    } else if (
+      (!supportsWeightText && form.weight_text.trim()) ||
+      (!supportsDimensionsText && form.dimensions_text.trim())
+    ) {
+      alert(
+        "Product updated, but weight/dimensions were not saved because those columns are missing in Supabase. Run the database setup from the Social workflow tab or run migrations/014_add_product_weight_dimensions.sql."
       );
     }
 
