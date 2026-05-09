@@ -10,8 +10,57 @@ import {
   ProductDeleteSchema,
   validateRequest,
 } from "@/lib/validation/schemas";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 export const dynamic = "force-dynamic";
+
+const OPTIONAL_PRODUCT_COLUMNS = [
+  "featured",
+  "stock_quantity",
+  "low_stock_threshold",
+  "weight_text",
+  "dimensions_text",
+] as const;
+
+function isMissingProductColumnError(error: any, column: string) {
+  return (
+    error?.code === "PGRST204" &&
+    getErrorMessage(error, "").toLowerCase().includes(column.toLowerCase())
+  );
+}
+
+async function insertProductWithOptionalColumnFallback(payload: Record<string, unknown>) {
+  const admin = supabaseAdmin();
+  let insertPayload = { ...payload };
+  let result = await admin.from("products").insert(insertPayload);
+
+  for (const column of OPTIONAL_PRODUCT_COLUMNS) {
+    if (result.error && isMissingProductColumnError(result.error, column)) {
+      delete insertPayload[column];
+      result = await admin.from("products").insert(insertPayload);
+    }
+  }
+
+  return result;
+}
+
+async function updateProductWithOptionalColumnFallback(
+  id: string,
+  payload: Record<string, unknown>
+) {
+  const admin = supabaseAdmin();
+  let updatePayload = { ...payload };
+  let result = await admin.from("products").update(updatePayload).eq("id", id);
+
+  for (const column of OPTIONAL_PRODUCT_COLUMNS) {
+    if (result.error && isMissingProductColumnError(result.error, column)) {
+      delete updatePayload[column];
+      result = await admin.from("products").update(updatePayload).eq("id", id);
+    }
+  }
+
+  return result;
+}
 
 export async function GET(req: NextRequest) {
   // Apply rate limiting for public endpoint
@@ -58,8 +107,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const admin = supabaseAdmin();
-  const { error } = await admin.from("products").insert({
+  const { error } = await insertProductWithOptionalColumnFallback({
     name: validation.data.name,
     description: validation.data.description,
     weight_text: validation.data.weight_text || null,
@@ -73,7 +121,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: getErrorMessage(error) }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
@@ -142,12 +190,11 @@ export async function PUT(req: NextRequest) {
 
   const { id, ...updateData } = validation.data;
 
-  const admin = supabaseAdmin();
-  const { error } = await admin.from("products").update(updateData).eq("id", id);
+  const { error } = await updateProductWithOptionalColumnFallback(id, updateData);
 
   if (error) {
     console.error(error);
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: false, error: getErrorMessage(error) }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

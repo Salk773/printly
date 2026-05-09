@@ -24,6 +24,7 @@ import AdminEmailCenter from "@/components/admin/AdminEmailCenter";
 import AdminSocialWorkflow from "@/components/admin/AdminSocialWorkflow";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { sortOrdersForDisplay } from "@/lib/orderSort";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 /* ================= TYPES ================= */
 
@@ -73,6 +74,20 @@ export type Order = {
 /* ============== CONSTANTS ============== */
 
 const MAX_GALLERY = 8;
+const OPTIONAL_PRODUCT_COLUMNS = [
+  "featured",
+  "stock_quantity",
+  "low_stock_threshold",
+  "weight_text",
+  "dimensions_text",
+] as const;
+
+function isMissingProductColumnError(error: any, column: string) {
+  return (
+    error?.code === "PGRST204" &&
+    getErrorMessage(error, "").toLowerCase().includes(column.toLowerCase())
+  );
+}
 
 /* ============== PAGE =================== */
 
@@ -221,19 +236,41 @@ export default function AdminPage() {
   const addProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.image_main) return;
 
-    const { data, error } = await supabase.from("products").insert([
-      {
-        ...newProduct,
-        price: Number(newProduct.price),
-        images: newProduct.images.slice(0, MAX_GALLERY),
-        active: true,
-        featured: newProduct.featured || false,
-        stock_quantity: newProduct.stock_quantity ? Number(newProduct.stock_quantity) : null,
-        low_stock_threshold: newProduct.low_stock_threshold ? Number(newProduct.low_stock_threshold) : 5,
-        weight_text: newProduct.weight_text?.trim() || null,
-        dimensions_text: newProduct.dimensions_text?.trim() || null,
-      },
-    ]).select().single();
+    const productPayload: any = {
+      ...newProduct,
+      price: Number(newProduct.price),
+      images: newProduct.images.slice(0, MAX_GALLERY),
+      active: true,
+      featured: newProduct.featured || false,
+      stock_quantity: newProduct.stock_quantity ? Number(newProduct.stock_quantity) : null,
+      low_stock_threshold: newProduct.low_stock_threshold ? Number(newProduct.low_stock_threshold) : 5,
+      weight_text: newProduct.weight_text?.trim() || null,
+      dimensions_text: newProduct.dimensions_text?.trim() || null,
+    };
+
+    let { data, error } = await supabase
+      .from("products")
+      .insert([productPayload])
+      .select()
+      .single();
+
+    for (const column of OPTIONAL_PRODUCT_COLUMNS) {
+      if (error && isMissingProductColumnError(error, column)) {
+        delete productPayload[column];
+        const retry = await supabase
+          .from("products")
+          .insert([productPayload])
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
+    }
+
+    if (error) {
+      alert("Failed to add product: " + getErrorMessage(error));
+      return;
+    }
 
     if (data) {
       await logAdminAction("create", "product", data.id, {
