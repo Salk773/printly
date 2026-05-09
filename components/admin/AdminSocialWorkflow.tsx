@@ -42,6 +42,7 @@ function statusColor(status: string) {
 
 export default function AdminSocialWorkflow() {
   const [assets, setAssets] = useState<CreativeWorkflowItem[]>([]);
+  const [localAssets, setLocalAssets] = useState<CreativeWorkflowItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -126,6 +127,12 @@ export default function AdminSocialWorkflow() {
           ? current
           : nextAssets
       );
+      if (nextAssets.length > 0) {
+        const databaseIds = new Set(nextAssets.map((asset: CreativeWorkflowItem) => asset.id));
+        setLocalAssets((current) =>
+          current.filter((asset) => !databaseIds.has(asset.id))
+        );
+      }
       setLoadError(null);
       setSetupSql(null);
       setQueueLoaded(true);
@@ -211,12 +218,36 @@ export default function AdminSocialWorkflow() {
             file_size: file.size,
           }),
         });
-        if (uploadResult.asset) {
-          uploadedAssets.push(uploadResult.asset);
-        }
+        const uploadedAsset = uploadResult.asset ?? {
+          id: `local-${path}`,
+          original_filename: file.name,
+          storage_bucket: "uploads",
+          storage_path: path,
+          public_url: data.publicUrl,
+          content_type: file.type,
+          file_size: file.size,
+          status: "uploaded",
+          metadata: { localPreview: true },
+          created_by: null,
+          created_by_email: null,
+          error_message: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          creative_renditions: [],
+          creative_descriptions: [],
+          social_posts: [],
+        };
+        uploadedAssets.push(uploadedAsset);
       }
 
       if (uploadedAssets.length > 0) {
+        setLocalAssets((current) => {
+          const existingIds = new Set(current.map((asset) => asset.id));
+          return [
+            ...uploadedAssets.filter((asset) => !existingIds.has(asset.id)),
+            ...current,
+          ];
+        });
         setAssets((current) => {
           const existingIds = new Set(current.map((asset) => asset.id));
           return [
@@ -348,9 +379,17 @@ export default function AdminSocialWorkflow() {
   };
 
   const emptyState = useMemo(
-    () => !loading && assets.length === 0,
-    [assets.length, loading]
+    () => !loading && assets.length === 0 && localAssets.length === 0,
+    [assets.length, localAssets.length, loading]
   );
+
+  const visibleAssets = useMemo(() => {
+    const databaseIds = new Set(assets.map((asset) => asset.id));
+    return [
+      ...localAssets.filter((asset) => !databaseIds.has(asset.id)),
+      ...assets,
+    ];
+  }, [assets, localAssets]);
 
   return (
     <section>
@@ -413,7 +452,7 @@ export default function AdminSocialWorkflow() {
         <ProgressPanel
           loading={loading || uploading || Boolean(busyId)}
           ready={queueLoaded && !loadError}
-          hasAssets={assets.length > 0}
+          hasAssets={visibleAssets.length > 0}
           activity={activity}
         />
       </div>
@@ -483,7 +522,7 @@ export default function AdminSocialWorkflow() {
       )}
 
       <div style={{ display: "grid", gap: 18 }}>
-        {assets.map((asset) => {
+        {visibleAssets.map((asset) => {
           const edited = (asset.creative_renditions || []).find(
             (rendition) => rendition.rendition_type === "edited"
           );
