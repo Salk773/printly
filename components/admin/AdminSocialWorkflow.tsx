@@ -37,6 +37,7 @@ export default function AdminSocialWorkflow() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
 
   const getToken = useCallback(async () => {
@@ -72,8 +73,11 @@ export default function AdminSocialWorkflow() {
     try {
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
+      setLoadError(null);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to load workflow"));
+      const message = getErrorMessage(error, "Failed to load workflow");
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -161,6 +165,34 @@ export default function AdminSocialWorkflow() {
       await loadAssets();
     } catch (error) {
       toast.error(getErrorMessage(error, "Action failed"));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const runDatabaseSetup = async () => {
+    setBusyId("schema-setup");
+    try {
+      const data = await apiFetch("/api/admin/schema/creative-workflow", {
+        method: "POST",
+      });
+
+      if (data.success) {
+        toast.success(data.message || "Database schema is ready");
+        await loadAssets();
+        return;
+      }
+
+      if (data.sql) {
+        console.info("Creative workflow setup SQL:", data.sql);
+      }
+
+      toast.error(
+        data.message ||
+          "Database credentials are missing. SQL was printed to the browser console."
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to run database setup"));
     } finally {
       setBusyId(null);
     }
@@ -260,6 +292,27 @@ export default function AdminSocialWorkflow() {
       </div>
 
       {loading && <p>Loading workflow...</p>}
+      {loadError && (
+        <div
+          style={{
+            border: "1px solid #92400e",
+            background: "rgba(146, 64, 14, 0.18)",
+            borderRadius: 10,
+            padding: 14,
+            marginBottom: 16,
+          }}
+        >
+          <strong>Database setup needed</strong>
+          <p style={{ margin: "8px 0 12px" }}>{loadError}</p>
+          <button
+            type="button"
+            disabled={busyId === "schema-setup"}
+            onClick={runDatabaseSetup}
+          >
+            {busyId === "schema-setup" ? "Running setup..." : "Run database setup"}
+          </button>
+        </div>
+      )}
       {emptyState && <p>No creative assets yet. Upload pictures to begin.</p>}
 
       <div style={{ display: "grid", gap: 18 }}>

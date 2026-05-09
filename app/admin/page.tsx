@@ -83,9 +83,11 @@ const OPTIONAL_PRODUCT_COLUMNS = [
 ] as const;
 
 function isMissingProductColumnError(error: any, column: string) {
+  const message = getErrorMessage(error, "").toLowerCase();
+  const columnWords = column.toLowerCase().replace(/_/g, " ");
   return (
-    error?.code === "PGRST204" &&
-    getErrorMessage(error, "").toLowerCase().includes(column.toLowerCase())
+    (message.includes("schema cache") || error?.code === "PGRST204") &&
+    (message.includes(column.toLowerCase()) || message.includes(columnWords))
   );
 }
 

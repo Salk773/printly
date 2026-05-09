@@ -9,9 +9,10 @@ const MAX_GALLERY = 8;
 
 function isMissingProductColumnError(error: any, column: string) {
   const message = getErrorMessage(error, "").toLowerCase();
+  const columnWords = column.toLowerCase().replace(/_/g, " ");
   return (
-    error?.code === "PGRST204" &&
-    message.includes(column.toLowerCase())
+    (message.includes("schema cache") || error?.code === "PGRST204") &&
+    (message.includes(column.toLowerCase()) || message.includes(columnWords))
   );
 }
 
