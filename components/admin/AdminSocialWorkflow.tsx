@@ -47,6 +47,7 @@ export default function AdminSocialWorkflow() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [setupSql, setSetupSql] = useState<string | null>(null);
+  const [queueLoaded, setQueueLoaded] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
@@ -76,14 +77,30 @@ export default function AdminSocialWorkflow() {
       const token = await getToken();
       if (!token) throw new Error("You must be signed in as an admin.");
 
-      const response = await fetch(path, {
-        ...init,
-        headers: {
-          ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-          Authorization: `Bearer ${token}`,
-          ...(init?.headers || {}),
-        },
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 15000);
+
+      let response: Response;
+      try {
+        response = await fetch(path, {
+          ...init,
+          signal: controller.signal,
+          headers: {
+            ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+            Authorization: `Bearer ${token}`,
+            ...(init?.headers || {}),
+          },
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw new Error(
+            "The workflow request timed out. Check that the database tables exist and the dev server is responding."
+          );
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+      }
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -97,15 +114,22 @@ export default function AdminSocialWorkflow() {
   const loadAssets = useCallback(async () => {
     setLoading(true);
     try {
-      addActivity("Loading creative workflow queue...");
+      addActivity("Checking creative workflow database and queue...");
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
       setLoadError(null);
       setSetupSql(null);
-      addActivity("Workflow queue loaded", "success");
+      setQueueLoaded(true);
+      addActivity(
+        (data.assets || []).length > 0
+          ? "Workflow queue loaded. Pick an asset to process or review."
+          : "Workflow is ready. Upload pictures to start.",
+        "success"
+      );
     } catch (error) {
       const message = getErrorMessage(error, "Failed to load workflow");
       setLoadError(message);
+      setQueueLoaded(false);
       addActivity(message, "error");
       toast.error(message);
     } finally {
@@ -322,6 +346,10 @@ export default function AdminSocialWorkflow() {
             descriptions, social drafts, ranked tags, and audio ideas, then approve
             what should be published.
           </p>
+          <p style={{ color: "#fbbf24", maxWidth: 760, fontSize: 13 }}>
+            Current AI provider: fallback demo mode. It creates placeholder edits,
+            captions, tags, and audio ideas locally until a real image/LLM provider is connected.
+          </p>
         </div>
         <label
           className="btn-primary"
@@ -357,7 +385,12 @@ export default function AdminSocialWorkflow() {
         }}
       >
         <WorkflowExplainer />
-        <ProgressPanel loading={loading || uploading || Boolean(busyId)} activity={activity} />
+        <ProgressPanel
+          loading={loading || uploading || Boolean(busyId)}
+          ready={queueLoaded && !loadError}
+          hasAssets={assets.length > 0}
+          activity={activity}
+        />
       </div>
 
       {loading && <p>Loading workflow...</p>}
@@ -406,7 +439,23 @@ export default function AdminSocialWorkflow() {
           )}
         </div>
       )}
-      {emptyState && <p>No creative assets yet. Upload pictures to begin.</p>}
+      {emptyState && !loadError && (
+        <div
+          className="card-soft"
+          style={{
+            padding: 18,
+            border: "1px dashed rgba(192,132,252,0.35)",
+            marginBottom: 18,
+          }}
+        >
+          <h3 style={{ marginTop: 0 }}>Ready for your first workflow</h3>
+          <p style={{ color: "#cbd5e1", marginBottom: 0 }}>
+            The queue is loaded and waiting. Click <strong>Upload pictures</strong>,
+            then each uploaded asset will appear below with a <strong>Process / regenerate</strong>
+            button.
+          </p>
+        </div>
+      )}
 
       <div style={{ display: "grid", gap: 18 }}>
         {assets.map((asset) => {
@@ -557,18 +606,28 @@ function WorkflowExplainer() {
 
 function ProgressPanel({
   loading,
+  ready,
+  hasAssets,
   activity,
 }: {
   loading: boolean;
+  ready: boolean;
+  hasAssets: boolean;
   activity: ActivityEntry[];
 }) {
+  const statusText = loading
+    ? "A workflow action is running. Watch each step appear below."
+    : ready
+      ? hasAssets
+        ? "Queue loaded. Choose an asset to process, approve, or publish."
+        : "Ready. Upload pictures to begin."
+      : "Waiting for the workflow queue to load.";
+
   return (
     <div className="card-soft" style={{ padding: 16 }}>
       <h3 style={{ marginTop: 0, marginBottom: 8 }}>Live progress</h3>
       <p style={{ margin: "0 0 12px", color: "#94a3b8", fontSize: 13 }}>
-        {loading
-          ? "A workflow action is running. Watch each step appear below."
-          : "No action running right now."}
+        {statusText}
       </p>
       <div style={{ display: "grid", gap: 8, maxHeight: 260, overflowY: "auto" }}>
         {activity.length === 0 ? (

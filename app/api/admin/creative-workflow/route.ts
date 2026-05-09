@@ -17,6 +17,11 @@ export async function GET(req: NextRequest) {
 
   try {
     const admin = supabaseAdmin();
+    const health = await admin.from("creative_assets").select("id").limit(1);
+    if (health.error) {
+      throw health.error;
+    }
+
     const { data, error } = await admin
       .from("creative_assets")
       .select(
