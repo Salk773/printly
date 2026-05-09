@@ -184,6 +184,9 @@ export default function AdminSocialWorkflow() {
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return;
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H1",location:"components/admin/AdminSocialWorkflow.tsx:uploadFiles-entry",message:"Upload files handler entered",data:{fileCount:files.length,fileNames:Array.from(files).map((file)=>file.name),fileTypes:Array.from(files).map((file)=>file.type)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     setUploading(true);
     const uploadedAssets: CreativeWorkflowItem[] = [];
 
@@ -216,6 +219,9 @@ export default function AdminSocialWorkflow() {
 
         upsertLocalAsset(previewAsset);
         setQueueLoaded(true);
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H2,H3",location:"components/admin/AdminSocialWorkflow.tsx:preview-created",message:"Local preview asset created and queued",data:{previewId,fileName:file.name,previewSrcPrefix:previewUrl.slice(0,40),fileSize:file.size},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         addActivity(`Validating ${file.name}...`);
         const validationForm = new FormData();
         validationForm.append("file", file);
@@ -258,6 +264,9 @@ export default function AdminSocialWorkflow() {
             file_size: file.size,
           }),
         });
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H4",location:"components/admin/AdminSocialWorkflow.tsx:upload-register-result",message:"Upload registration API returned",data:{hasAsset:Boolean(uploadResult.asset),assetId:uploadResult.asset?.id??null,storagePath:path,publicUrlPrefix:data.publicUrl.slice(0,60)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const uploadedAsset = uploadResult.asset ?? {
           id: previewId,
           original_filename: file.name,
@@ -297,6 +306,9 @@ export default function AdminSocialWorkflow() {
           ];
         });
         setQueueLoaded(true);
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H2,H4",location:"components/admin/AdminSocialWorkflow.tsx:uploaded-assets-committed",message:"Uploaded assets committed to component state",data:{uploadedCount:uploadedAssets.length,uploadedIds:uploadedAssets.map((asset)=>asset.id),uploadedStatuses:uploadedAssets.map((asset)=>asset.status)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       }
       addActivity("Upload complete. Next step: process the asset.", "success");
       toast.success("Upload registered");
@@ -431,6 +443,12 @@ export default function AdminSocialWorkflow() {
       ...assets,
     ];
   }, [assets, localAssets]);
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H2,H5",location:"components/admin/AdminSocialWorkflow.tsx:visibleAssets-effect",message:"Workflow render state changed",data:{assetsCount:assets.length,localAssetsCount:localAssets.length,visibleAssetsCount:visibleAssets.length,emptyState,loading,uploading,queueLoaded,hasLoadError:Boolean(loadError),visibleAssetIds:visibleAssets.map((asset)=>asset.id),visibleAssetStatuses:visibleAssets.map((asset)=>asset.status)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [assets.length, emptyState, loadError, loading, localAssets.length, queueLoaded, uploading, visibleAssets]);
 
   return (
     <section>
@@ -589,6 +607,16 @@ export default function AdminSocialWorkflow() {
                   <img
                     src={edited?.public_url || asset.public_url}
                     alt={asset.original_filename}
+                    onLoad={() => {
+                      // #region agent log
+                      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3",location:"components/admin/AdminSocialWorkflow.tsx:asset-image-load",message:"Workflow asset image loaded",data:{assetId:asset.id,status:asset.status,srcPrefix:String(edited?.public_url||asset.public_url).slice(0,40)},timestamp:Date.now()})}).catch(()=>{});
+                      // #endregion
+                    }}
+                    onError={() => {
+                      // #region agent log
+                      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3",location:"components/admin/AdminSocialWorkflow.tsx:asset-image-error",message:"Workflow asset image failed to load",data:{assetId:asset.id,status:asset.status,srcPrefix:String(edited?.public_url||asset.public_url).slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+                      // #endregion
+                    }}
                     style={{
                       width: "100%",
                       borderRadius: 10,
