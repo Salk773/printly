@@ -111,21 +111,26 @@ export default function AdminSocialWorkflow() {
     [getToken]
   );
 
-  const loadAssets = useCallback(async () => {
+  const loadAssets = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
     setLoading(true);
     try {
-      addActivity("Checking creative workflow database and queue...");
+      if (!silent) {
+        addActivity("Checking creative workflow database and queue...");
+      }
       const data = await apiFetch("/api/admin/creative-workflow");
       setAssets(data.assets || []);
       setLoadError(null);
       setSetupSql(null);
       setQueueLoaded(true);
-      addActivity(
-        (data.assets || []).length > 0
-          ? "Workflow queue loaded. Pick an asset to process or review."
-          : "Workflow is ready. Upload pictures to start.",
-        "success"
-      );
+      if (!silent) {
+        addActivity(
+          (data.assets || []).length > 0
+            ? "Queue ready. Pick an asset to process or review."
+            : "Queue ready. Upload pictures to start.",
+          "success"
+        );
+      }
     } catch (error) {
       const message = getErrorMessage(error, "Failed to load workflow");
       setLoadError(message);
@@ -203,7 +208,7 @@ export default function AdminSocialWorkflow() {
 
       addActivity("Upload complete. Next step: process the asset.", "success");
       toast.success("Upload registered");
-      await loadAssets();
+      await loadAssets({ silent: true });
     } catch (error) {
       const message = getErrorMessage(error, "Upload failed");
       addActivity(message, "error");
@@ -222,7 +227,7 @@ export default function AdminSocialWorkflow() {
     try {
       await action();
       toast.success(successMessage);
-      await loadAssets();
+      await loadAssets({ silent: true });
     } catch (error) {
       toast.error(getErrorMessage(error, "Action failed"));
     } finally {
@@ -241,7 +246,7 @@ export default function AdminSocialWorkflow() {
       if (data.success) {
         addActivity("Database setup completed", "success");
         toast.success(data.message || "Database schema is ready");
-        await loadAssets();
+        await loadAssets({ silent: true });
         return;
       }
 
