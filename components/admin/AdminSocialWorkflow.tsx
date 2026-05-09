@@ -198,9 +198,15 @@ export default function AdminSocialWorkflow() {
 
     try {
       const token = await getToken();
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H6,H8",location:"components/admin/AdminSocialWorkflow.tsx:upload-token-check",message:"Upload auth token checked",data:{hasToken:Boolean(token)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (!token) throw new Error("You must be signed in as an admin.");
 
       for (const file of Array.from(files)) {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H7",location:"components/admin/AdminSocialWorkflow.tsx:before-preview-create",message:"About to create local preview asset",data:{fileName:file.name,fileType:file.type,fileSize:file.size},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         const previewId = `local-${crypto.randomUUID()}`;
         const previewUrl = URL.createObjectURL(file);
         const previewAsset: CreativeWorkflowItem = {
@@ -321,6 +327,9 @@ export default function AdminSocialWorkflow() {
       await loadAssets({ silent: true, preserveExistingOnEmpty: true });
     } catch (error) {
       const message = getErrorMessage(error, "Upload failed");
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H6,H7,H8",location:"components/admin/AdminSocialWorkflow.tsx:upload-catch",message:"Upload flow caught error",data:{message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       addActivity(message, "error");
       toast.error(message);
     } finally {
