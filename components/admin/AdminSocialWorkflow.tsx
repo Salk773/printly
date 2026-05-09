@@ -32,6 +32,7 @@ function platformLabel(platform: string) {
 }
 
 function statusColor(status: string) {
+  if (status === "uploading") return "#c084fc";
   if (status === "published") return "#22c55e";
   if (status === "failed") return "#f87171";
   if (status === "approved") return "#93c5fd";
@@ -51,6 +52,13 @@ export default function AdminSocialWorkflow() {
   const [queueLoaded, setQueueLoaded] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, PostDraft>>({});
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+
+  const upsertLocalAsset = useCallback((asset: CreativeWorkflowItem) => {
+    setLocalAssets((current) => {
+      const withoutCurrent = current.filter((item) => item.id !== asset.id);
+      return [asset, ...withoutCurrent];
+    });
+  }, []);
 
   const addActivity = useCallback((message: string, tone: ActivityEntry["tone"] = "info") => {
     setActivity((current) => [
@@ -184,6 +192,30 @@ export default function AdminSocialWorkflow() {
       if (!token) throw new Error("You must be signed in as an admin.");
 
       for (const file of Array.from(files)) {
+        const previewId = `local-${crypto.randomUUID()}`;
+        const previewUrl = URL.createObjectURL(file);
+        const previewAsset: CreativeWorkflowItem = {
+          id: previewId,
+          original_filename: file.name,
+          storage_bucket: "uploads",
+          storage_path: "",
+          public_url: previewUrl,
+          content_type: file.type,
+          file_size: file.size,
+          status: "uploading" as any,
+          metadata: { localPreview: true },
+          created_by: null,
+          created_by_email: null,
+          error_message: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          creative_renditions: [],
+          creative_descriptions: [],
+          social_posts: [],
+        };
+
+        upsertLocalAsset(previewAsset);
+        setQueueLoaded(true);
         addActivity(`Validating ${file.name}...`);
         const validationForm = new FormData();
         validationForm.append("file", file);
@@ -206,6 +238,14 @@ export default function AdminSocialWorkflow() {
         const { data } = supabase.storage.from("uploads").getPublicUrl(path);
         if (!data.publicUrl) throw new Error("Failed to create public image URL.");
 
+        upsertLocalAsset({
+          ...previewAsset,
+          storage_path: path,
+          public_url: data.publicUrl,
+          status: "uploaded",
+          updated_at: new Date().toISOString(),
+        });
+
         addActivity(`Registering ${file.name} in the workflow queue...`);
         const uploadResult = await apiFetch("/api/admin/creative-workflow/upload", {
           method: "POST",
@@ -219,7 +259,7 @@ export default function AdminSocialWorkflow() {
           }),
         });
         const uploadedAsset = uploadResult.asset ?? {
-          id: `local-${path}`,
+          id: previewId,
           original_filename: file.name,
           storage_bucket: "uploads",
           storage_path: path,
@@ -237,6 +277,7 @@ export default function AdminSocialWorkflow() {
           creative_descriptions: [],
           social_posts: [],
         };
+        setLocalAssets((current) => current.filter((asset) => asset.id !== previewId));
         uploadedAssets.push(uploadedAsset);
       }
 
