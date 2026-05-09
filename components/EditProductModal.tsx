@@ -301,6 +301,7 @@ const overlay: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
+  padding: 16,
   zIndex: 200,
 };
 
@@ -309,6 +310,9 @@ const modal: React.CSSProperties = {
   padding: 20,
   borderRadius: 12,
   width: 560,
+  maxWidth: "100%",
+  maxHeight: "calc(100vh - 32px)",
+  overflowY: "auto",
 };
 
 const mainImage: React.CSSProperties = {
@@ -346,7 +350,11 @@ const mainBadge: React.CSSProperties = {
 };
 
 const actions: React.CSSProperties = {
+  position: "sticky",
+  bottom: -20,
   display: "flex",
   justifyContent: "space-between",
   marginTop: 20,
+  padding: "12px 0 0",
+  background: "#1f1f25",
 };

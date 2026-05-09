@@ -10,6 +10,7 @@ export type AdminTab =
   | "coupons"
   | "emails"
   | "analytics"
+  | "social"
   | "logs";
 
 export default function AdminTabs({
@@ -36,6 +37,7 @@ export default function AdminTabs({
       {btn("coupons", "Discount codes")}
       {btn("emails", "Emails")}
       {btn("analytics", "Analytics")}
+      {btn("social", "Social workflow")}
       {btn("logs", "Logs")}
     </div>
   );

@@ -21,6 +21,7 @@ import AdminShipping from "@/components/admin/AdminShipping";
 import AdminInventory from "@/components/admin/AdminInventory";
 import AdminCustomers from "@/components/admin/AdminCustomers";
 import AdminEmailCenter from "@/components/admin/AdminEmailCenter";
+import AdminSocialWorkflow from "@/components/admin/AdminSocialWorkflow";
 import OrderDetailsModal from "@/components/admin/OrderDetailsModal";
 import { sortOrdersForDisplay } from "@/lib/orderSort";
 
@@ -466,6 +467,8 @@ export default function AdminPage() {
       {tab === "emails" && <AdminEmailCenter />}
 
       {tab === "analytics" && <AdminAnalytics />}
+
+      {tab === "social" && <AdminSocialWorkflow />}
 
       {tab === "logs" && <AdminLogs />}
 

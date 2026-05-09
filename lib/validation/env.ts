@@ -12,6 +12,14 @@ interface EnvConfig {
   ADMIN_EMAILS?: string;
   SUPABASE_EDGE_FUNCTION_URL?: string;
   CRON_SECRET?: string;
+  AI_IMAGE_PROVIDER_API_KEY?: string;
+  LLM_PROVIDER_API_KEY?: string;
+  SOCIAL_SCHEDULER_WEBHOOK_URL?: string;
+  SOCIAL_SCHEDULER_API_KEY?: string;
+  META_APP_ID?: string;
+  META_APP_SECRET?: string;
+  TIKTOK_CLIENT_KEY?: string;
+  TIKTOK_CLIENT_SECRET?: string;
 }
 
 const requiredVars = [
@@ -45,6 +53,14 @@ export function validateEnv(): EnvConfig {
     "ADMIN_EMAILS",
     "SUPABASE_EDGE_FUNCTION_URL",
     "CRON_SECRET",
+    "AI_IMAGE_PROVIDER_API_KEY",
+    "LLM_PROVIDER_API_KEY",
+    "SOCIAL_SCHEDULER_WEBHOOK_URL",
+    "SOCIAL_SCHEDULER_API_KEY",
+    "META_APP_ID",
+    "META_APP_SECRET",
+    "TIKTOK_CLIENT_KEY",
+    "TIKTOK_CLIENT_SECRET",
   ];
 
   for (const varName of optionalVars) {
