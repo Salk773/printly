@@ -111,15 +111,21 @@ export default function AdminSocialWorkflow() {
     [getToken]
   );
 
-  const loadAssets = useCallback(async (options?: { silent?: boolean }) => {
+  const loadAssets = useCallback(async (options?: { silent?: boolean; preserveExistingOnEmpty?: boolean }) => {
     const silent = options?.silent ?? false;
+    const preserveExistingOnEmpty = options?.preserveExistingOnEmpty ?? false;
     setLoading(true);
     try {
       if (!silent) {
         addActivity("Checking creative workflow database and queue...");
       }
       const data = await apiFetch("/api/admin/creative-workflow");
-      setAssets(data.assets || []);
+      const nextAssets = data.assets || [];
+      setAssets((current) =>
+        preserveExistingOnEmpty && nextAssets.length === 0 && current.length > 0
+          ? current
+          : nextAssets
+      );
       setLoadError(null);
       setSetupSql(null);
       setQueueLoaded(true);
@@ -164,6 +170,7 @@ export default function AdminSocialWorkflow() {
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
+    const uploadedAssets: CreativeWorkflowItem[] = [];
 
     try {
       const token = await getToken();
@@ -193,7 +200,7 @@ export default function AdminSocialWorkflow() {
         if (!data.publicUrl) throw new Error("Failed to create public image URL.");
 
         addActivity(`Registering ${file.name} in the workflow queue...`);
-        await apiFetch("/api/admin/creative-workflow/upload", {
+        const uploadResult = await apiFetch("/api/admin/creative-workflow/upload", {
           method: "POST",
           body: JSON.stringify({
             original_filename: file.name,
@@ -204,11 +211,24 @@ export default function AdminSocialWorkflow() {
             file_size: file.size,
           }),
         });
+        if (uploadResult.asset) {
+          uploadedAssets.push(uploadResult.asset);
+        }
       }
 
+      if (uploadedAssets.length > 0) {
+        setAssets((current) => {
+          const existingIds = new Set(current.map((asset) => asset.id));
+          return [
+            ...uploadedAssets.filter((asset) => !existingIds.has(asset.id)),
+            ...current,
+          ];
+        });
+        setQueueLoaded(true);
+      }
       addActivity("Upload complete. Next step: process the asset.", "success");
       toast.success("Upload registered");
-      await loadAssets({ silent: true });
+      await loadAssets({ silent: true, preserveExistingOnEmpty: true });
     } catch (error) {
       const message = getErrorMessage(error, "Upload failed");
       addActivity(message, "error");
