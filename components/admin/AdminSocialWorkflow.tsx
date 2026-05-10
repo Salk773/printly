@@ -190,8 +190,9 @@ export default function AdminSocialWorkflow() {
 
   const uploadFiles = async (files: FileList | null) => {
     if (!files?.length) return;
+    const selectedFiles = Array.from(files);
     // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H1",location:"components/admin/AdminSocialWorkflow.tsx:uploadFiles-entry",message:"Upload files handler entered",data:{fileCount:files.length,fileNames:Array.from(files).map((file)=>file.name),fileTypes:Array.from(files).map((file)=>file.type)},timestamp:Date.now()})}).catch(()=>{});
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H1",location:"components/admin/AdminSocialWorkflow.tsx:uploadFiles-entry",message:"Upload files handler entered",data:{fileCount:files.length,snapshotCount:selectedFiles.length,fileNames:selectedFiles.map((file)=>file.name),fileTypes:selectedFiles.map((file)=>file.type)},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     setUploading(true);
     const uploadedAssets: CreativeWorkflowItem[] = [];
@@ -203,7 +204,7 @@ export default function AdminSocialWorkflow() {
       // #endregion
       if (!token) throw new Error("You must be signed in as an admin.");
 
-      for (const file of Array.from(files)) {
+      for (const file of selectedFiles) {
         // #region agent log
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H7",location:"components/admin/AdminSocialWorkflow.tsx:before-preview-create",message:"About to create local preview asset",data:{fileName:file.name,fileType:file.type,fileSize:file.size},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
