@@ -435,7 +435,10 @@ export default function AdminSocialWorkflow() {
       async () => {
         const draft = drafts[post.id];
         addActivity(`Approving ${platformLabel(post.platform)} caption and tags...`);
-        await apiFetch("/api/admin/creative-workflow/approve", {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V2,V3",location:"components/admin/AdminSocialWorkflow.tsx:approvePost-start",message:"Approve action started",data:{postId:post.id,platform:post.platform,statusBefore:post.status},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const result = await apiFetch("/api/admin/creative-workflow/approve", {
           method: "POST",
           body: JSON.stringify({
             postId: post.id,
@@ -447,6 +450,9 @@ export default function AdminSocialWorkflow() {
             selectedAudio: post.selected_audio,
           }),
         });
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V2,V3",location:"components/admin/AdminSocialWorkflow.tsx:approvePost-result",message:"Approve action returned",data:{hasPost:Boolean(result.post),postId:result.post?.id??null,statusAfter:result.post?.status??null,platform:result.post?.platform??post.platform},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         addActivity(`${platformLabel(post.platform)} draft approved`, "success");
       },
       `${platformLabel(post.platform)} post approved`
@@ -457,10 +463,16 @@ export default function AdminSocialWorkflow() {
       post.id,
       async () => {
         addActivity(`Sending ${platformLabel(post.platform)} post to publishing adapter...`);
-        await apiFetch("/api/admin/creative-workflow/publish", {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V3,V4",location:"components/admin/AdminSocialWorkflow.tsx:publishPost-start",message:"Publish action started",data:{postId:post.id,platform:post.platform,statusBefore:post.status,provider:post.publish_provider},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const result = await apiFetch("/api/admin/creative-workflow/publish", {
           method: "POST",
           body: JSON.stringify({ postId: post.id }),
         });
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V3,V4",location:"components/admin/AdminSocialWorkflow.tsx:publishPost-result",message:"Publish action returned",data:{hasPost:Boolean(result.post),postId:result.post?.id??null,statusAfter:result.post?.status??null,provider:result.post?.publish_provider??null,providerPostId:result.post?.provider_post_id??null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         addActivity(`${platformLabel(post.platform)} publish request finished`, "success");
       },
       `${platformLabel(post.platform)} post sent to publisher`
@@ -491,7 +503,7 @@ export default function AdminSocialWorkflow() {
 
   useEffect(() => {
     // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H2,H5",location:"components/admin/AdminSocialWorkflow.tsx:visibleAssets-effect",message:"Workflow render state changed",data:{assetsCount:assets.length,localAssetsCount:localAssets.length,visibleAssetsCount:visibleAssets.length,emptyState,loading,uploading,queueLoaded,hasLoadError:Boolean(loadError),visibleAssetIds:visibleAssets.map((asset)=>asset.id),visibleAssetStatuses:visibleAssets.map((asset)=>asset.status)},timestamp:Date.now()})}).catch(()=>{});
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H2,H5,V1,V2",location:"components/admin/AdminSocialWorkflow.tsx:visibleAssets-effect",message:"Workflow render state changed",data:{assetsCount:assets.length,localAssetsCount:localAssets.length,visibleAssetsCount:visibleAssets.length,emptyState,loading,uploading,queueLoaded,hasLoadError:Boolean(loadError),visibleAssetIds:visibleAssets.map((asset)=>asset.id),visibleAssetStatuses:visibleAssets.map((asset)=>asset.status),renditions:visibleAssets.map((asset)=>({assetId:asset.id,renditions:(asset.creative_renditions||[]).map((rendition)=>({type:rendition.rendition_type,platform:rendition.platform,width:rendition.width,height:rendition.height,provider:(rendition.metadata as any)?.provider??null,format:(rendition.metadata as any)?.format??null}))})),posts:visibleAssets.map((asset)=>({assetId:asset.id,posts:(asset.social_posts||[]).map((post)=>({id:post.id,platform:post.platform,status:post.status,provider:post.publish_provider,providerPostId:post.provider_post_id}))}))},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
   }, [assets.length, emptyState, loadError, loading, localAssets.length, queueLoaded, uploading, visibleAssets]);
 
