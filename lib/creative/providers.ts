@@ -7,6 +7,7 @@ import type {
   SocialPlatform,
   TrendSuggestion,
 } from "./types";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface ImageEditResult {
   rendition_type: "edited";
@@ -68,7 +69,213 @@ function baseHashtags(platform: SocialPlatform) {
     : [...shared, "#InstaGifts", "#HomeDecor"];
 }
 
+function bananaConfig() {
+  const apiKey = process.env.AI_IMAGE_PROVIDER_API_KEY;
+  if (!apiKey) return null;
+
+  return {
+    apiKey,
+    baseUrl: (process.env.AI_IMAGE_PROVIDER_BASE_URL || "https://aiberm.com").replace(/\/$/, ""),
+    model: process.env.AI_IMAGE_PROVIDER_MODEL || "gemini-3-pro-image-preview",
+  };
+}
+
+function agentLog(hypothesisId: string, message: string, data: Record<string, unknown>) {
+  // #region agent log
+  fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"banana-provider",hypothesisId,location:"lib/creative/providers.ts",message,data,timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+}
+
+async function downloadImageForProvider(publicUrl: string, fallbackMimeType: string | null) {
+  const response = await fetch(publicUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download source image (${response.status})`);
+  }
+
+  const mimeType = response.headers.get("content-type")?.split(";")[0] || fallbackMimeType || "image/png";
+  const data = Buffer.from(await response.arrayBuffer()).toString("base64");
+  return { mimeType, data };
+}
+
+function imagePartFromResponse(body: any) {
+  const parts = body?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return null;
+
+  return parts.find((part) => part?.inlineData?.data || part?.inline_data?.data) ?? null;
+}
+
+async function uploadGeneratedImage(params: {
+  assetId: string;
+  kind: string;
+  imageBase64: string;
+  mimeType: string;
+}) {
+  const extension = params.mimeType.includes("webp")
+    ? "webp"
+    : params.mimeType.includes("jpeg") || params.mimeType.includes("jpg")
+      ? "jpg"
+      : "png";
+  const storagePath = `creative-renditions/${params.assetId}/${params.kind}-${Date.now()}.${extension}`;
+  const buffer = Buffer.from(params.imageBase64, "base64");
+  const admin = supabaseAdmin();
+
+  const { error } = await admin.storage.from("uploads").upload(storagePath, buffer, {
+    contentType: params.mimeType,
+    upsert: false,
+  });
+
+  if (error) {
+    throw new Error(`Failed to upload Banana output: ${error.message}`);
+  }
+
+  const { data } = admin.storage.from("uploads").getPublicUrl(storagePath);
+  if (!data.publicUrl) {
+    throw new Error("Failed to create public URL for Banana output");
+  }
+
+  return {
+    publicUrl: data.publicUrl,
+    storageBucket: "uploads",
+    storagePath,
+  };
+}
+
+async function generateBananaImage(params: {
+  sourceUrl: string;
+  sourceMimeType: string | null;
+  assetId: string;
+  kind: string;
+  prompt: string;
+  aspectRatio?: string;
+  width: number | null;
+  height: number | null;
+}) {
+  const config = bananaConfig();
+  if (!config) return null;
+
+  agentLog("B1", "Banana provider enabled", {
+    provider: "banana-pro-ai-studio",
+    model: config.model,
+    baseUrl: config.baseUrl,
+    kind: params.kind,
+    hasApiKey: Boolean(config.apiKey),
+  });
+
+  const source = await downloadImageForProvider(params.sourceUrl, params.sourceMimeType);
+  agentLog("B2", "Downloaded source image for Banana edit", {
+    kind: params.kind,
+    mimeType: source.mimeType,
+    bytesBase64Length: source.data.length,
+  });
+
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ["TEXT", "IMAGE"],
+  };
+
+  if (params.aspectRatio) {
+    generationConfig.imageConfig = {
+      aspectRatio: params.aspectRatio,
+      imageSize: "2K",
+    };
+  }
+
+  const response = await fetch(`${config.baseUrl}/v1beta/models/${config.model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType: source.mimeType,
+                data: source.data,
+              },
+            },
+            { text: params.prompt },
+          ],
+        },
+      ],
+      generationConfig,
+    }),
+  });
+
+  const body = await response.json().catch(() => null);
+  agentLog("B3", "Banana API response received", {
+    kind: params.kind,
+    ok: response.ok,
+    status: response.status,
+    hasCandidates: Array.isArray(body?.candidates),
+    errorMessage: body?.error?.message,
+  });
+
+  if (!response.ok) {
+    throw new Error(body?.error?.message || `Banana image API failed (${response.status})`);
+  }
+
+  const imagePart = imagePartFromResponse(body);
+  const imageBase64 = imagePart?.inlineData?.data || imagePart?.inline_data?.data;
+  const imageMimeType = imagePart?.inlineData?.mimeType || imagePart?.inline_data?.mime_type || "image/png";
+
+  if (!imageBase64) {
+    throw new Error("Banana image API did not return an image");
+  }
+
+  const uploaded = await uploadGeneratedImage({
+    assetId: params.assetId,
+    kind: params.kind,
+    imageBase64,
+    mimeType: imageMimeType,
+  });
+
+  agentLog("B4", "Uploaded Banana output to Supabase storage", {
+    kind: params.kind,
+    storagePath: uploaded.storagePath,
+    mimeType: imageMimeType,
+  });
+
+  return {
+    public_url: uploaded.publicUrl,
+    storage_bucket: uploaded.storageBucket,
+    storage_path: uploaded.storagePath,
+    width: params.width,
+    height: params.height,
+    metadata: {
+      provider: "banana-pro-ai-studio",
+      model: config.model,
+      source: config.baseUrl,
+      prompt: params.prompt,
+    },
+  };
+}
+
 export async function editImage(asset: CreativeAsset): Promise<ImageEditResult> {
+  const banana = await generateBananaImage({
+    sourceUrl: asset.public_url,
+    sourceMimeType: asset.content_type,
+    assetId: asset.id,
+    kind: "edited",
+    prompt:
+      "Polish this product photo for a premium ecommerce listing. Keep the product accurate, improve lighting, background cleanliness, shadows, color balance, and overall professional presentation. Do not add text or logos.",
+    width: null,
+    height: null,
+  });
+
+  if (banana) {
+    return {
+      rendition_type: "edited",
+      ...banana,
+    };
+  }
+
+  agentLog("B1", "Banana provider not configured; using fallback image", {
+    provider: "fallback",
+    hasApiKey: false,
+  });
+
   return {
     rendition_type: "edited",
     public_url: asset.public_url,
@@ -115,6 +322,49 @@ export async function generateDescriptions(asset: CreativeAsset): Promise<Genera
 export async function createSocialRenditions(
   edited: CreativeRendition
 ): Promise<SocialRenditionDraft[]> {
+  const instagram = await generateBananaImage({
+    sourceUrl: edited.public_url,
+    sourceMimeType: null,
+    assetId: edited.asset_id,
+    kind: "instagram",
+    prompt:
+      "Create an Instagram-ready product image from this edited product photo. Use a clean branded social layout, premium lighting, tasteful background styling, and enough negative space for a caption overlay, but do not add text.",
+    aspectRatio: "4:5",
+    width: 1080,
+    height: 1350,
+  });
+
+  const tiktok = await generateBananaImage({
+    sourceUrl: edited.public_url,
+    sourceMimeType: null,
+    assetId: edited.asset_id,
+    kind: "tiktok",
+    prompt:
+      "Create a TikTok/Reels vertical product visual from this edited product photo. Make it scroll-stopping with dynamic composition, premium lighting, and tasteful branded styling, but do not add text.",
+    aspectRatio: "9:16",
+    width: 1080,
+    height: 1920,
+  });
+
+  if (instagram && tiktok) {
+    return [
+      {
+        rendition_type: "social",
+        platform: "instagram",
+        ...instagram,
+        width: 1080,
+        height: 1350,
+      },
+      {
+        rendition_type: "social",
+        platform: "tiktok",
+        ...tiktok,
+        width: 1080,
+        height: 1920,
+      },
+    ];
+  }
+
   return [
     {
       rendition_type: "social",

@@ -85,6 +85,9 @@ export async function POST(req: NextRequest) {
     // #endregion
 
     const editedDraft = await editImage(typedAsset);
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"banana-provider",hypothesisId:"B5",location:"app/api/admin/creative-workflow/process/route.ts:edited-draft",message:"Process route received edited image draft",data:{assetId:typedAsset.id,provider:editedDraft.metadata?.provider,publicUrlChanged:editedDraft.public_url!==typedAsset.public_url,storagePath:editedDraft.storage_path},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const { data: edited, error: editedError } = await admin
       .from("creative_renditions")
       .insert({

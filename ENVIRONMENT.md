@@ -96,6 +96,27 @@ This document describes all environment variables used in the Printly applicatio
   - Email links
   - Robots.txt
 
+### Creative Workflow AI
+
+#### `AI_IMAGE_PROVIDER_API_KEY`
+- **Description**: Server-side API key for Banana Pro/Nano Banana image editing.
+- **Example**: `sk-your-provider-key`
+- **Required**: No. If omitted, the social workflow uses the uploaded image as a fallback preview.
+- **Public**: No.
+- **Used in**: Admin Social workflow image edits and Instagram/TikTok image variants.
+
+#### `AI_IMAGE_PROVIDER_BASE_URL`
+- **Description**: Gemini-compatible Banana provider base URL.
+- **Example**: `https://aiberm.com`
+- **Default**: `https://aiberm.com`
+- **Required**: No.
+
+#### `AI_IMAGE_PROVIDER_MODEL`
+- **Description**: Banana/Nano Banana image model name.
+- **Example**: `gemini-3-pro-image-preview`
+- **Default**: `gemini-3-pro-image-preview`
+- **Required**: No.
+
 ## Environment Setup
 
 ### Local Development
@@ -121,6 +142,11 @@ NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn-here
 CRON_SECRET=your-secure-random-token-here
 LOW_STOCK_THRESHOLD=5
 AUTO_CANCEL_DAYS=30
+
+# Creative Workflow AI (Optional)
+AI_IMAGE_PROVIDER_API_KEY=your-banana-provider-key
+AI_IMAGE_PROVIDER_BASE_URL=https://aiberm.com
+AI_IMAGE_PROVIDER_MODEL=gemini-3-pro-image-preview
 ```
 
 ### Production (Vercel)
