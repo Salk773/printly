@@ -76,6 +76,22 @@ export default function AdminSocialWorkflow() {
     setLocalAssets((current) => current.filter((item) => item.id !== asset.id));
   }, []);
 
+  const upsertPostInAssets = useCallback((post: SocialPost) => {
+    const updateAsset = (asset: CreativeWorkflowItem): CreativeWorkflowItem => {
+      if (asset.id !== post.asset_id) return asset;
+      const existingPosts = asset.social_posts || [];
+      return {
+        ...asset,
+        social_posts: existingPosts.map((item) =>
+          item.id === post.id ? { ...item, ...post } : item
+        ),
+      };
+    };
+
+    setAssets((current) => current.map(updateAsset));
+    setLocalAssets((current) => current.map(updateAsset));
+  }, []);
+
   const addActivity = useCallback((message: string, tone: ActivityEntry["tone"] = "info") => {
     setActivity((current) => [
       {
@@ -453,6 +469,9 @@ export default function AdminSocialWorkflow() {
         // #region agent log
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V2,V3",location:"components/admin/AdminSocialWorkflow.tsx:approvePost-result",message:"Approve action returned",data:{hasPost:Boolean(result.post),postId:result.post?.id??null,statusAfter:result.post?.status??null,platform:result.post?.platform??post.platform},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
+        if (result.post) {
+          upsertPostInAssets(result.post);
+        }
         addActivity(`${platformLabel(post.platform)} draft approved`, "success");
       },
       `${platformLabel(post.platform)} post approved`
@@ -473,6 +492,9 @@ export default function AdminSocialWorkflow() {
         // #region agent log
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-approval-publish",hypothesisId:"V3,V4",location:"components/admin/AdminSocialWorkflow.tsx:publishPost-result",message:"Publish action returned",data:{hasPost:Boolean(result.post),postId:result.post?.id??null,statusAfter:result.post?.status??null,provider:result.post?.publish_provider??null,providerPostId:result.post?.provider_post_id??null},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
+        if (result.post) {
+          upsertPostInAssets(result.post);
+        }
         addActivity(`${platformLabel(post.platform)} publish request finished`, "success");
       },
       `${platformLabel(post.platform)} post sent to publisher`

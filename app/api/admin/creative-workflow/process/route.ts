@@ -63,6 +63,27 @@ export async function POST(req: NextRequest) {
     }
 
     const typedAsset = asset as CreativeAsset;
+
+    // Regeneration replaces prior generated output for this asset instead of
+    // appending duplicate approval cards on every click.
+    const cleanupSteps = [
+      admin.from("social_posts").delete().eq("asset_id", typedAsset.id),
+      admin.from("trend_snapshots").delete().eq("asset_id", typedAsset.id),
+      admin.from("creative_descriptions").delete().eq("asset_id", typedAsset.id),
+      admin.from("creative_renditions").delete().eq("asset_id", typedAsset.id),
+    ];
+
+    for (const step of cleanupSteps) {
+      const { error: cleanupError } = await step;
+      if (cleanupError) {
+        throw cleanupError;
+      }
+    }
+
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"D1",location:"app/api/admin/creative-workflow/process/route.ts:cleanup",message:"Cleared previous generated workflow rows before regeneration",data:{assetId:typedAsset.id},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     const editedDraft = await editImage(typedAsset);
     const { data: edited, error: editedError } = await admin
       .from("creative_renditions")
