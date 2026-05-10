@@ -96,6 +96,10 @@ export default function AdminSocialWorkflow() {
 
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 15000);
+      const startedAt = Date.now();
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4,P5,P6",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-start",message:"Workflow API request started",data:{path,method:init?.method??"GET",hasBody:Boolean(init?.body)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       let response: Response;
       try {
@@ -110,16 +114,25 @@ export default function AdminSocialWorkflow() {
         });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
+          // #region agent log
+          fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-abort",message:"Workflow API request aborted by timeout",data:{path,durationMs:Date.now()-startedAt},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
           throw new Error(
             "The workflow request timed out. Check that the database tables exist and the dev server is responding."
           );
         }
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P6",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-network-error",message:"Workflow API request failed before response",data:{path,durationMs:Date.now()-startedAt,error:getErrorMessage(error)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         throw error;
       } finally {
         window.clearTimeout(timeout);
       }
 
       const data = await response.json().catch(() => ({}));
+      // #region agent log
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P5,P6",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-response",message:"Workflow API response received",data:{path,status:response.status,ok:response.ok,durationMs:Date.now()-startedAt,error:getErrorMessage((data as any).error??"", ""),dataKeys:data&&typeof data==="object"?Object.keys(data):[]},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (!response.ok) {
         throw new Error(getErrorMessage(data.error ?? data, "Request failed"));
       }
