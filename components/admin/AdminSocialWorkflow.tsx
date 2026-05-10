@@ -68,6 +68,14 @@ export default function AdminSocialWorkflow() {
     });
   }, []);
 
+  const upsertAsset = useCallback((asset: CreativeWorkflowItem) => {
+    setAssets((current) => {
+      const withoutCurrent = current.filter((item) => item.id !== asset.id);
+      return [asset, ...withoutCurrent];
+    });
+    setLocalAssets((current) => current.filter((item) => item.id !== asset.id));
+  }, []);
+
   const addActivity = useCallback((message: string, tone: ActivityEntry["tone"] = "info") => {
     setActivity((current) => [
       {
@@ -362,7 +370,7 @@ export default function AdminSocialWorkflow() {
     try {
       await action();
       toast.success(successMessage);
-      await loadAssets({ silent: true });
+      await loadAssets({ silent: true, preserveExistingOnEmpty: true });
     } catch (error) {
       toast.error(getErrorMessage(error, "Action failed"));
     } finally {
@@ -409,10 +417,13 @@ export default function AdminSocialWorkflow() {
         fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P1,P2",location:"components/admin/AdminSocialWorkflow.tsx:processAsset",message:"Process asset action started",data:{assetId,isLocalId:assetId.startsWith("local-")},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         addActivity("Starting AI edit, description, social format, and trend steps...");
-        await apiFetch("/api/admin/creative-workflow/process", {
+        const result = await apiFetch("/api/admin/creative-workflow/process", {
           method: "POST",
           body: JSON.stringify({ assetId }),
         });
+        if (result.asset) {
+          upsertAsset(result.asset);
+        }
         addActivity("Processing complete. Review and approve the social drafts.", "success");
       },
       "Asset processed"
