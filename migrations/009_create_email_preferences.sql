@@ -18,16 +18,19 @@ CREATE INDEX IF NOT EXISTS idx_email_preferences_user_id ON email_preferences(us
 ALTER TABLE email_preferences ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only see their own preferences
+DROP POLICY IF EXISTS "Users can view their own preferences" ON email_preferences;
 CREATE POLICY "Users can view their own preferences"
   ON email_preferences FOR SELECT
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can insert their own preferences
+DROP POLICY IF EXISTS "Users can insert their own preferences" ON email_preferences;
 CREATE POLICY "Users can insert their own preferences"
   ON email_preferences FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policy: Users can update their own preferences
+DROP POLICY IF EXISTS "Users can update their own preferences" ON email_preferences;
 CREATE POLICY "Users can update their own preferences"
   ON email_preferences FOR UPDATE
   USING (auth.uid() = user_id);
@@ -42,6 +45,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_email_preferences_timestamp ON email_preferences;
 CREATE TRIGGER update_email_preferences_timestamp
   BEFORE UPDATE ON email_preferences
   FOR EACH ROW

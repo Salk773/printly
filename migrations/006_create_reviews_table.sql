@@ -22,21 +22,25 @@ CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at DESC);
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Anyone can view reviews
+DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
 CREATE POLICY "Anyone can view reviews"
   ON reviews FOR SELECT
   USING (true);
 
 -- RLS Policy: Users can insert their own reviews
+DROP POLICY IF EXISTS "Users can insert their own reviews" ON reviews;
 CREATE POLICY "Users can insert their own reviews"
   ON reviews FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policy: Users can update their own reviews
+DROP POLICY IF EXISTS "Users can update their own reviews" ON reviews;
 CREATE POLICY "Users can update their own reviews"
   ON reviews FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can delete their own reviews
+DROP POLICY IF EXISTS "Users can delete their own reviews" ON reviews;
 CREATE POLICY "Users can delete their own reviews"
   ON reviews FOR DELETE
   USING (auth.uid() = user_id);
@@ -51,6 +55,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_reviews_timestamp ON reviews;
 CREATE TRIGGER update_reviews_timestamp
   BEFORE UPDATE ON reviews
   FOR EACH ROW

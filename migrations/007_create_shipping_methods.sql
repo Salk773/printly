@@ -27,6 +27,7 @@ ON CONFLICT DO NOTHING;
 ALTER TABLE shipping_methods ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Anyone can view active shipping methods
+DROP POLICY IF EXISTS "Anyone can view active shipping methods" ON shipping_methods;
 CREATE POLICY "Anyone can view active shipping methods"
   ON shipping_methods FOR SELECT
   USING (active = true OR EXISTS (
@@ -45,6 +46,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_shipping_methods_timestamp ON shipping_methods;
 CREATE TRIGGER update_shipping_methods_timestamp
   BEFORE UPDATE ON shipping_methods
   FOR EACH ROW

@@ -24,21 +24,25 @@ CREATE INDEX IF NOT EXISTS idx_saved_addresses_is_default ON saved_addresses(use
 ALTER TABLE saved_addresses ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only see their own addresses
+DROP POLICY IF EXISTS "Users can view their own addresses" ON saved_addresses;
 CREATE POLICY "Users can view their own addresses"
   ON saved_addresses FOR SELECT
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can insert their own addresses
+DROP POLICY IF EXISTS "Users can insert their own addresses" ON saved_addresses;
 CREATE POLICY "Users can insert their own addresses"
   ON saved_addresses FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policy: Users can update their own addresses
+DROP POLICY IF EXISTS "Users can update their own addresses" ON saved_addresses;
 CREATE POLICY "Users can update their own addresses"
   ON saved_addresses FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can delete their own addresses
+DROP POLICY IF EXISTS "Users can delete their own addresses" ON saved_addresses;
 CREATE POLICY "Users can delete their own addresses"
   ON saved_addresses FOR DELETE
   USING (auth.uid() = user_id);
@@ -53,6 +57,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at
+DROP TRIGGER IF EXISTS update_saved_addresses_timestamp ON saved_addresses;
 CREATE TRIGGER update_saved_addresses_timestamp
   BEFORE UPDATE ON saved_addresses
   FOR EACH ROW

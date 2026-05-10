@@ -32,8 +32,15 @@ export async function POST(req: NextRequest) {
     return (authResult as { authorized: false; response: NextResponse }).response;
   }
 
-  const parsed = ProcessSchema.safeParse(await req.json().catch(() => null));
+  const rawBody = await req.json().catch(() => null);
+  // #region agent log
+  fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P1,P2,P3",location:"app/api/admin/creative-workflow/process/route.ts:raw-body",message:"Process route received body",data:{body:rawBody,assetIdType:typeof rawBody?.assetId,assetId:String(rawBody?.assetId??""),isLocalId:String(rawBody?.assetId??"").startsWith("local-")},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+  const parsed = ProcessSchema.safeParse(rawBody);
   if (!parsed.success) {
+    // #region agent log
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P1,P2,P3",location:"app/api/admin/creative-workflow/process/route.ts:parse-failed",message:"Process route schema validation failed",data:{issues:parsed.error.issues},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 

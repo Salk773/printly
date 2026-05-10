@@ -2,6 +2,7 @@
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS visible BOOLEAN NOT NULL DEFAULT true;
 
 DROP POLICY IF EXISTS "Anyone can view reviews" ON reviews;
+DROP POLICY IF EXISTS "Anyone can view visible reviews" ON reviews;
 
 CREATE POLICY "Anyone can view visible reviews"
   ON reviews FOR SELECT

@@ -392,6 +392,9 @@ export default function AdminSocialWorkflow() {
     runAction(
       assetId,
       async () => {
+        // #region agent log
+        fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P1,P2",location:"components/admin/AdminSocialWorkflow.tsx:processAsset",message:"Process asset action started",data:{assetId,isLocalId:assetId.startsWith("local-")},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         addActivity("Starting AI edit, description, social format, and trend steps...");
         await apiFetch("/api/admin/creative-workflow/process", {
           method: "POST",
