@@ -22,6 +22,8 @@ type ActivityEntry = {
   createdAt: string;
 };
 
+const WORKFLOW_DEBUG_BUILD = "workflow-filelist-snapshot-v2";
+
 function getExtension(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase();
   return ext && ext.length <= 5 ? ext : "jpg";
@@ -192,7 +194,7 @@ export default function AdminSocialWorkflow() {
     if (!files?.length) return;
     const selectedFiles = Array.from(files);
     // #region agent log
-    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H1",location:"components/admin/AdminSocialWorkflow.tsx:uploadFiles-entry",message:"Upload files handler entered",data:{fileCount:files.length,snapshotCount:selectedFiles.length,fileNames:selectedFiles.map((file)=>file.name),fileTypes:selectedFiles.map((file)=>file.type)},timestamp:Date.now()})}).catch(()=>{});
+    fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H1",location:"components/admin/AdminSocialWorkflow.tsx:uploadFiles-entry",message:"Upload files handler entered",data:{build:WORKFLOW_DEBUG_BUILD,fileCount:files.length,snapshotCount:selectedFiles.length,fileNames:selectedFiles.map((file)=>file.name),fileTypes:selectedFiles.map((file)=>file.type)},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     setUploading(true);
     const uploadedAssets: CreativeWorkflowItem[] = [];
@@ -488,6 +490,9 @@ export default function AdminSocialWorkflow() {
           <p style={{ color: "#fbbf24", maxWidth: 760, fontSize: 13 }}>
             Current AI provider: fallback demo mode. It creates placeholder edits,
             captions, tags, and audio ideas locally until a real image/LLM provider is connected.
+          </p>
+          <p style={{ color: "#64748b", fontSize: 11, marginTop: 4 }}>
+            Debug build: {WORKFLOW_DEBUG_BUILD}
           </p>
         </div>
         <label
