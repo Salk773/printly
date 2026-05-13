@@ -97,6 +97,52 @@ async function downloadImageForProvider(publicUrl: string, fallbackMimeType: str
   return { mimeType, data };
 }
 
+async function getGalleryStyleReferences(limit = 3) {
+  const admin = supabaseAdmin();
+  const { data, error } = await admin.storage
+    .from("uploads")
+    .list("home-gallery", { sortBy: { column: "name", order: "asc" }, limit: 20 });
+
+  if (error || !data?.length) {
+    agentLog("T1", "No gallery style references available", {
+      reason: error?.message || "empty-gallery",
+    });
+    return [];
+  }
+
+  const imageFiles = data
+    .filter((file) => /\.(png|jpe?g|webp)$/i.test(file.name))
+    .slice(0, limit);
+
+  const references = await Promise.all(
+    imageFiles.map(async (file) => {
+      const publicUrl = admin.storage
+        .from("uploads")
+        .getPublicUrl(`home-gallery/${file.name}`).data.publicUrl;
+
+      try {
+        const image = await downloadImageForProvider(publicUrl, null);
+        return { fileName: file.name, ...image };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const usableReferences = references.filter(
+    (reference): reference is { fileName: string; mimeType: string; data: string } =>
+      Boolean(reference)
+  );
+
+  agentLog("T1", "Loaded gallery style references for Banana prompt", {
+    requested: imageFiles.length,
+    usable: usableReferences.length,
+    files: usableReferences.map((reference) => reference.fileName),
+  });
+
+  return usableReferences;
+}
+
 function imagePartFromResponse(body: any) {
   const parts = body?.candidates?.[0]?.content?.parts;
   if (!Array.isArray(parts)) return null;
@@ -162,10 +208,12 @@ async function generateBananaImage(params: {
   });
 
   const source = await downloadImageForProvider(params.sourceUrl, params.sourceMimeType);
+  const styleReferences = await getGalleryStyleReferences();
   agentLog("B2", "Downloaded source image for Banana edit", {
     kind: params.kind,
     mimeType: source.mimeType,
     bytesBase64Length: source.data.length,
+    styleReferenceCount: styleReferences.length,
   });
 
   const generationConfig: Record<string, unknown> = {
@@ -179,6 +227,26 @@ async function generateBananaImage(params: {
     };
   }
 
+  const parts = [
+    {
+      inlineData: {
+        mimeType: source.mimeType,
+        data: source.data,
+      },
+    },
+    ...styleReferences.map((reference) => ({
+      inlineData: {
+        mimeType: reference.mimeType,
+        data: reference.data,
+      },
+    })),
+    {
+      text:
+        "The first image is the product photo to edit. Any following images are Printly homepage/gallery style references only. Match their visual theme, lighting, background mood, product staging, composition, and brand feel, but do not copy their exact objects or layout. " +
+        params.prompt,
+    },
+  ];
+
   const response = await fetch(`${config.baseUrl}/v1beta/models/${config.model}:generateContent`, {
     method: "POST",
     headers: {
@@ -188,15 +256,7 @@ async function generateBananaImage(params: {
     body: JSON.stringify({
       contents: [
         {
-          parts: [
-            {
-              inlineData: {
-                mimeType: source.mimeType,
-                data: source.data,
-              },
-            },
-            { text: params.prompt },
-          ],
+          parts,
         },
       ],
       generationConfig,
@@ -259,7 +319,7 @@ export async function editImage(asset: CreativeAsset): Promise<ImageEditResult> 
     assetId: asset.id,
     kind: "edited",
     prompt:
-      "Polish this product photo for a premium ecommerce listing. Keep the product accurate, improve lighting, background cleanliness, shadows, color balance, and overall professional presentation. Do not add text or logos.",
+      "Polish this product photo for Printly's ecommerce gallery. Keep the product accurate, preserve its shape/material/color, clean up lighting and background, and make it feel like it belongs beside the existing Printly gallery photos. Do not add text or logos.",
     width: null,
     height: null,
   });
@@ -328,7 +388,7 @@ export async function createSocialRenditions(
     assetId: edited.asset_id,
     kind: "instagram",
     prompt:
-      "Create an Instagram-ready product image from this edited product photo. Use a clean branded social layout, premium lighting, tasteful background styling, and enough negative space for a caption overlay, but do not add text.",
+      "Create an Instagram-ready product image from this edited product photo. Follow the existing Printly gallery theme for background styling, lighting, color palette, and product staging. Make it premium and scroll-stopping with enough negative space for a caption overlay, but do not add text.",
     aspectRatio: "4:5",
     width: 1080,
     height: 1350,
@@ -340,7 +400,7 @@ export async function createSocialRenditions(
     assetId: edited.asset_id,
     kind: "tiktok",
     prompt:
-      "Create a TikTok/Reels vertical product visual from this edited product photo. Make it scroll-stopping with dynamic composition, premium lighting, and tasteful branded styling, but do not add text.",
+      "Create a TikTok/Reels vertical product visual from this edited product photo. Follow the existing Printly gallery theme while making the composition more dynamic for vertical social content. Use premium lighting and tasteful branded styling, but do not add text.",
     aspectRatio: "9:16",
     width: 1080,
     height: 1920,

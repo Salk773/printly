@@ -114,15 +114,16 @@ export default function AdminSocialWorkflow() {
   }, []);
 
   const apiFetch = useCallback(
-    async (path: string, init?: RequestInit) => {
+    async (path: string, init?: RequestInit, options?: { timeoutMs?: number }) => {
       const token = await getToken();
       if (!token) throw new Error("You must be signed in as an admin.");
 
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 15000);
+      const timeoutMs = options?.timeoutMs ?? 15000;
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
       const startedAt = Date.now();
       // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4,P5,P6",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-start",message:"Workflow API request started",data:{path,method:init?.method??"GET",hasBody:Boolean(init?.body)},timestamp:Date.now()})}).catch(()=>{});
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4,P5,P6,P7",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-start",message:"Workflow API request started",data:{path,method:init?.method??"GET",hasBody:Boolean(init?.body),timeoutMs},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
 
       let response: Response;
@@ -139,10 +140,10 @@ export default function AdminSocialWorkflow() {
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           // #region agent log
-          fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-abort",message:"Workflow API request aborted by timeout",data:{path,durationMs:Date.now()-startedAt},timestamp:Date.now()})}).catch(()=>{});
+          fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P4,P7",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-abort",message:"Workflow API request aborted by timeout",data:{path,durationMs:Date.now()-startedAt,timeoutMs},timestamp:Date.now()})}).catch(()=>{});
           // #endregion
           throw new Error(
-            "The workflow request timed out. Check that the database tables exist and the dev server is responding."
+            "The workflow request timed out. The AI provider may still be generating images; try again in a moment."
           );
         }
         // #region agent log
@@ -155,7 +156,7 @@ export default function AdminSocialWorkflow() {
 
       const data = await response.json().catch(() => ({}));
       // #region agent log
-      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P5,P6",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-response",message:"Workflow API response received",data:{path,status:response.status,ok:response.ok,durationMs:Date.now()-startedAt,error:getErrorMessage((data as any).error??"", ""),dataKeys:data&&typeof data==="object"?Object.keys(data):[]},timestamp:Date.now()})}).catch(()=>{});
+      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-process",hypothesisId:"P5,P6,P7",location:"components/admin/AdminSocialWorkflow.tsx:apiFetch-response",message:"Workflow API response received",data:{path,status:response.status,ok:response.ok,durationMs:Date.now()-startedAt,timeoutMs,error:getErrorMessage((data as any).error??"", ""),dataKeys:data&&typeof data==="object"?Object.keys(data):[]},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
       if (!response.ok) {
         throw new Error(getErrorMessage(data.error ?? data, "Request failed"));
@@ -436,7 +437,7 @@ export default function AdminSocialWorkflow() {
         const result = await apiFetch("/api/admin/creative-workflow/process", {
           method: "POST",
           body: JSON.stringify({ assetId }),
-        });
+        }, { timeoutMs: 120000 });
         if (result.asset) {
           upsertAsset(result.asset);
         }
@@ -688,27 +689,23 @@ export default function AdminSocialWorkflow() {
                   gap: 18,
                 }}
               >
-                <div>
-                  <img
-                    src={edited?.public_url || asset.public_url}
-                    alt={asset.original_filename}
-                    onLoad={() => {
-                      // #region agent log
-                      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3",location:"components/admin/AdminSocialWorkflow.tsx:asset-image-load",message:"Workflow asset image loaded",data:{assetId:asset.id,status:asset.status,srcPrefix:String(edited?.public_url||asset.public_url).slice(0,40)},timestamp:Date.now()})}).catch(()=>{});
-                      // #endregion
-                    }}
-                    onError={() => {
-                      // #region agent log
-                      fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3",location:"components/admin/AdminSocialWorkflow.tsx:asset-image-error",message:"Workflow asset image failed to load",data:{assetId:asset.id,status:asset.status,srcPrefix:String(edited?.public_url||asset.public_url).slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
-                      // #endregion
-                    }}
-                    style={{
-                      width: "100%",
-                      borderRadius: 10,
-                      border: "1px solid rgba(148,163,184,0.25)",
-                      objectFit: "cover",
-                    }}
+                <div style={{ display: "grid", gap: 10 }}>
+                  <WorkflowImage
+                    label="Original upload"
+                    src={asset.public_url}
+                    alt={`Original ${asset.original_filename}`}
+                    assetId={asset.id}
+                    status={asset.status}
                   />
+                  {edited && (
+                    <WorkflowImage
+                      label={`Edited output${providerName(edited) ? ` - ${providerName(edited)}` : ""}`}
+                      src={edited.public_url}
+                      alt={`Edited ${asset.original_filename}`}
+                      assetId={asset.id}
+                      status={asset.status}
+                    />
+                  )}
                   <p style={{ fontSize: 13, color: "#94a3b8", wordBreak: "break-word" }}>
                     {asset.original_filename}
                   </p>
@@ -735,10 +732,14 @@ export default function AdminSocialWorkflow() {
                     <button
                       className="btn-primary"
                       type="button"
-                      disabled={busyId === asset.id || asset.status === "processing"}
+                      disabled={busyId === asset.id}
                       onClick={() => processAsset(asset.id)}
                     >
-                      {busyId === asset.id ? "Processing..." : "Process / regenerate"}
+                      {busyId === asset.id
+                        ? "Processing..."
+                        : asset.status === "processing"
+                          ? "Retry / regenerate"
+                          : "Process / regenerate"}
                     </button>
                   </div>
 
@@ -940,6 +941,62 @@ function GeneratedCopy({ asset }: { asset: CreativeWorkflowItem }) {
   );
 }
 
+function providerName(rendition?: CreativeRendition) {
+  const provider = rendition?.metadata?.provider;
+  return typeof provider === "string" ? provider : null;
+}
+
+function WorkflowImage({
+  label,
+  src,
+  alt,
+  assetId,
+  status,
+}: {
+  label: string;
+  src: string;
+  alt: string;
+  assetId: string;
+  status: string;
+}) {
+  return (
+    <figure style={{ margin: 0 }}>
+      <figcaption
+        style={{
+          color: "#cbd5e1",
+          fontSize: 12,
+          fontWeight: 700,
+          marginBottom: 6,
+          textTransform: "uppercase",
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+      </figcaption>
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => {
+          // #region agent log
+          fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3,H6",location:"components/admin/AdminSocialWorkflow.tsx:workflow-image-load",message:"Workflow image loaded",data:{assetId,status,label,srcPrefix:String(src).slice(0,40)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+        }}
+        onError={() => {
+          // #region agent log
+          fetch("http://127.0.0.1:7557/ingest/4c85b0d5-d993-424a-bae9-0fea9b6fa259",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"2eb26c"},body:JSON.stringify({sessionId:"2eb26c",runId:"workflow-card-display",hypothesisId:"H3,H6",location:"components/admin/AdminSocialWorkflow.tsx:workflow-image-error",message:"Workflow image failed to load",data:{assetId,status,label,srcPrefix:String(src).slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+        }}
+        style={{
+          width: "100%",
+          borderRadius: 10,
+          border: "1px solid rgba(148,163,184,0.25)",
+          objectFit: "cover",
+        }}
+      />
+    </figure>
+  );
+}
+
 function PostApprovalCard({
   post,
   rendition,
@@ -982,6 +1039,20 @@ function PostApprovalCard({
           </span>
         )}
       </div>
+
+      {rendition?.public_url && (
+        <div style={{ marginTop: 12 }}>
+          <WorkflowImage
+            label={`Generated ${platformLabel(post.platform)} image${
+              providerName(rendition) ? ` - ${providerName(rendition)}` : ""
+            }`}
+            src={rendition.public_url}
+            alt={`${platformLabel(post.platform)} generated image`}
+            assetId={post.asset_id}
+            status={post.status}
+          />
+        </div>
+      )}
 
       <label style={{ display: "block", marginTop: 10 }}>
         Caption

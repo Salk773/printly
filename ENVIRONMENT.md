@@ -117,6 +117,43 @@ This document describes all environment variables used in the Printly applicatio
 - **Default**: `gemini-3-pro-image-preview`
 - **Required**: No.
 
+### Local Auto Label Printer
+
+#### `LABEL_PRINTER_STATUS`
+- **Description**: Order status that the local label printer watcher should print.
+- **Example**: `paid`
+- **Default**: `paid`
+- **Required**: No.
+
+#### `LABEL_PRINTER_POLL_MS`
+- **Description**: How often the local printer watcher checks for newly paid orders.
+- **Example**: `5000`
+- **Default**: `5000`
+- **Required**: No.
+
+#### `LABEL_PRINTER_LOOKBACK_HOURS`
+- **Description**: How far back the watcher looks for unpaid-to-paid orders it has not printed locally.
+- **Example**: `48`
+- **Default**: `48`
+- **Required**: No.
+
+#### `LABEL_PRINTER_BROWSER_PATH`
+- **Description**: Optional path to Edge/Chrome if the watcher cannot find it automatically.
+- **Example**: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
+- **Required**: No.
+- **Note**: Silent printing uses Edge/Chrome kiosk printing. Set your Windows default printer to the 4x6 label printer before running the watcher.
+
+#### `LABEL_PRINTER_SITE_URL`
+- **Description**: Printly site URL for a printer computer that is not running the app locally.
+- **Example**: `https://printly.ae`
+- **Required**: Yes for the remote printer-computer setup.
+
+#### `LABEL_PRINTER_AGENT_SECRET`
+- **Description**: Shared secret used by the local printer watcher to fetch printable orders from Printly.
+- **Example**: `use-a-long-random-secret`
+- **Required**: Yes for the remote printer-computer setup.
+- **Security**: Keep this private. Add the same value to the Printly server/Vercel environment and to the printer computer's local `.env.local`.
+
 ## Environment Setup
 
 ### Local Development
@@ -147,6 +184,13 @@ AUTO_CANCEL_DAYS=30
 AI_IMAGE_PROVIDER_API_KEY=your-banana-provider-key
 AI_IMAGE_PROVIDER_BASE_URL=https://aiberm.com
 AI_IMAGE_PROVIDER_MODEL=gemini-3-pro-image-preview
+
+# Local Auto Label Printer (Optional)
+LABEL_PRINTER_STATUS=paid
+LABEL_PRINTER_POLL_MS=5000
+LABEL_PRINTER_LOOKBACK_HOURS=48
+LABEL_PRINTER_SITE_URL=http://localhost:3000
+LABEL_PRINTER_AGENT_SECRET=use-a-long-random-secret
 ```
 
 ### Production (Vercel)
